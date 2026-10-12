@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="950" viewBox="0 0 1600 950" role="img" aria-labelledby="title desc">
+  <title id="title">SafePick 시스템 구조</title>
+  <desc id="desc">Expo 모바일 앱, FastAPI 백엔드, OpenAI API, 공식 도메인 API, Serper Search API, SQLite 분석 결과 데이터베이스의 연결 구조</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#54708f"/>
+    </marker>
+    <style>
+      .canvas { fill: #f8fafc; }
+      .title { fill: #172033; font: 700 42px Arial, 'Malgun Gothic', sans-serif; }
+      .subtitle { fill: #64748b; font: 400 20px Arial, 'Malgun Gothic', sans-serif; }
+      .nodeTitle { fill: #172033; font: 700 25px Arial, 'Malgun Gothic', sans-serif; }
+      .innerTitle { fill: #172033; font: 700 20px Arial, 'Malgun Gothic', sans-serif; }
+      .nodeText { fill: #475569; font: 400 19px Arial, 'Malgun Gothic', sans-serif; }
+      .smallText { fill: #475569; font: 400 17px Arial, 'Malgun Gothic', sans-serif; }
+      .mobile { fill: #eaf2ff; stroke: #1d6fe8; stroke-width: 3; }
+      .backend { fill: #ffffff; stroke: #172033; stroke-width: 3; }
+      .service { fill: #ffffff; stroke: #9db4cc; stroke-width: 2; }
+      .database { fill: #effaf3; stroke: #2d8a57; stroke-width: 2; }
+      .inner { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 2; }
+      .line { fill: none; stroke: #54708f; stroke-width: 3; marker-end: url(#arrow); }
+      .mutedLine { fill: none; stroke: #94a3b8; stroke-width: 2.5; stroke-dasharray: 8 7; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="canvas" width="1600" height="950" rx="28"/>
+  <text class="title" x="80" y="90">SafePick 시스템 구조</text>
+  <text class="subtitle" x="80" y="128">상품 링크 분석부터 공식 정보 비교, 위험 신호 안내, 분석 결과 저장까지의 흐름</text>
+
+  <rect class="mobile" x="390" y="185" width="820" height="150" rx="20"/>
+  <text class="nodeTitle" x="435" y="237">Expo 모바일 앱</text>
+  <text class="nodeText" x="435" y="278">링크 입력</text>
+  <text class="nodeText" x="605" y="278">분석 진행</text>
+  <text class="nodeText" x="805" y="278">공식 정보 비교</text>
+  <text class="nodeText" x="1040" y="278">위험 신호 · 저장 목록</text>
+  <path class="line" d="M 800 335 L 800 415"/>
+
+  <rect class="backend" x="180" y="430" width="1240" height="250" rx="22"/>
+  <text class="nodeTitle" x="225" y="485">FastAPI 백엔드</text>
+  <text class="nodeText" x="225" y="520">상품 분석 API · 공식 정보 비교 API · 분석 결과 저장/조회 API</text>
+
+  <rect class="inner" x="225" y="555" width="305" height="85" rx="14"/>
+  <text class="innerTitle" x="262" y="591">URL 검증 · 페이지 수집</text>
+  <text class="smallText" x="262" y="620">공개 텍스트와 보안 검사</text>
+
+  <rect class="inner" x="648" y="555" width="305" height="85" rx="14"/>
+  <text class="innerTitle" x="692" y="591">AI 분석 · 공식 비교</text>
+  <text class="smallText" x="692" y="620">정보 추출, 비교, 위험 신호</text>
+
+  <rect class="inner" x="1070" y="555" width="305" height="85" rx="14"/>
+  <text class="innerTitle" x="1112" y="591">저장 · 다시 보기</text>
+  <text class="smallText" x="1112" y="620">분석 결과와 출처 관리</text>
+
+  <path class="line" d="M 377 640 L 377 740"/>
+  <path class="line" d="M 800 640 L 800 740"/>
+  <path class="line" d="M 1222 640 L 1222 740"/>
+
+  <rect class="service" x="80" y="765" width="300" height="120" rx="18"/>
+  <text class="nodeTitle" x="120" y="815">OpenAI API</text>
+  <text class="smallText" x="120" y="850">상품 정보 추출 · 비교 · 요약</text>
+
+  <rect class="service" x="440" y="765" width="300" height="120" rx="18"/>
+  <text class="nodeTitle" x="480" y="815">공식 도메인 API</text>
+  <text class="smallText" x="480" y="850">지원 브랜드 · 공식 도메인 검증</text>
+
+  <rect class="service" x="800" y="765" width="300" height="120" rx="18"/>
+  <text class="nodeTitle" x="840" y="815">Serper Search API</text>
+  <text class="smallText" x="840" y="850">공식 도메인 제한 웹 검색</text>
+
+  <rect class="database" x="1160" y="765" width="300" height="120" rx="18"/>
+  <text class="nodeTitle" x="1200" y="815">SQLite 분석 결과 DB</text>
+  <text class="smallText" x="1200" y="850">분석 결과 · 출처 · 위험 신호</text>
+
+  <path class="mutedLine" d="M 690 640 L 590 740"/>
+  <path class="mutedLine" d="M 910 640 L 950 740"/>
+</svg>

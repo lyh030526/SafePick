@@ -1,0 +1,14 @@
+# JavaScript / Expo
+node_modules/
+.expo/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Local configuration
+.env
+.env.local
+apps/mobile/.env
