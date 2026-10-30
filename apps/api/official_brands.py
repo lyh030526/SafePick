@@ -6,14 +6,15 @@ class OfficialBrand:
     name: str
     domains: tuple[str, ...]
     aliases: tuple[str, ...]
+    search_sites: tuple[str, ...] = ()
 
 
 OFFICIAL_BRANDS: tuple[OfficialBrand, ...] = (
-    OfficialBrand("삼성전자", ("samsung.com",), ("삼성", "Samsung", "Samsung Electronics")),
-    OfficialBrand("Apple", ("apple.com",), ("애플",)),
+    OfficialBrand("삼성전자", ("samsung.com",), ("삼성", "Samsung", "Samsung Electronics"), ("samsung.com/sec",)),
+    OfficialBrand("Apple", ("apple.com",), ("애플",), ("apple.com/kr",)),
     OfficialBrand("LG전자", ("lge.co.kr",), ("LG", "LG Electronics")),
-    OfficialBrand("다이슨", ("dyson.co.kr", "dyson.com"), ("Dyson",)),
-    OfficialBrand("소니", ("sony.co.kr", "sony.com"), ("Sony", "소니코리아")),
+    OfficialBrand("다이슨", ("dyson.co.kr", "dyson.com"), ("Dyson",), ("dyson.co.kr",)),
+    OfficialBrand("소니", ("sony.co.kr", "sony.com"), ("Sony", "소니코리아"), ("sony.co.kr",)),
 )
 
 

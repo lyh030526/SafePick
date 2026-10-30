@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SafePick</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <h1><span>S</span> SafePick</h1>
+  <p>현재 네이버 상품 페이지의 정보를 가져와 확인한 뒤 보내세요.</p>
+  <p>상세 설명과 배송·반품 안내를 먼저 펼치면 더 많은 근거를 분석할 수 있어요.</p>
+  <button id="collect">현재 상품 정보 가져오기</button>
+  <p id="status" role="status" aria-live="polite"></p>
+  <section id="preview" hidden>
+    <label for="url">상품 링크</label><input id="url" readonly>
+    <label for="title">페이지 제목</label><input id="title" maxlength="300">
+    <label for="text">전달할 상품 설명</label><textarea id="text" maxlength="12000" rows="10"></textarea>
+    <small>개인정보나 주문 정보가 있으면 지워 주세요. 보이는 공개 텍스트와 상품 JSON-LD만 읽으며 쿠키·로그인 정보는 수집하지 않습니다. 이미지 첨부는 SafePick 화면에서 할 수 있어요.</small>
+    <label for="app-origin">실행 중인 SafePick 앱 주소</label>
+    <select id="app-origin"><option value="http://localhost:8081">http://localhost:8081 (기본)</option><option value="http://localhost:8082">http://localhost:8082</option></select>
+    <label class="confirm"><input id="consent" type="checkbox"> 전송할 내용과 이용 권한을 확인했습니다.</label>
+    <button id="send" disabled>SafePick에서 확인하기</button>
+  </section>
+  <footer>로컬 SafePick을 실행하고 위에서 같은 앱 주소를 선택해 주세요. 별도 수집 API 없이 동작하며, AI 분석 비용은 기존 설정에 따라 발생합니다.</footer>
+  <script src="collector.js"></script><script src="popup.js"></script>
+</body>
+</html>

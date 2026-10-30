@@ -1,13 +1,58 @@
+import base64
+import binascii
+from io import BytesIO
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from PIL import Image, UnidentifiedImageError
+from pydantic import AwareDatetime, BaseModel, Field, HttpUrl, field_validator, model_validator
 
 
 UNKNOWN = "확인 불가"
 
 
+class AnalysisImage(BaseModel):
+    mime_type: Literal["image/jpeg", "image/png", "image/webp"]
+    base64_data: str = Field(min_length=1, max_length=5_592_408, repr=False)
+
+    @model_validator(mode="after")
+    def validate_image(self):
+        try:
+            data = base64.b64decode(self.base64_data, validate=True)
+            if not data or len(data) > 4 * 1024 * 1024:
+                raise ValueError("이미지는 한 장에 4MB 이하여야 합니다.")
+            with Image.open(BytesIO(data)) as image:
+                if Image.MIME.get(image.format) != self.mime_type:
+                    raise ValueError("이미지 형식과 파일 내용이 일치하지 않습니다.")
+                if image.width * image.height > 40_000_000 or max(image.size) > 16000:
+                    raise ValueError("이미지 해상도가 너무 큽니다. 필요한 부분을 잘라 첨부해 주세요.")
+                if getattr(image, "is_animated", False):
+                    raise ValueError("움직이는 이미지 대신 정지 이미지를 첨부해 주세요.")
+                image.verify()
+        except (binascii.Error, UnidentifiedImageError, OSError, Image.DecompressionBombError) as error:
+            raise ValueError("올바른 JPG, PNG, WebP 이미지가 아닙니다.") from error
+        return self
+
+
 class AnalysisRequest(BaseModel):
     product_url: HttpUrl
+    provided_text: str | None = Field(default=None, min_length=1, max_length=12000)
+    page_title: str = Field(default="", max_length=300)
+    input_source: Literal["user_text", "browser_extension"] = "user_text"
+    captured_at: AwareDatetime | None = None
+    images: list[AnalysisImage] = Field(default_factory=list, max_length=3)
+
+    @field_validator("provided_text")
+    @classmethod
+    def nonempty_text(cls, value):
+        if value is not None and not value.strip():
+            raise ValueError("상품 설명을 입력하거나 해당 항목을 제외해 주세요.")
+        return value.strip() if value is not None else None
+
+    @model_validator(mode="after")
+    def limit_total_images(self):
+        if sum(len(image.base64_data) for image in self.images) > 11_184_816:
+            raise ValueError("이미지는 합계 8MB 이내로 첨부해 주세요.")
+        return self
 
 
 class ProductDetails(BaseModel):
@@ -24,6 +69,9 @@ class SourceSummary(BaseModel):
     page_title: str
     final_url: str
     text_length: int
+    kind: Literal["server_page", "user_text", "browser_extension", "user_images", "mixed"] = "server_page"
+    image_count: int = 0
+    captured_at: AwareDatetime | None = None
 
 
 class SupportedBrand(BaseModel):
@@ -45,9 +93,119 @@ class OfficialLookup(BaseModel):
     message: str
 
 
+class ComparisonRequest(BaseModel):
+    product_url: HttpUrl
+    product: ProductDetails
+    sale_text: str = Field(default="", max_length=12000)
+    page_title: str = Field(default="", max_length=300)
+
+
+class OfficialEvidence(BaseModel):
+    field: Literal["product_name", "model_number", "price", "currency", "seller_guidance"]
+    quote: str = Field(min_length=1, max_length=1200)
+
+
+class OfficialFacts(BaseModel):
+    product_name: str = UNKNOWN
+    model_number: str = UNKNOWN
+    price: str = UNKNOWN
+    currency: str = UNKNOWN
+    seller_guidance: str = UNKNOWN
+    match: Literal["exact", "similar", "not_found", "unknown"] = "unknown"
+    evidence: list[OfficialEvidence] = Field(default_factory=list)
+
+
+class OfficialPageSummary(BaseModel):
+    url: str
+    title: str
+    facts: OfficialFacts
+
+
+class PriceComparison(BaseModel):
+    status: Literal["available", "unavailable"] = "unavailable"
+    sale_price: str | None = None
+    official_price: str | None = None
+    currency: str | None = None
+    difference: str | None = None
+    difference_percent: str | None = None
+    message: str
+
+
+class ProductComparison(BaseModel):
+    status: Literal["exact", "similar", "not_found", "unknown"] = "unknown"
+    label: str = "확인 불가"
+    message: str
+    selected_url: str | None = None
+    pages: list[OfficialPageSummary] = Field(default_factory=list)
+    price: PriceComparison
+    seller_status: Literal["official_domain", "unknown"] = "unknown"
+    seller_message: str = "판매자명만으로 공식 판매처 여부를 판단할 수 없습니다."
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ListingCondition(BaseModel):
+    status: Literal["found", "unknown"] = "unknown"
+    text: str = UNKNOWN
+    quotes: list[str] = Field(default_factory=list)
+
+
+class ListingConditions(BaseModel):
+    description: ListingCondition = Field(default_factory=ListingCondition)
+    components: ListingCondition = Field(default_factory=ListingCondition)
+    options: ListingCondition = Field(default_factory=ListingCondition)
+    shipping: ListingCondition = Field(default_factory=ListingCondition)
+    returns: ListingCondition = Field(default_factory=ListingCondition)
+    warranty: ListingCondition = Field(default_factory=ListingCondition)
+
+
+class PurchaseCheck(BaseModel):
+    id: str
+    category: Literal["model_mismatch", "components_mismatch", "ambiguous_conditions", "discount_claim", "purchase_pressure", "missing_information"]
+    kind: Literal["attention", "needs_check"]
+    title: str
+    explanation: str
+    quotes: list[str] = Field(default_factory=list)
+    how_to_check: str
+
+
+class RiskCriterion(BaseModel):
+    key: Literal["official", "description", "purchase_terms"]
+    label: str
+    status: Literal["confirmed", "attention", "unknown"]
+    detail: str
+
+
+class RiskAssessment(BaseModel):
+    level: Literal["high", "moderate", "low", "undetermined"] = "undetermined"
+    label: str = "판단 보류"
+    summary: str = "확인할 자료가 부족하여 주의 수준을 정하지 않았습니다."
+    reasons: list[str] = Field(default_factory=list)
+    missing_checks: list[str] = Field(default_factory=list)
+    criteria: list[RiskCriterion] = Field(default_factory=list)
+    rule_version: str = "1"
+
+
+class RiskAnalysis(BaseModel):
+    status: Literal["completed", "insufficient", "unavailable"] = "unavailable"
+    message: str = "위험 신호 분석 결과가 없습니다. 상품 설명으로 다시 분석해 주세요."
+    conditions: ListingConditions = Field(default_factory=ListingConditions)
+    checklist: list[PurchaseCheck] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    assessment: RiskAssessment = Field(default_factory=RiskAssessment)
+
+
+class ComparisonResponse(BaseModel):
+    official_lookup: OfficialLookup
+    comparison: ProductComparison
+    risk_analysis: RiskAnalysis = Field(default_factory=RiskAnalysis)
+
+
 class AnalysisResponse(BaseModel):
     status: Literal["completed", "manual_input_required"]
     product: ProductDetails
     source: SourceSummary
     warnings: list[str]
     official_lookup: OfficialLookup
+    comparison: ProductComparison | None = None
+    risk_analysis: RiskAnalysis = Field(default_factory=RiskAnalysis)
+    sale_text: str = Field(default="", max_length=12000)

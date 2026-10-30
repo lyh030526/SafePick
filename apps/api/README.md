@@ -3,6 +3,7 @@
 ## 실행
 
 ```powershell
+python -m pip install -r requirements.txt
 py -m uvicorn main:app --reload --port 8000
 ```
 
@@ -12,10 +13,111 @@ py -m uvicorn main:app --reload --port 8000
 
 공식 사이트 검색은 [Serper](https://serper.dev/)의 Google Search API를 사용합니다. `SERPER_API_KEY`를 설정하면 지원 브랜드의 공식 도메인으로만 결과를 검색합니다. 키가 없거나 검색 요청이 실패한 경우에도 분석은 완료되고, 검색을 사용할 수 없다는 안내를 반환합니다.
 
+`POST /analyses`와 `POST /comparisons`는 AI·검색 비용이 드는 요청이므로 클라이언트 IP당 분당 `SAFEPICK_RATE_LIMIT_PER_MINUTE`회(기본 30, `0`이면 해제)로 제한하며, 초과하면 429를 반환합니다. 제한 기록은 프로세스 메모리에만 있어 서버를 재시작하면 초기화됩니다. 본문 크기는 `/analyses` 12MB, `/comparisons` 256KB로 제한합니다.
+
 ## 현재 API
 
 - `GET /health`: 서버 상태를 확인합니다.
 - `GET /brands`: 초기 지원 브랜드와 공식 도메인 목록을 반환합니다.
-- `POST /analyses`: 공개 상품 페이지의 텍스트를 수집하고 상품 정보를 구조화합니다.
+- `POST /analyses`: 공개 상품 페이지 또는 사용자가 제공한 텍스트·이미지에서 상품 정보를 구조화합니다.
+- `POST /comparisons`: 사용자가 보정한 상품 정보로 공식 검색과 비교를 다시 수행합니다.
 
-`POST /analyses`는 추출된 브랜드가 지원 대상인지 확인하고, LLM이 만든 브랜드·모델 기반 검색어로 공식 도메인만 검색합니다. 검색 결과는 `official_lookup`에 담깁니다. 내부망·로컬 주소와 HTML이 아닌 응답은 차단합니다. 페이지에서 읽은 공개 텍스트만 OpenAI에 전달하며, 결과가 없는 필드는 `확인 불가`로 처리합니다.
+`POST /analyses`는 추출된 브랜드가 지원 대상인지 확인하고, LLM이 만든 브랜드·모델 기반 검색어로 공식 도메인만 검색합니다. 검색 결과는 `official_lookup`에 담깁니다. 직접 수집 시 내부망·로컬 주소와 HTML이 아닌 응답은 차단합니다. 수집한 공개 텍스트 또는 사용자가 제공한 텍스트·이미지를 OpenAI에 전달하며, 결과가 없는 필드는 `확인 불가`로 처리합니다.
+
+## 사용자 제공 텍스트·상품 이미지 분석
+
+판매 페이지 접근이 제한되면 앱에서 상품 설명을 붙여넣거나 JPG·PNG·WebP 이미지를 첨부할 수 있습니다. [브라우저 확장 프로그램](../extension/README.md)도 같은 분석 API를 사용합니다. 추가 수집 API는 연결하지 않습니다.
+
+`POST /analyses`의 선택 필드:
+
+```json
+{
+  "product_url": "https://smartstore.naver.com/demo/products/12345?option=blue",
+  "provided_text": "브랜드·모델·가격·판매자 등 확인할 상품 설명",
+  "page_title": "상품 제목",
+  "input_source": "browser_extension",
+  "captured_at": "2026-10-28T03:00:00Z",
+  "images": [{"mime_type": "image/png", "base64_data": "이미지의 base64 문자열"}]
+}
+```
+
+- `provided_text` 또는 `images`가 있으면 판매 페이지를 다시 요청하지 않고 해당 자료만 추출에 사용합니다. 공식 사이트 검색과 비교는 기존대로 진행합니다. 링크는 분석 대상의 출처를 표시하기 위해 필요합니다.
+- 설명은 최대 12,000자입니다. 이미지는 최대 3장, 한 장 4MB·총 8MB이며 실제 파일 형식·디코딩·해상도를 검증합니다. 분석 요청 전체는 실제 수신 바이트 기준 12MB까지 받습니다.
+- 이미지는 기존 OpenAI Chat Completions의 `image_url` content part로 전달합니다. 기본 `gpt-5.4-mini`는 이미지 입력을 지원하며, 커스텀 엔드포인트/모델도 이미지 입력을 지원해야 합니다. 지원하지 않거나 호출에 실패하면 직접 보정하도록 안내합니다.
+- 흐리거나 없는 글자, 외형으로만 유추한 모델/브랜드, 충돌하는 정보는 `확인 불가`로 처리하도록 요청합니다. 추출 결과는 사용자가 확인·수정해야 하며 외형만으로 정품/판매자 신뢰도를 판정하지 않습니다.
+- `source.kind`는 `server_page`, `user_text`, `browser_extension`, `user_images`, `mixed`를 구분합니다. `image_count`와 사용자가 제공한 `captured_at`도 반환합니다. 제공 자료와 URL의 일치나 수집 시각을 인증하지 않습니다.
+- 운영 API는 이미지/설명 원본을 디스크나 DB에 저장하지 않습니다. 검증 오류 응답에도 원본 base64와 설명을 포함하지 않습니다. 첨부 화면에서 AI 전송을 안내하며, 기존 OpenAI 이용료는 발생할 수 있습니다.
+
+실제 이미지 입력 확인: `python tests/live_material.py`. **가상 상품 캡처와 빈 이미지 두 장을 실제 OpenAI에 전송**하므로 API 비용이 발생합니다. 성공 결과는 `docs/validation/2026-10-28/material-input/`에 기록합니다.
+
+참고: [OpenAI 이미지 입력](https://developers.openai.com/api/docs/guides/images-vision?api-mode=chat), [Expo SDK 57 ImagePicker](https://docs.expo.dev/versions/v57.0.0/sdk/imagepicker/).
+
+## 공식 정보 비교 (4주차)
+
+`POST /analyses`의 `comparison` 필드는 공식 페이지를 직접 읽어 비교한 결과입니다. 페이지를 수집하지 못해 보정 입력으로 전환된 경우에는 `null`이며, 보정 후 `/comparisons`로 비교할 수 있습니다.
+
+| status | 화면 표시 | 의미 |
+| --- | --- | --- |
+| `exact` | 동일 상품 확인 | 상품명 또는 모델명과 공식 원문 근거가 확인됨 |
+| `similar` | 유사 상품 확인 | 관련 상품이나 모델·세대·옵션의 차이 또는 불확실성이 있음 |
+| `not_found` | 확인되지 않음 | 이번 검색·확인한 페이지에서 동일 상품을 찾지 못함 |
+| `unknown` | 확인 불가 | 미지원 브랜드, 접근 차단, 추출 실패 또는 근거 부족 |
+
+- 공식 페이지는 최대 3개를 읽고, 이동하는 모든 URL에 공식 도메인 제한과 공개 주소 검사를 적용합니다.
+- 국내 공식 사이트를 우선 검색하고, 입력 링크가 공식 도메인이면 그 페이지도 비교 근거 후보에 우선 포함합니다.
+- `pages[].facts`에 공식 상품명·모델명·가격·통화·구매처 안내가 포함됩니다. `evidence`는 공식 페이지에 실제 존재하는 원문이며 필드와 연결해 검증합니다.
+- `price.difference`는 판매가에서 공식 가격을 뺀 값입니다. `difference_percent`는 공식 가격 대비 차이(%)입니다. 동일 상품·단일 가격·같은 통화가 확인된 경우에만 Decimal로 계산하며, 유사 상품·할부·범위·쿠폰 조건·누락 정보는 계산하지 않습니다.
+- 공식 도메인 판매 링크는 별도로 표시하고, 판매자명이나 안내 문구만으로 외부 판매자를 공식 판매처로 인증하지 않습니다.
+
+보정 비교 요청 예시:
+
+```json
+{
+  "product_url": "https://shop.example.com/product",
+  "product": {
+    "brand_name": "Apple",
+    "product_name": "AirPods Pro 3",
+    "model_number": "확인 불가",
+    "price": "299000",
+    "currency": "KRW",
+    "seller_name": "확인 불가",
+    "components": ["확인 불가"]
+  }
+}
+```
+
+## AI 상품 설명 위험 신호 분석 (5주차)
+
+`POST /analyses`는 `risk_analysis`와 `sale_text`를 추가로 반환합니다. 네이버 플러스 스토어 확장에서 전달한 상품 설명도 같은 경로로 분석합니다. 공식 비교 미지원 브랜드도 판매 설명 체크리스트는 사용할 수 있습니다.
+
+- `risk_analysis.status`: `completed`(수집 범위 분석 완료), `insufficient`(설명 부족), `unavailable`(AI 설정/호출/응답 오류).
+- `conditions`: 상세 설명(`description`), 구성품(`components`), 옵션(`options`), 배송(`shipping`), 반품·교환(`returns`), 보증·AS(`warranty`). 각 값은 `status`, `text`, `quotes`를 가지며, 표시하는 `text`도 검증한 원문에서만 구성합니다.
+- `checklist`: 모델 표기 불일치, 구성품 불일치, 모호한 조건, 할인·최저가 주장, 구매 압박, 수집 자료에서 확인하지 못한 정보. 각 항목에는 `kind`, `title`, `explanation`, `quotes`, `how_to_check`가 있습니다.
+- `kind=attention`은 실제 인용이 있는 표현/불일치 확인 항목이고, `needs_check`는 수집 범위에서 조건을 확인하지 못한 항목입니다. 후자는 실제 페이지에 안내가 없다는 뜻이 아닙니다.
+- 누락 확인은 배송·반품을 기본으로 하고, 세트/번들/구성품 안내가 있는 자료만 구성품 누락을 추가 확인합니다. 식품처럼 모델명이 없는 상품을 일괄 위험으로 표시하지 않습니다.
+- AI는 엄격한 JSON Schema로 조건 인용과 신호 후보를 반환합니다. 설정한 모델/엔드포인트는 Structured Outputs를 지원해야 합니다. 기본 모델은 기존 `gpt-5.4-mini` 설정을 유지합니다.
+- 서버가 공백을 정규화한 인용문과 원문을 대조하고, 메뉴명·안전거래 신고 안내·단순 배송 마감·명시된 호환 기종 등을 걸러냅니다. 할인 확인 기준은 무조건 최저가/최저가 보장 같은 주장 또는 70% 이상 할인 표현이며, 사기 가능성의 통계적 기준이 아닙니다.
+- 모델 불일치는 서로 다른 코드가 있는 두 인용을, 구성품 불일치는 포함과 제외 안내가 있는 두 인용을 요구합니다. 공식 검색 실패나 미지원 브랜드 자체를 위험으로 취급하지 않습니다.
+- 근거 없는 0~100점 사기 확률/안전 등급은 생성하지 않습니다. 분석 실패 시에도 안전하다고 표시하지 않습니다.
+
+이미지는 기존 상품 정보 추출에 사용합니다. 위험 신호의 **원문 문장 검증은 텍스트 설명만** 대상으로 하며 이미지뿐이면 `insufficient`입니다. 필요한 상세 설명이나 배송·반품 안내를 펼쳐 확장으로 다시 가져오거나 텍스트로 추가하세요.
+
+사용자 보정 후 재분석하려면 `/comparisons`에 기존 `product_url`, `product`와 함께 원래 자료인 `sale_text`, `page_title`을 전달합니다. 앱은 수정 즉시 이전 체크리스트를 숨기고 새 비교/분석 결과를 표시합니다. `sale_text`는 클라이언트에서 재분석을 위해 보유하는 자료이며 운영 API가 DB/디스크에 저장하지 않습니다.
+
+이 단계는 기존 OpenAI에 설명 분석 호출 1회를 추가합니다. 별도의 수집 API나 키는 필요하지 않습니다. 확인 완료 체크는 현재 화면에서만 유지되며 영구 저장은 6주차 범위입니다.
+
+검증: [5주차 구현 및 테스트 기록](../../docs/week5-verification.md). 실제 모델 평가는 `python tests/live_risk_evaluation.py`로 실행하고 AI 비용이 발생합니다. [OpenAI Structured Outputs 공식 문서](https://developers.openai.com/api/docs/guides/structured-outputs).
+
+실제 네이버 상품 추가 검증과 남은 제한은 [실제 상품 12개 검증 기록](../../docs/validation/2026-10-28/week5-real-products/README.md)에 정리했습니다. 인용문을 이중 인코딩한 응답과 DOM 공백 차이를 처리한 뒤 실제 원문 구간을 반환하며, 메뉴 제목만으로 조건을 확인했다고 처리하지 않습니다. `무료교환반품`에 직접 붙은 괄호 제한도 함께 보존합니다.
+
+## 테스트
+
+구매 전 주의 수준은 `risk_analysis.assessment`에서 높음·보통·낮음·판단 보류로 반환합니다. 원문 검증된 모델/구성품 모순은 높음, 그 외 확인할 표현은 보통, 공식 상품 일치·상세 설명·배송/반품 확인과 신호 없음이 모두 충족될 때만 낮음입니다. 미지원 브랜드/검색 실패/정보 부족/분석 오류는 낮음의 근거가 아니며 판단 보류로 남깁니다. 추가 모델 호출이나 확률 점수 없이 계산합니다. [분류 규칙과 검증](../../docs/risk-levels.md).
+
+```cmd
+python -m unittest discover -s tests -v
+```
+
+서버와 키를 설정한 뒤 실제 Apple 공식 사이트 연동을 점검하려면 `python tests/live_comparison.py`를 실행합니다. 이 명령은 실제 검색 API와 AI를 호출합니다.
+
+지원 브랜드별 실제 검증 기록과 403 등 남은 제한은 [4주차 검증 결과](../../docs/week4-verification.md)에 정리되어 있습니다.

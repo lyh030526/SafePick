@@ -1,0 +1,65 @@
+"""Conservative, deterministic purchase-attention levels over validated evidence.
+
+Not a fraud probability or a calibrated seller-reliability model. No model calls.
+"""
+from schemas import ProductComparison, RiskAnalysis, RiskAssessment, RiskCriterion
+
+
+def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None) -> RiskAssessment:
+    complete = analysis.status == "completed"
+    # Search status/not_found alone never proves a contradiction or a safe listing.
+    official = bool(comparison and comparison.status == "exact" and any(
+        page.url == comparison.selected_url and page.facts.match == "exact" and page.facts.evidence
+        for page in comparison.pages
+    ))
+    signals = [item for item in analysis.checklist if complete and item.kind == "attention" and item.quotes]
+    critical = [item for item in signals if item.category in {"model_mismatch", "components_mismatch"}
+                and len(set(item.quotes)) >= 2]
+    description = complete and analysis.conditions.description.status == "found"
+    shipping = complete and analysis.conditions.shipping.status == "found"
+    returns = complete and analysis.conditions.returns.status == "found"
+    # A completed analysis may still have required bundle/option conditions unresolved.
+    unresolved = [item.title for item in analysis.checklist if item.kind == "needs_check"]
+    pending = ([] if official else ["공식 상품 동일 여부"])
+    pending += ([] if description else ["상품 상세 설명"])
+    pending += ([] if shipping else ["배송 조건"])
+    pending += ([] if returns else ["반품·교환 조건"])
+    pending += [{"missing_shipping": "배송 조건", "missing_returns": "반품·교환 조건"}.get(item.id, item.title)
+                for item in analysis.checklist if item.kind == "needs_check"]
+    pending = list(dict.fromkeys(pending))
+    criteria = [
+        RiskCriterion(key="official", label="공식 정보 비교", status="confirmed" if official else "unknown",
+                      detail="공식 페이지에서 동일 상품의 근거를 확인했습니다." if official
+                      else "공식 상품 동일 여부를 확인하지 못했습니다. 미지원·검색 실패 자체를 위험으로 보지 않습니다."),
+        RiskCriterion(key="description", label="판매 설명 검토",
+                      status="attention" if signals else "confirmed" if description else "unknown",
+                      detail=f"원문이 확인된 주의 항목 {len(signals)}개가 있습니다." if signals
+                      else "상세 설명을 분석했고 추가 주의 표현을 찾지 못했습니다." if description
+                      else "상품 상세 설명 분석을 충분히 확인하지 못했습니다."),
+        RiskCriterion(key="purchase_terms", label="배송·반품 조건",
+                      status="confirmed" if shipping and returns and not unresolved else "unknown",
+                      detail="배송·반품 관련 원문을 확인했습니다. 모든 세부 조건의 확인을 뜻하지 않습니다."
+                      if shipping and returns and not unresolved else "일부 구매 조건을 추가 확인해야 합니다."),
+    ]
+    if not complete:
+        level, label = "undetermined", "판단 보류"
+        summary = "설명 분석을 완료하지 못해 주의 수준을 정하지 않았습니다. 자료를 추가하거나 다시 분석해 주세요."
+        reasons = [analysis.message]
+    elif critical:
+        level, label = "high", "높음"
+        summary = "모델 또는 구성품의 모순을 확인했습니다. 선택 옵션과 판매자 답변을 확인한 뒤 구매를 결정해 주세요."
+        reasons = [item.title for item in critical]
+    elif signals:
+        level, label = "moderate", "보통"
+        summary = "추가 확인할 판매 표현이나 조건을 발견했습니다. 원문 근거와 적용 조건을 확인해 주세요."
+        reasons = [item.title for item in signals]
+    elif not pending:
+        level, label = "low", "낮음"
+        summary = "확인한 공식 상품 정보와 판매 설명·구매 조건에서 추가 주의 신호를 찾지 못했습니다. 안전을 보장하지 않습니다."
+        reasons = ["공식 상품 일치, 상세 설명, 배송·반품 원문을 확인했습니다."]
+    else:
+        level, label = "undetermined", "판단 보류"
+        summary = "확인된 주의 표현은 없지만 필요한 정보가 부족해 낮음으로 분류하지 않았습니다."
+        reasons = ["주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."]
+    return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
+                          missing_checks=pending, criteria=criteria)

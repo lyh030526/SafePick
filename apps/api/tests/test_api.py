@@ -2,12 +2,15 @@ import os
 import unittest
 from unittest.mock import patch
 
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 import main
 from extractor import _normalize_product, unknown_product
 from official_brands import find_official_brand
 from official_search import is_official_url
+from request_limits import AnalysisRateLimit, reset_rate_limits
+from schemas import RiskAnalysis
 from scraper import ProductPage, ProductPageError, _extract_visible_text, fetch_product_page
 
 
@@ -54,6 +57,9 @@ class ScraperTests(unittest.TestCase):
 class AnalysisApiTests(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(main.app)
+        patcher = patch("main.analyze_listing_risks", return_value=RiskAnalysis())
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     @patch.dict(os.environ, {}, clear=True)
     @patch("main.fetch_product_page")
@@ -97,6 +103,20 @@ class AnalysisApiTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 422)
+
+    def test_oversized_comparison_body_is_rejected(self):
+        response = self.client.post("/comparisons", content=b"x" * (256 * 1024 + 1),
+                                    headers={"content-type": "application/json"})
+        self.assertEqual(response.status_code, 413)
+
+    def test_rate_limit_rejects_excess_analysis_requests(self):
+        async def ok(scope, receive, send):
+            await JSONResponse({})(scope, receive, send)
+
+        reset_rate_limits()
+        client = TestClient(AnalysisRateLimit(ok, per_minute=2))
+        statuses = [client.post("/analyses").status_code for _ in range(3)] + [client.get("/analyses").status_code]
+        self.assertEqual(statuses, [200, 200, 429, 200])
 
     def test_brands_endpoint_returns_initial_brands(self):
         response = self.client.get("/brands")
