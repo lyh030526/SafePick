@@ -4,9 +4,10 @@ Naver and 11st show the seller's trade name and representative openly but the nu
 The FTC publishes every mail-order registration as region CSV files (data.go.kr 15083251, updated weekly); this module
 loads them into SQLite and looks up the number only when exactly one operating business has that name and representative.
 
-    python mail_order_index.py build <csv> [<csv> ...]
+    python mail_order_index.py build "data/mail_order/*.csv"
 """
 import csv
+import glob
 import re
 import sqlite3
 import sys
@@ -86,4 +87,6 @@ def find_number(name: str, representative: str, index_path: Path | None = None) 
 if __name__ == "__main__":
     if len(sys.argv) < 3 or sys.argv[1] != "build":
         sys.exit(__doc__)
-    print(f"통신판매사업자 {build([Path(arg) for arg in sys.argv[2:]]):,}건으로 색인을 만들었습니다: {INDEX_PATH}")
+    # Patterns are expanded here because Windows shells pass them through unexpanded.
+    files = sorted({Path(match) for arg in sys.argv[2:] for match in (glob.glob(arg) or [arg])})
+    print(f"{len(files)}개 파일, 통신판매사업자 {build(files):,}건으로 색인을 만들었습니다: {INDEX_PATH}")

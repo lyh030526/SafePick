@@ -75,6 +75,12 @@ class ExtractionTests(unittest.TestCase):
                          ("marketplace_listed", "소니코리아(주)", "KITAJIMA YUKIHIRO"))
         # Own malls and operator footers never count as a marketplace-checked identity.
         self.assertEqual(verify_seller(naver, "https://some-shop.example/p/1").status, "not_found")
+        # 11st puts its seller table on one line with tab-separated cells.
+        row = "판매자\t랜선가게\t상호명\t랜선가게\n사업자구분\t간이과세자\t대표자\t이종석"
+        self.assertEqual(verify_seller(row, "https://www.11st.co.kr/products/1").seller.business_name, "랜선가게")
+        inline = "상호명\t랜선가게\t사업자구분\t간이과세자\t대표자\t이종석"
+        listed = verify_seller(inline, "https://www.11st.co.kr/products/1").seller
+        self.assertEqual((listed.business_name, listed.representative), ("랜선가게", "이종석"))
         operator = "상호 : 십일번가(주)\n대표이사 : 안정은\n대표자 : 안정은"
         self.assertEqual(verify_seller(operator, "https://www.11st.co.kr/products/1").status, "not_found")
 

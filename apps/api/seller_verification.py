@@ -22,7 +22,7 @@ _LABELS = {
     "mail_order_number": r"통신\s*판매\s*업?\s*(?:신고\s*번호|신고|번호)",
     "address": r"사업장\s*(?:소재지|주소)|소재지",
 }
-_NEXT_LABEL = re.compile("|".join([*_LABELS.values(), r"고객\s*센터", r"e-?mail", r"이메일", r"전화\s*번호", r"연락처", r"사업자\s*정보\s*확인"]), re.I)
+_NEXT_LABEL = re.compile("|".join([*_LABELS.values(), r"고객\s*센터", r"e-?mail", r"이메일", r"전화\s*번호", r"연락처", r"사업자\s*정보\s*확인", r"사업자\s*구분"]), re.I)
 _NUMBER = re.compile(rf"(?:{_LABELS['business_number']})\s*[:：]?\s*(\d{{3}})\s*-?\s*(\d{{2}})\s*-?\s*(\d{{5}})(?!\d)")
 # Marketplace operators print their own registration in page footers; that is not the seller.
 _OPERATORS = r"(?:네이버|쿠팡|십일번가|11번가|지마켓|G마켓|이베이코리아|에스에스지닷컴|롯데쇼핑|인터파크|위메프|티몬|카카오)"
@@ -52,8 +52,8 @@ def _field(window: str, key: str) -> str:
         return number.group().strip() if number else UNKNOWN
     cut = _NEXT_LABEL.search(value)
     value = value[:cut.start()] if cut else value
-    # One-line pastes run straight into the description; a sentence break ends the field.
-    value = re.split(r"\.\s|\s{2,}", value)[0]
+    # One-line pastes run straight into the description; a sentence break or a table cell break (tab) ends the field.
+    value = re.split(r"\.\s|\s{2,}|\t", value)[0]
     value = value.strip(" \t|·,:：")
     return value[:80] if value else UNKNOWN
 
@@ -95,13 +95,27 @@ def extract_listed_identity(text: str) -> SellerInfo | None:
     return None
 
 
+def _find_listed(listed: SellerInfo) -> tuple[SellerInfo, str] | None:
+    """Flattened page text runs a field into what follows, so the first few words are tried as well."""
+    def prefixes(value: str) -> list[str]:
+        words = value.split()
+        return list(dict.fromkeys([value, *(" ".join(words[:size]) for size in (1, 2, 3) if size <= len(words))]))
+    for name in prefixes(listed.business_name):
+        for representative in prefixes(listed.representative):
+            number = find_number(name, representative)
+            if number:
+                return listed.model_copy(update={"business_name": name, "representative": representative}), number
+    return None
+
+
 def verify_seller(text: str, page_url: str = "") -> SellerVerification:
     seller = extract_seller_info(text or "")
     listed = extract_listed_identity(text or "") if seller is None and is_marketplace(page_url) else None
     # With the FTC file indexed, a unique trade name and representative gives the number the page hides.
-    found = find_number(listed.business_name, listed.representative) if listed is not None else None
+    found = _find_listed(listed) if listed is not None else None
     if found:
-        seller = listed.model_copy(update={"business_number": f"{found[:3]}-{found[3:5]}-{found[5:]}"})
+        seller, number = found
+        seller = seller.model_copy(update={"business_number": f"{number[:3]}-{number[3:5]}-{number[5:]}"})
         return _check_number(seller).model_copy(update={"number_source": "registry"})
     if listed is not None:
         return SellerVerification(status="marketplace_listed", label="오픈마켓 표시 판매자", seller=listed,

@@ -51,6 +51,11 @@ class IndexTests(unittest.TestCase):
         self.assertEqual((result.status, result.number_source, result.seller.business_number),
                          ("active", "registry", "106-81-23810"))
         self.assertEqual(post.call_args.kwargs["json"], {"b_no": ["1068123810"]})
+        # Flattened text runs the representative into the next sentence; the leading words still match.
+        flat = "판매자정보 테이블 판매자 같은상점 상호명 소니코리아(주) 사업자구분 법인 대표자 KITAJIMA YUKIHIRO 11번가 결제대금예치업 등록번호"
+        with patch("mail_order_index.INDEX_PATH", self.index):
+            result = verify_seller(flat, "https://www.11st.co.kr/products/1")
+        self.assertEqual((result.number_source, result.seller.representative), ("registry", "KITAJIMA YUKIHIRO"))
 
 
 if __name__ == "__main__":
