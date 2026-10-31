@@ -49,11 +49,31 @@ function collectProductPage() {
     if (script.textContent.length > 100000) continue;
     try { visit(JSON.parse(script.textContent)); } catch { /* Malformed JSON-LD is optional. */ }
   }
+  // The seller disclosure often sits in a collapsed tab or past the text cut, so read its block on its own.
+  const sellerBlocks = [];
+  const labelWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  while (labelWalker.nextNode() && sellerBlocks.length < 2) {
+    const node = labelWalker.currentNode;
+    if (!/사업자\s*(등록)?\s*번호/.test(node.textContent) || node.parentElement?.closest('script,style,footer,form')) continue;
+    let block = node.parentElement;
+    while (block.parentElement && block.parentElement !== document.body && block.textContent.length < 1500
+      && !/상호|대표자/.test(block.textContent)) block = block.parentElement;
+    const lines = [];
+    const cellWalker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    while (cellWalker.nextNode()) {
+      const text = cellWalker.currentNode.textContent.replace(/\s+/g, ' ').trim();
+      if (text && !cellWalker.currentNode.parentElement.closest('script,style')) lines.push(text);
+    }
+    const blockText = lines.join('\n').slice(0, 1500);
+    if (/네이버\s*(주식회사|㈜|\(주\))|NAVER\s*Corp/i.test(blockText) || sellerBlocks.includes(blockText)) continue;
+    sellerBlocks.push(blockText);
+  }
+  const seller = sellerBlocks.length ? `판매자 정보:\n${sellerBlocks.join('\n\n')}\n\n` : '';
   const structured = products.length ? `페이지에 포함된 상품 구조화 데이터:\n${JSON.stringify(products).slice(0, 3500)}\n\n화면 텍스트:\n` : '';
   if (visibleText.length < 30 && !products.length) return { error: '읽을 수 있는 상품 설명이 없습니다. 상품 설명을 펼친 뒤 다시 시도해 주세요.' };
   // Preserve the exact product URL, including option query parameters, but never a fragment.
   url.hash = '';
   return { version: 1, product_url: url.toString(), page_title: document.title.slice(0, 300),
-    provided_text: (structured + visibleText).slice(0, 12000),
+    provided_text: (seller + structured + visibleText).slice(0, 12000),
     captured_at: new Date().toISOString(), input_source: 'browser_extension' };
 }

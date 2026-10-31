@@ -8,7 +8,7 @@ from extractor import unknown_product
 from risk_analysis import DetailsDraft, RiskDraft, SignalDraft, validate_risk_draft
 from risk_assessment import assess_risk
 from schemas import (OfficialEvidence, OfficialFacts, OfficialLookup, OfficialPageSummary,
-                     PriceComparison, ProductComparison, RiskAnalysis)
+                     PriceComparison, ProductComparison, RiskAnalysis, SellerVerification)
 
 
 def official(status="exact", evidence=True):
@@ -77,11 +77,29 @@ class RiskLevelTests(unittest.TestCase):
             analysis.status = status
             self.assertEqual(assess_risk(analysis, official()).level, "undetermined")
 
+    def test_seller_status_sets_the_level(self):
+        for status, level in [("closed", "high"), ("unregistered", "high"), ("suspended", "moderate"),
+                              ("invalid_number", "moderate"), ("active", "low"),
+                              ("not_found", "undetermined"), ("unavailable", "undetermined")]:
+            with self.subTest(status=status):
+                result = assess_risk(analyzed(), official(), SellerVerification(status=status, label=status))
+                self.assertEqual(result.level, level)
+                seller = next(item for item in result.criteria if item.key == "seller")
+                self.assertEqual(seller.status, {"active": "confirmed", "not_found": "unknown",
+                                                 "unavailable": "unknown"}.get(status, "attention"))
+                self.assertEqual("판매자 사업자 상태" in result.missing_checks, status != "active")
+
+    def test_closed_seller_is_high_even_without_description_analysis(self):
+        result = assess_risk(RiskAnalysis(), None, SellerVerification(status="closed", label="폐업한 사업자"))
+        self.assertEqual(result.level, "high")
+        self.assertIn("판매자 사업자 상태: 폐업한 사업자", result.reasons)
+
+    @patch("main.verify_seller", return_value=SellerVerification(status="active", label="계속사업자"))
     @patch("main.compare_product")
     @patch("main.create_official_lookup")
     @patch("main.extract_product_details", return_value=(unknown_product(), []))
     @patch("main.analyze_listing_risks")
-    def test_analysis_and_correction_return_fresh_server_assessment(self, risk, extract, lookup, compare):
+    def test_analysis_and_correction_return_fresh_server_assessment(self, risk, extract, lookup, compare, seller):
         lookup.return_value = OfficialLookup(status="found", message="테스트")
         compare.return_value = official()
         risk.return_value = analyzed()
@@ -89,10 +107,12 @@ class RiskLevelTests(unittest.TestCase):
         response = client.post("/analyses", json={"product_url": "https://shop.example.com/p", "provided_text": "실제 입력 자료"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["risk_analysis"]["assessment"]["level"], "low")
+        self.assertEqual(response.json()["seller_verification"]["status"], "active")
         risk.return_value = analyzed([SignalDraft(category="model_mismatch", quotes=["상품 모델 WH-1000XM5", "상세 모델 WH-1000XM4"])])
         response = client.post("/comparisons", json={"product_url": "https://shop.example.com/p", "product": unknown_product().model_dump(), "sale_text": "보정 후 자료"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["risk_analysis"]["assessment"]["level"], "high")
+        self.assertEqual(response.json()["seller_verification"]["status"], "active")
 
 
 if __name__ == "__main__":

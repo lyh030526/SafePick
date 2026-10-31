@@ -2,10 +2,11 @@
 
 Not a fraud probability or a calibrated seller-reliability model. No model calls.
 """
-from schemas import ProductComparison, RiskAnalysis, RiskAssessment, RiskCriterion
+from schemas import ProductComparison, RiskAnalysis, RiskAssessment, RiskCriterion, SellerVerification
 
 
-def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None) -> RiskAssessment:
+def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
+                seller: SellerVerification | None = None) -> RiskAssessment:
     complete = analysis.status == "completed"
     # Search status/not_found alone never proves a contradiction or a safe listing.
     official = bool(comparison and comparison.status == "exact" and any(
@@ -26,6 +27,11 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None) ->
     pending += ([] if returns else ["반품·교환 조건"])
     pending += [{"missing_shipping": "배송 조건", "missing_returns": "반품·교환 조건"}.get(item.id, item.title)
                 for item in analysis.checklist if item.kind == "needs_check"]
+    # A closed or unknown registration is decisive on its own; a suspended or malformed one needs a check.
+    seller_block = seller is not None and seller.status in {"closed", "unregistered"}
+    seller_warn = seller is not None and seller.status in {"suspended", "invalid_number"}
+    if seller is not None and seller.status != "active":
+        pending.append("판매자 사업자 상태")
     pending = list(dict.fromkeys(pending))
     criteria = [
         RiskCriterion(key="official", label="공식 정보 비교", status="confirmed" if official else "unknown",
@@ -41,25 +47,35 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None) ->
                       detail="배송·반품 관련 원문을 확인했습니다. 모든 세부 조건의 확인을 뜻하지 않습니다."
                       if shipping and returns and not unresolved else "일부 구매 조건을 추가 확인해야 합니다."),
     ]
-    if not complete:
+    if seller is not None:
+        criteria.append(RiskCriterion(
+            key="seller", label="판매자 사업자 확인",
+            status="confirmed" if seller.status == "active" else "attention" if seller_block or seller_warn else "unknown",
+            detail=f"{seller.label}: {seller.message}"))
+    seller_reason = f"판매자 사업자 상태: {seller.label}" if seller_block or seller_warn else None
+    if seller_block or (complete and critical):
+        level, label = "high", "높음"
+        summary = ("판매자 정보의 사업자등록번호가 국세청에서 정상 사업자로 조회되지 않습니다. 판매자 정보를 확인하기 전에는 구매를 미뤄 주세요."
+                   if seller_block else
+                   "모델 또는 구성품의 모순을 확인했습니다. 선택 옵션과 판매자 답변을 확인한 뒤 구매를 결정해 주세요.")
+        reasons = ([seller_reason] if seller_block else []) + [item.title for item in critical]
+    elif not complete:
         level, label = "undetermined", "판단 보류"
         summary = "설명 분석을 완료하지 못해 주의 수준을 정하지 않았습니다. 자료를 추가하거나 다시 분석해 주세요."
         reasons = [analysis.message]
-    elif critical:
-        level, label = "high", "높음"
-        summary = "모델 또는 구성품의 모순을 확인했습니다. 선택 옵션과 판매자 답변을 확인한 뒤 구매를 결정해 주세요."
-        reasons = [item.title for item in critical]
-    elif signals:
+    elif signals or seller_warn:
         level, label = "moderate", "보통"
         summary = "추가 확인할 판매 표현이나 조건을 발견했습니다. 원문 근거와 적용 조건을 확인해 주세요."
-        reasons = [item.title for item in signals]
+        reasons = ([seller_reason] if seller_warn else []) + [item.title for item in signals]
     elif not pending:
         level, label = "low", "낮음"
         summary = "확인한 공식 상품 정보와 판매 설명·구매 조건에서 추가 주의 신호를 찾지 못했습니다. 안전을 보장하지 않습니다."
         reasons = ["공식 상품 일치, 상세 설명, 배송·반품 원문을 확인했습니다."]
+        if seller is not None:
+            reasons.append("판매자가 국세청에 정상 등록된 사업자로 조회됩니다.")
     else:
         level, label = "undetermined", "판단 보류"
         summary = "확인된 주의 표현은 없지만 필요한 정보가 부족해 낮음으로 분류하지 않았습니다."
         reasons = ["주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."]
     return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
-                          missing_checks=pending, criteria=criteria)
+                          missing_checks=pending, criteria=criteria, rule_version="2")

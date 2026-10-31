@@ -17,6 +17,7 @@ from schemas import (
     ProductDetails, SourceSummary, SupportedBrand, UNKNOWN,
 )
 from scraper import ProductPageError, fetch_product_page
+from seller_verification import verify_seller
 
 
 app = FastAPI(title="SafePick API", version="0.5.1")
@@ -95,20 +96,24 @@ def create_official_lookup(product: ProductDetails) -> OfficialLookup:
 
 @app.post("/comparisons", response_model=ComparisonResponse)
 def create_comparison(request: ComparisonRequest) -> ComparisonResponse:
-    lookup, comparison, risk = analyze_product(
+    lookup, comparison, risk, seller = analyze_product(
         request.product, str(request.product_url), request.page_title, request.sale_text,
     )
-    return ComparisonResponse(official_lookup=lookup, comparison=comparison, risk_analysis=risk)
+    return ComparisonResponse(official_lookup=lookup, comparison=comparison, risk_analysis=risk,
+                              seller_verification=seller)
 
 
 def analyze_product(product, url, title, text):
-    # The listing risk review does not depend on the official lookup, so run both at once.
-    with ThreadPoolExecutor(max_workers=1) as executor:
+    # The listing risk review and seller check do not depend on the official lookup, so run them at once.
+    with ThreadPoolExecutor(max_workers=2) as executor:
         risk_future = executor.submit(analyze_listing_risks, product, title, text)
+        seller_future = executor.submit(verify_seller, text)
         lookup = create_official_lookup(product)
         comparison = compare_product(product, url, lookup)
         analysis = risk_future.result()
-    return lookup, comparison, analysis.model_copy(update={"assessment": assess_risk(analysis, comparison)})
+        seller = seller_future.result()
+    assessment = assess_risk(analysis, comparison, seller)
+    return lookup, comparison, analysis.model_copy(update={"assessment": assessment}), seller
 
 
 @app.post("/analyses", response_model=AnalysisResponse)
@@ -116,7 +121,7 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
     if request.provided_text is not None or request.images:
         text = request.provided_text or ""
         product, warnings = extract_product_details(request.page_title, text, images=request.images)
-        lookup, comparison, risk = analyze_product(product, str(request.product_url), request.page_title, text)
+        lookup, comparison, risk, seller = analyze_product(product, str(request.product_url), request.page_title, text)
         kind = ("mixed" if text and request.images else "user_images" if request.images
                 else request.input_source)
         notice = "사용자가 제공한 자료를 분석했습니다. 판매 페이지의 현재 내용과 일치하는지는 별도 확인이 필요합니다."
@@ -131,7 +136,7 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
                 image_count=len(request.images), captured_at=request.captured_at,
             ),
             warnings=[notice, *warnings], official_lookup=lookup,
-            comparison=comparison, risk_analysis=risk, sale_text=text,
+            comparison=comparison, risk_analysis=risk, seller_verification=seller, sale_text=text,
         )
     try:
         page = fetch_product_page(str(request.product_url))
@@ -157,7 +162,7 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
 
     product, warnings = extract_product_details(page.title, page.text)
     status = "completed" if not warnings else "manual_input_required"
-    lookup, comparison, risk = analyze_product(product, page.final_url, page.title, page.text)
+    lookup, comparison, risk, seller = analyze_product(product, page.final_url, page.title, page.text)
     return AnalysisResponse(
         status=status,
         product=product,
@@ -170,5 +175,6 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
         official_lookup=lookup,
         comparison=comparison,
         risk_analysis=risk,
+        seller_verification=seller,
         sale_text=page.text,
     )

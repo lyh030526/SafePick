@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { parseBrowserImport } from './browserImport';
 import { RiskChecklist, type RiskAnalysis } from './RiskChecklist';
+import { SellerCheck, type SellerVerification } from './SellerCheck';
 import { colors, installWebFont, radius } from './theme';
 import { CheckCircle } from './ui';
 
@@ -42,6 +43,7 @@ type AnalysisResponse = {
   official_lookup: OfficialLookup;
   comparison: ProductComparison | null;
   risk_analysis?: RiskAnalysis;
+  seller_verification?: SellerVerification;
   sale_text?: string;
 };
 
@@ -114,6 +116,7 @@ export default function App() {
   const [officialLookup, setOfficialLookup] = useState<OfficialLookup | null>(null);
   const [comparison, setComparison] = useState<ProductComparison | null>(null);
   const [riskAnalysis, setRiskAnalysis] = useState<RiskAnalysis | null>(null);
+  const [sellerVerification, setSellerVerification] = useState<SellerVerification | null>(null);
   const [analysisText, setAnalysisText] = useState('');
   const [providedText, setProvidedText] = useState(initialImport.payload?.provided_text ?? '');
   const [images, setImages] = useState<AttachedImage[]>([]);
@@ -209,6 +212,7 @@ export default function App() {
       setOfficialLookup(payload.official_lookup);
       setComparison(payload.comparison);
       setRiskAnalysis(payload.risk_analysis ?? null);
+      setSellerVerification(payload.seller_verification ?? null);
       setAnalysisText(payload.sale_text ?? providedText.trim());
       setSource(payload.source);
       setAnalysisState('correction');
@@ -236,6 +240,7 @@ export default function App() {
         officialLookup={officialLookup}
         initialComparison={comparison}
         initialRiskAnalysis={riskAnalysis}
+        initialSeller={sellerVerification}
         saleText={analysisText}
         productUrl={productUrl.trim()}
         warnings={warnings}
@@ -244,7 +249,7 @@ export default function App() {
         onBack={() => {
           setProductUrl(''); setProvidedText(''); setImages([]); setPageTitle('');
           setInputSource('user_text'); setCapturedAt(undefined); setConsent(false);
-          setError(''); setSource(null); setRiskAnalysis(null); setAnalysisText(''); setAnalysisState('input');
+          setError(''); setSource(null); setRiskAnalysis(null); setSellerVerification(null); setAnalysisText(''); setAnalysisState('input');
         }}
       />
     );
@@ -395,6 +400,7 @@ function CorrectionForm({
   officialLookup,
   initialComparison,
   initialRiskAnalysis,
+  initialSeller,
   saleText,
   productUrl,
   warnings,
@@ -406,6 +412,7 @@ function CorrectionForm({
   officialLookup: OfficialLookup | null;
   initialComparison: ProductComparison | null;
   initialRiskAnalysis: RiskAnalysis | null;
+  initialSeller: SellerVerification | null;
   saleText: string;
   productUrl: string;
   warnings: string[];
@@ -416,6 +423,7 @@ function CorrectionForm({
   const [draft, setDraft] = useState(initialProduct);
   const [result, setResult] = useState(initialComparison);
   const [riskResult, setRiskResult] = useState(initialRiskAnalysis);
+  const [seller, setSeller] = useState(initialSeller);
   const [lookup, setLookup] = useState(officialLookup);
   const [dirty, setDirty] = useState(false);
   const [comparing, setComparing] = useState(false);
@@ -449,6 +457,7 @@ function CorrectionForm({
       setDraft(cleaned);
       setResult(payload.comparison);
       setRiskResult(payload.risk_analysis ?? null);
+      setSeller(payload.seller_verification ?? null);
       setLookup(payload.official_lookup);
       setDirty(false);
     } catch (error) {
@@ -509,6 +518,7 @@ function CorrectionForm({
           ) : null}
 
           {!dirty && !comparing ? <RiskChecklist analysis={riskResult} sourceUrl={source?.final_url ?? productUrl} /> : null}
+          {!dirty && !comparing ? <SellerCheck verification={seller} /> : null}
           <Text style={styles.sectionTitle}>공식 정보 비교 결과</Text>
           {result && !dirty ? <ComparisonPanel comparison={result} /> : null}
           {comparing ? (

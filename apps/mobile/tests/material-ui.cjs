@@ -14,6 +14,8 @@ const product = { brand_name: 'DemoBrand', product_name: '테스트 무선 헤�
 const fixture = `<html lang="ko"><head><title>테스트 무선 헤드폰</title></head><body>
   <header>PRIVATE-ACCOUNT-HEADER</header><main><h1>DemoBrand 테스트 무선 헤드폰</h1>
   <p>모델명 SP-TEST-100 / 판매 가격 129,000원 KRW / 판매자 데모스토어 / 구성품 헤드폰 USB-C 케이블</p>
+  <div style="display:none"><table><tr><th>상호명</th><td>데모상사</td></tr><tr><th>대표자</th><td>홍길동</td></tr>
+  <tr><th>사업자등록번호</th><td>123-45-67891</td></tr></table></div><div>네이버(주) 사업자등록번호 220-81-62517</div>
   <input value="PRIVATE-INPUT"><form>PRIVATE-FORM</form><p style="display:none">PRIVATE-HIDDEN</p>
   <script type="application/ld+json">{"@type":"Product","name":"테스트 무선 헤드폰","sku":"SP-TEST-100","offers":{"price":"129000","priceCurrency":"KRW","seller":{"name":"데모스토어"}}}</script>
   </main><footer>PRIVATE-FOOTER</footer></body></html>`;
@@ -45,7 +47,7 @@ async function mockApi(page, calls) {
     const { id } = await browserCdp.send('Extensions.loadUnpacked', { path: extensionPath });
     console.log('Loaded test extension');
     const shop = await context.newPage();
-    await shop.route(`${new URL(productUrl).origin}/**`, route => route.fulfill({ contentType: 'text/html', body: fixture }));
+    await shop.route(`${new URL(productUrl).origin}/**`, route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: fixture }));
     await shop.goto(productUrl);
     await shop.bringToFront();
     const { targetInfos } = await browserCdp.send('Target.getTargets', { filter: [{ type: 'tab' }, { exclude: true }] });
@@ -70,6 +72,9 @@ async function mockApi(page, calls) {
     assert.match(text, /SP-TEST-100/);
     assert.match(text, /129000/);
     assert.doesNotMatch(text, /PRIVATE/);
+    // The hidden seller table leads the text; the operator's own registration is left out of it.
+    const sellerSection = text.split('\n\n')[0];
+    assert.equal(sellerSection, ['판매자 정보:', '상호명', '데모상사', '대표자', '홍길동', '사업자등록번호', '123-45-67891'].join('\n'));
     assert.equal(await popup.locator('#url').inputValue(), productUrl);
     assert.ok(await popup.locator('#send').isDisabled());
     await popup.locator('#app-origin').selectOption(appOrigin);

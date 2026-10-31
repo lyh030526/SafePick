@@ -169,7 +169,7 @@ class PurchaseCheck(BaseModel):
 
 
 class RiskCriterion(BaseModel):
-    key: Literal["official", "description", "purchase_terms"]
+    key: Literal["official", "description", "purchase_terms", "seller"]
     label: str
     status: Literal["confirmed", "attention", "unknown"]
     detail: str
@@ -185,6 +185,24 @@ class RiskAssessment(BaseModel):
     rule_version: str = "1"
 
 
+class SellerInfo(BaseModel):
+    business_name: str = UNKNOWN
+    representative: str = UNKNOWN
+    business_number: str = UNKNOWN
+    mail_order_number: str = UNKNOWN
+    address: str = UNKNOWN
+    quote: str = ""
+
+
+class SellerVerification(BaseModel):
+    status: Literal["active", "suspended", "closed", "unregistered", "invalid_number", "not_found", "unavailable"] = "not_found"
+    label: str = "사업자 정보 없음"
+    message: str = "판매 자료에서 사업자등록번호를 찾지 못했습니다."
+    seller: SellerInfo = Field(default_factory=SellerInfo)
+    tax_type: str | None = None
+    closed_on: str | None = None
+
+
 class RiskAnalysis(BaseModel):
     status: Literal["completed", "insufficient", "unavailable"] = "unavailable"
     message: str = "위험 신호 분석 결과가 없습니다. 상품 설명으로 다시 분석해 주세요."
@@ -198,6 +216,7 @@ class ComparisonResponse(BaseModel):
     official_lookup: OfficialLookup
     comparison: ProductComparison
     risk_analysis: RiskAnalysis = Field(default_factory=RiskAnalysis)
+    seller_verification: SellerVerification = Field(default_factory=SellerVerification)
 
 
 class AnalysisResponse(BaseModel):
@@ -208,4 +227,5 @@ class AnalysisResponse(BaseModel):
     official_lookup: OfficialLookup
     comparison: ProductComparison | None = None
     risk_analysis: RiskAnalysis = Field(default_factory=RiskAnalysis)
+    seller_verification: SellerVerification = Field(default_factory=SellerVerification)
     sale_text: str = Field(default="", max_length=12000)
