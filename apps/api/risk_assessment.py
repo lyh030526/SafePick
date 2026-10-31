@@ -2,6 +2,8 @@
 
 Not a fraud probability or a calibrated seller-reliability model. No model calls.
 """
+from dataclasses import dataclass, field
+
 from schemas import MarketPrice, ProductComparison, RiskAnalysis, RiskAssessment, RiskCriterion, SellerVerification
 
 # Evidence score: confirmed criteria earn their weight, attention earns none, unchecked earns half.
@@ -14,22 +16,36 @@ MIN_COVERAGE = 40
 BANDS = [(80, "근거 양호"), (60, "대체로 양호"), (30, "주의 필요"), (0, "구매 보류 권장")]
 
 
-def score_evidence(criteria: list[RiskCriterion], level: str) -> dict:
-    total = sum(WEIGHTS[item.key] for item in criteria)
+@dataclass(frozen=True)
+class ScoreParams:
+    """Score settings; the calibration tool tries alternatives against labeled cases."""
+    weights: dict[str, float] = field(default_factory=lambda: dict(WEIGHTS))
+    unknown_credit: float = CREDIT["unknown"]
+    min_coverage: int = MIN_COVERAGE
+
+
+DEFAULT_PARAMS = ScoreParams()
+
+
+def score_evidence(criteria: list[RiskCriterion], level: str, params: ScoreParams = DEFAULT_PARAMS) -> dict:
+    weights = params.weights
+    credit = {**CREDIT, "unknown": params.unknown_credit}
+    total = sum(weights[item.key] for item in criteria)
     checked = [item for item in criteria if item.status != "unknown"]
-    coverage = round(sum(WEIGHTS[item.key] for item in checked) * 100 / total) if total else 0
+    coverage = round(sum(weights[item.key] for item in checked) * 100 / total) if total else 0
     result = {"coverage_percent": coverage, "checked_count": len(checked)}
     # Half credit on mostly unchecked criteria would show a meaningless middle score, unless the level is decisive.
-    if not total or (coverage < MIN_COVERAGE and level not in {"high", "moderate"}):
+    if not total or (coverage < params.min_coverage and level not in {"high", "moderate"}):
         return result
-    raw = sum(WEIGHTS[item.key] * CREDIT[item.status] for item in criteria) * 100 / total
+    raw = sum(weights[item.key] * credit[item.status] for item in criteria) * 100 / total
     low, high = RANGES[level]
     score = int(low + (high - low) * raw / 100)
     return {**result, "score": score, "score_label": next(label for floor, label in BANDS if score >= floor)}
 
 
 def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
-                seller: SellerVerification | None = None, market: MarketPrice | None = None) -> RiskAssessment:
+                seller: SellerVerification | None = None, market: MarketPrice | None = None,
+                params: ScoreParams = DEFAULT_PARAMS) -> RiskAssessment:
     complete = analysis.status == "completed"
     # Search status/not_found alone never proves a contradiction or a safe listing.
     official = bool(comparison and comparison.status == "exact" and any(
@@ -115,4 +131,4 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         reasons = ["주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."]
     return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
                           missing_checks=pending, criteria=criteria, rule_version="4",
-                          **score_evidence(criteria, level))
+                          **score_evidence(criteria, level, params))

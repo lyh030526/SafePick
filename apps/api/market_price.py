@@ -33,6 +33,18 @@ def _model_pattern(model: str) -> re.Pattern | None:
     return re.compile(r"(?<![0-9A-Za-z])" + r"[\s\-_/.]*".join(map(re.escape, chars)) + r"(?![0-9A-Za-z])", re.I)
 
 
+def rate_ratio(ratio: int, far_below: int = FAR_BELOW_PERCENT, below: int = BELOW_PERCENT) -> tuple[str, str, str]:
+    """Status, label, and message for a sale price at `ratio` percent of the market median."""
+    if ratio < far_below:
+        return ("far_below", "시세보다 지나치게 저렴",
+                f"판매가가 같은 모델 시세 중앙값의 {ratio}%입니다. 가품·미끼 가격·구성품 차이일 수 있으니 "
+                "판매자와 상품 구성을 꼭 확인해 주세요.")
+    if ratio < below:
+        return ("below", "시세보다 저렴",
+                f"판매가가 같은 모델 시세 중앙값의 {ratio}%입니다. 할인 사유와 구성품이 같은지 확인해 주세요.")
+    return "typical", "시세 범위", f"판매가가 같은 모델 시세 중앙값의 {ratio}%로, 지나치게 저렴하지 않습니다."
+
+
 def _won(amount: Decimal) -> str:
     return str(int(amount.quantize(Decimal("1"))))
 
@@ -96,14 +108,5 @@ def check_market_price(product: ProductDetails) -> MarketPrice:
                            message="같은 모델의 시세는 찾았지만 판매 가격이 확인되지 않아 비교하지 않았습니다.")
     # Truncated, so the shown percent never sits on the other side of a threshold.
     ratio = int(sale * 100 / middle)
-    if ratio < FAR_BELOW_PERCENT:
-        status, label = "far_below", "시세보다 지나치게 저렴"
-        message = (f"판매가가 같은 모델 시세 중앙값의 {ratio}%입니다. 가품·미끼 가격·구성품 차이일 수 있으니 "
-                   "판매자와 상품 구성을 꼭 확인해 주세요.")
-    elif ratio < BELOW_PERCENT:
-        status, label = "below", "시세보다 저렴"
-        message = f"판매가가 같은 모델 시세 중앙값의 {ratio}%입니다. 할인 사유와 구성품이 같은지 확인해 주세요."
-    else:
-        status, label = "typical", "시세 범위"
-        message = f"판매가가 같은 모델 시세 중앙값의 {ratio}%로, 지나치게 저렴하지 않습니다."
+    status, label, message = rate_ratio(ratio)
     return MarketPrice(status=status, label=label, message=message, sale_price=_won(sale), ratio_percent=ratio, **market)

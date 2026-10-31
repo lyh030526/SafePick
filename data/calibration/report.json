@@ -1,0 +1,215 @@
+{
+ "checked_at": "2026-10-31T01:24:11.217579+00:00",
+ "settings": "현재 설정",
+ "metrics": {
+  "trusted": 10,
+  "risky": 4,
+  "unlabeled": 2,
+  "detection_rate": 1.0,
+  "risky_cleared": 0,
+  "false_alarm_rate": 0.0,
+  "trusted_low_rate": 0.0,
+  "score_separation": 1.0,
+  "scored": 6,
+  "confusion": {
+   "trusted": {
+    "high": 0,
+    "moderate": 0,
+    "undetermined": 10,
+    "low": 0
+   },
+   "risky": {
+    "high": 2,
+    "moderate": 2,
+    "undetermined": 0,
+    "low": 0
+   },
+   "unlabeled": {
+    "high": 0,
+    "moderate": 0,
+    "undetermined": 2,
+    "low": 0
+   }
+  }
+ },
+ "cases": [
+  {
+   "id": "snack",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 20,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "blueberries",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 35,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "eggs",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 35,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "milk",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 35,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "bulgogi",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 35,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "jjamppong-options",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 35,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "dumplings",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 35,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "sony-headphones",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 35,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "memory-card",
+   "label": "unlabeled",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 35,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "tteokbokki",
+   "label": "unlabeled",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 35,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "syn-risky-unregistered",
+   "label": "risky",
+   "synthetic": true,
+   "level": "high",
+   "score": 18,
+   "coverage_percent": 75,
+   "reasons": [
+    "판매자 사업자 상태: 국세청 미등록 번호"
+   ]
+  },
+  {
+   "id": "syn-risky-cheap-pressure",
+   "label": "risky",
+   "synthetic": true,
+   "level": "moderate",
+   "score": 41,
+   "coverage_percent": 50,
+   "reasons": [
+    "가격 시세: 시세보다 지나치게 저렴 (중앙값의 23%)",
+    "구매를 서두르게 하는 표현"
+   ]
+  },
+  {
+   "id": "syn-risky-components",
+   "label": "risky",
+   "synthetic": true,
+   "level": "high",
+   "score": 7,
+   "coverage_percent": 75,
+   "reasons": [
+    "구성품 안내 불일치 확인"
+   ]
+  },
+  {
+   "id": "syn-risky-vague",
+   "label": "risky",
+   "synthetic": true,
+   "level": "moderate",
+   "score": 41,
+   "coverage_percent": 50,
+   "reasons": [
+    "가격 시세: 시세보다 지나치게 저렴 (중앙값의 32%)",
+    "모호한 조건 확인"
+   ]
+  },
+  {
+   "id": "syn-trusted-sony",
+   "label": "trusted",
+   "synthetic": true,
+   "level": "undetermined",
+   "score": 72,
+   "coverage_percent": 75,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "syn-trusted-dyson",
+   "label": "trusted",
+   "synthetic": true,
+   "level": "undetermined",
+   "score": 72,
+   "coverage_percent": 75,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  }
+ ]
+}
