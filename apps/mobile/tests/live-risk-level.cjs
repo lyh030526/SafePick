@@ -32,7 +32,7 @@ const output = process.env.LIVE_RISK_OUTPUT || path.join(root, 'docs/validation/
     assert.equal(body.risk_analysis.status, 'completed');
     assert.equal(body.risk_analysis.assessment.level, 'undetermined');
     assert.ok((body.product.product_name + body.product.brand_name).includes(process.env.LIVE_RISK_KEYWORD || '블루베리'));
-    assert.ok(body.risk_analysis.assessment.missing_checks.includes('공식 상품 동일 여부'));
+    assert.ok(body.risk_analysis.assessment.missing_checks.includes('공식 상품 동일 여부 또는 판매자 사업자 확인'));
     assert.ok(!body.risk_analysis.checklist.some(item => item.kind === 'attention'));
     await page.getByLabel('구매 전 주의 수준 판단 보류', { exact: true }).waitFor();
     await page.getByText('구매 전 주의 수준', { exact: true }).scrollIntoViewIfNeeded();

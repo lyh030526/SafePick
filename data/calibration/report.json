@@ -1,5 +1,5 @@
 {
- "checked_at": "2026-10-31T01:24:11.217579+00:00",
+ "checked_at": "2026-10-31T03:49:06.803885+00:00",
  "settings": "현재 설정",
  "metrics": {
   "trusted": 10,
@@ -8,15 +8,15 @@
   "detection_rate": 1.0,
   "risky_cleared": 0,
   "false_alarm_rate": 0.0,
-  "trusted_low_rate": 0.0,
+  "trusted_low_rate": 0.2,
   "score_separation": 1.0,
   "scored": 6,
   "confusion": {
    "trusted": {
     "high": 0,
     "moderate": 0,
-    "undetermined": 10,
-    "low": 0
+    "undetermined": 8,
+    "low": 2
    },
    "risky": {
     "high": 2,
@@ -193,22 +193,26 @@
    "id": "syn-trusted-sony",
    "label": "trusted",
    "synthetic": true,
-   "level": "undetermined",
-   "score": 72,
+   "level": "low",
+   "score": 97,
    "coverage_percent": 75,
    "reasons": [
-    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "판매가가 같은 모델의 시세 범위 안에 있습니다."
    ]
   },
   {
    "id": "syn-trusted-dyson",
    "label": "trusted",
    "synthetic": true,
-   "level": "undetermined",
-   "score": 72,
+   "level": "low",
+   "score": 97,
    "coverage_percent": 75,
    "reasons": [
-    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "판매가가 같은 모델의 시세 범위 안에 있습니다."
    ]
   }
  ]

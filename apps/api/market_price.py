@@ -20,7 +20,7 @@ FAR_BELOW_PERCENT = 50
 BELOW_PERCENT = 70
 # Used, refurbished, rental, accessory, and bundle listings are not the same offer.
 _EXCLUDED = ["중고", "리퍼", "전시", "반품", "렌탈", "대여", "케이스", "커버", "필름", "보호", "호환", "교체",
-             "부품", "거치대", "스킨", "파우치", "이어팁", "스트랩", "세트", "묶음", "1+1", "2+1"]
+             "부품", "거치대", "스킨", "파우치", "이어팁", "이어패드", "쿠션", "스트랩", "케이블", "충전기", "세트", "묶음", "1+1", "2+1"]
 # Second-hand and rental shops list used items or monthly fees under ordinary titles.
 _USED_SOURCES = re.compile(r"번개장터|중고나라|당근|후루츠|헬로마켓|세컨웨어|렌탈|bunjang|joongna|fruitsfamily", re.I)
 
@@ -71,9 +71,11 @@ def check_market_price(product: ProductDetails) -> MarketPrice:
     except (httpx.HTTPError, ValueError, KeyError, TypeError):
         return MarketPrice(query=query, message="쇼핑 시세 조회에 실패했습니다. 잠시 후 다시 시도해 주세요.")
 
-    # A word in the product's own name (a case sold as a case) does not exclude its matches.
+    # A word in the product's own name (a case sold as a case) does not exclude its matches, and then only listings
+    # sharing one of those words count, so replacement ear pads are not measured against the headphones they fit.
     own_name = f"{product.product_name} {model}"
     excluded = [word for word in _EXCLUDED if word not in own_name]
+    required = [word for word in _EXCLUDED if word in own_name]
     matches, seen = [], set()
     for item in items if isinstance(items, list) else []:
         if not isinstance(item, dict):
@@ -85,7 +87,7 @@ def check_market_price(product: ProductDetails) -> MarketPrice:
         price = parse_price(raw_price) if raw_price.startswith("₩") else None
         seen_key = item.get("productId") or (title, source, raw_price)
         if (price is None or seen_key in seen or _USED_SOURCES.search(source) or not pattern.search(title)
-                or any(word in title for word in excluded)):
+                or any(word in title for word in excluded) or (required and not any(word in title for word in required))):
             continue
         seen.add(seen_key)
         matches.append(MarketListing(title=title[:120], mall=source, price=_won(price), link=str(item.get("link") or "")))

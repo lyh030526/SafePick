@@ -73,6 +73,16 @@ class MarketPriceTests(unittest.TestCase):
         self.assertEqual(check_market_price(product(price="19,000", name="WH-1000XM5 전용 케이스")).status, "typical")
 
     @patch("market_price.httpx.post")
+    def test_accessory_is_compared_only_with_the_same_accessory(self, post):
+        pads = [(f"WH-1000XM5 호환 교체용 이어패드 {i}", "몰", "₩24,000") for i in range(3)]
+        post.return_value = shopping(*MARKET, *pads)
+        result = check_market_price(product(price="25,350", name="소니호환 WH-1000XM5 교체용 이어패드"))
+        self.assertEqual((result.status, result.match_count, result.median_price), ("typical", 3, "24000"))
+        post.return_value = shopping(*MARKET)
+        self.assertEqual(check_market_price(product(price="25,350", name="WH-1000XM5 교체용 이어패드")).status,
+                         "insufficient")
+
+    @patch("market_price.httpx.post")
     def test_too_few_matches_or_no_price_withhold_judgement(self, post):
         post.return_value = shopping(*MARKET[:2])
         self.assertEqual(check_market_price(product()).status, "insufficient")

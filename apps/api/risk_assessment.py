@@ -60,7 +60,10 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
     returns = complete and analysis.conditions.returns.status == "found"
     # A completed analysis may still have required bundle/option conditions unresolved.
     unresolved = [item.title for item in analysis.checklist if item.kind == "needs_check"]
-    pending = ([] if official else ["공식 상품 동일 여부"])
+    # Most brands have no supported official page, so a seller registered as active with the NTS stands in
+    # for the official match. A market price below the norm still holds the listing back.
+    seller_active = seller is not None and seller.status == "active"
+    pending = ([] if official or seller_active else ["공식 상품 동일 여부 또는 판매자 사업자 확인"])
     pending += ([] if description else ["상품 상세 설명"])
     pending += ([] if shipping else ["배송 조건"])
     pending += ([] if returns else ["반품·교환 조건"])
@@ -119,9 +122,13 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         reasons = ([seller_reason] if seller_warn else []) + ([price_reason] if price_signal else []) + [item.title for item in signals]
     elif not pending:
         level, label = "low", "낮음"
-        summary = "확인한 공식 상품 정보와 판매 설명·구매 조건에서 추가 주의 신호를 찾지 못했습니다. 안전을 보장하지 않습니다."
-        reasons = ["공식 상품 일치, 상세 설명, 배송·반품 원문을 확인했습니다."]
-        if seller is not None:
+        summary = ("확인한 공식 상품 정보와 판매 설명·구매 조건에서 추가 주의 신호를 찾지 못했습니다. 안전을 보장하지 않습니다."
+                   if official else
+                   "판매자 사업자 등록과 판매 설명·구매 조건에서 추가 주의 신호를 찾지 못했습니다. 공식 상품과의 동일 여부는 "
+                   "확인하지 않았고, 페이지에 적힌 사업자번호가 실제 판매자의 것인지도 보장하지 않습니다.")
+        reasons = ["공식 상품 일치, 상세 설명, 배송·반품 원문을 확인했습니다." if official
+                   else "상세 설명과 배송·반품 원문을 확인했습니다."]
+        if seller_active:
             reasons.append("판매자가 국세청에 정상 등록된 사업자로 조회됩니다.")
         if market is not None and market.status == "typical":
             reasons.append("판매가가 같은 모델의 시세 범위 안에 있습니다.")
@@ -130,5 +137,5 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         summary = "확인된 주의 표현은 없지만 필요한 정보가 부족해 낮음으로 분류하지 않았습니다."
         reasons = ["주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."]
     return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
-                          missing_checks=pending, criteria=criteria, rule_version="4",
+                          missing_checks=pending, criteria=criteria, rule_version="5",
                           **score_evidence(criteria, level, params))

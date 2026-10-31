@@ -27,9 +27,9 @@ function risk(status = 'completed', empty = false, level = empty ? 'undetermined
       { id: 'missing_returns', category: 'missing_information', kind: 'needs_check', title: '반품·교환 조건 확인 필요', explanation: '수집 자료에서 반품 조건을 확인하지 못했습니다.', quotes: [], how_to_check: '페이지의 반품·교환 안내를 펼쳐 확인해 주세요.' },
     ] : [], warnings: ['사기·가품 여부나 판매자의 신뢰도를 인증하지 않습니다.'],
     assessment: { level, label: levelLabel, summary: '수집한 근거로 정한 구매 전 주의 수준입니다.',
-      reasons: ['테스트 판단 근거'], missing_checks: level === 'low' ? [] : ['공식 상품 동일 여부'],
+      reasons: ['테스트 판단 근거'], missing_checks: level === 'low' ? [] : ['공식 상품 동일 여부 또는 판매자 사업자 확인'],
       criteria: [{ key: 'official', label: '공식 정보 비교', status: level === 'low' ? 'confirmed' : 'unknown', detail: '공식 정보 확인 상태입니다.' }],
-      ...scores[level], rule_version: '4' } };
+      ...scores[level], rule_version: '5' } };
 }
 
 (async () => {

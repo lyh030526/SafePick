@@ -24,8 +24,10 @@ _LABELS = {
 _NEXT_LABEL = re.compile("|".join([*_LABELS.values(), r"고객\s*센터", r"e-?mail", r"이메일", r"전화\s*번호", r"연락처", r"사업자\s*정보\s*확인"]), re.I)
 _NUMBER = re.compile(rf"(?:{_LABELS['business_number']})\s*[:：]?\s*(\d{{3}})\s*-?\s*(\d{{2}})\s*-?\s*(\d{{5}})(?!\d)")
 # Marketplace operators print their own registration in page footers; that is not the seller.
-_PLATFORM = re.compile(r"네이버\s*(?:주식회사|㈜|\(주\))|NAVER\s*Corp|쿠팡\s*(?:주식회사|㈜|\(주\))|Coupang\s*Corp", re.I)
-_PLATFORM_NUMBERS = {"2208162517", "1208800767"}
+_OPERATORS = r"(?:네이버|쿠팡|십일번가|11번가|지마켓|G마켓|이베이코리아|에스에스지닷컴|롯데쇼핑|인터파크|위메프|티몬|카카오)"
+_PLATFORM = re.compile(rf"{_OPERATORS}\s*(?:주식회사|㈜|\(주\))|(?:주식회사|㈜|\(주\))\s*{_OPERATORS}|NAVER\s*Corp|Coupang\s*Corp"
+                       r"|통신판매\s*중개", re.I)
+_PLATFORM_NUMBERS = {"2208162517", "1208800767", "8158101244"}
 
 
 def is_valid_business_number(digits: str) -> bool:
@@ -78,7 +80,7 @@ def verify_seller(text: str) -> SellerVerification:
     seller = extract_seller_info(text or "")
     if seller is None:
         return SellerVerification(message="판매 자료에서 판매자의 사업자등록번호를 찾지 못했습니다. "
-                                  "상품 페이지의 '판매자 정보'나 반품·교환 안내를 펼친 뒤 다시 가져와 주세요.")
+                                  "네이버·11번가는 '판매자 상세정보 확인'의 인증을 직접 마친 뒤 가져와야 번호가 보입니다.")
     digits = seller.business_number.replace("-", "")
     if not is_valid_business_number(digits):
         return SellerVerification(status="invalid_number", label="번호 형식 오류", seller=seller,

@@ -41,7 +41,20 @@ class RiskLevelTests(unittest.TestCase):
         for comparison in [None, official("unknown"), official("not_found"), official("similar"), official(evidence=False)]:
             result = assess_risk(analyzed(), comparison)
             self.assertEqual(result.level, "undetermined")
-            self.assertIn("공식 상품 동일 여부", result.missing_checks)
+            self.assertIn("공식 상품 동일 여부 또는 판매자 사업자 확인", result.missing_checks)
+
+    def test_active_seller_stands_in_for_the_official_match(self):
+        active = SellerVerification(status="active", label="계속사업자")
+        result = assess_risk(analyzed(), None, active, MarketPrice(status="no_model"))
+        self.assertEqual((result.level, result.missing_checks), ("low", []))
+        self.assertIn("공식 상품과의 동일 여부는 확인하지 않았고", result.summary)
+        self.assertIn("판매자가 국세청에 정상 등록된 사업자로 조회됩니다.", result.reasons)
+        # The stand-in still needs every other axis: terms, an unflagged description, and no low price.
+        self.assertEqual(assess_risk(analyzed(returns=False), None, active).level, "undetermined")
+        self.assertEqual(assess_risk(analyzed(), None, active, MarketPrice(status="below", ratio_percent=60)).level,
+                         "undetermined")
+        for status in ["not_found", "unavailable"]:
+            self.assertEqual(assess_risk(analyzed(), None, SellerVerification(status=status)).level, "undetermined")
 
     def test_missing_terms_prevent_low_without_inventing_risk(self):
         for kwargs in [{"shipping": False}, {"returns": False}]:
@@ -117,9 +130,12 @@ class RiskLevelTests(unittest.TestCase):
         # An unchecked criterion earns half its weight: price 15 -> 92.5% of the evidence, 80 + 20 * 0.925.
         partial = assess_risk(analyzed(), official(), active, MarketPrice(status="no_model"))
         self.assertEqual((partial.level, partial.score, partial.coverage_percent), ("low", 98, 85))
-        # Same evidence without the official match is undetermined, so it cannot read as 근거 양호.
-        pending = assess_risk(analyzed(), None, active, typical)
-        self.assertEqual((pending.level, pending.score, pending.score_label), ("undetermined", 72, "대체로 양호"))
+        # Without the official match the active seller still allows low; official 25 earns half -> 87.5%.
+        seller_only = assess_risk(analyzed(), None, active, typical)
+        self.assertEqual((seller_only.level, seller_only.score, seller_only.coverage_percent), ("low", 97, 75))
+        # Without either, the same evidence is undetermined, so it cannot read as 근거 양호.
+        pending = assess_risk(analyzed(), None, SellerVerification(status="not_found"), typical)
+        self.assertEqual((pending.level, pending.score_label), ("undetermined", "대체로 양호"))
         quote = "오늘만 90% 할인! 지금 구매하세요."
         moderate = assess_risk(analyzed([SignalDraft(category="discount_claim", quotes=[quote])]), official(), active, typical)
         self.assertEqual((moderate.level, moderate.score, moderate.score_label), ("moderate", 53, "주의 필요"))

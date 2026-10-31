@@ -59,6 +59,9 @@ class ExtractionTests(unittest.TestCase):
         footer = "네이버(주) 대표이사 최수연 사업자등록번호 220-81-62517\n"
         self.assertIsNone(extract_seller_info(footer))
         self.assertEqual(extract_seller_info(footer + NAVER_STYLE).business_number, VALID)
+        for other in ["상호명 및 호스팅 서비스 제공 : 십일번가(주)\n대표이사 : 안정은\n사업자등록번호 : 123-45-67891",
+                      "(주)지마켓 사업자등록번호 : 123-45-67891", "통신판매중개자 주식회사 어딘가 사업자등록번호 123-45-67891"]:
+            self.assertIsNone(extract_seller_info(other), other)
 
     def test_unlabeled_numbers_are_ignored(self):
         self.assertIsNone(extract_seller_info("주문번호 123-45-67891 배송 조회"))
