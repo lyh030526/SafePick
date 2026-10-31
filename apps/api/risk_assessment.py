@@ -4,6 +4,29 @@ Not a fraud probability or a calibrated seller-reliability model. No model calls
 """
 from schemas import MarketPrice, ProductComparison, RiskAnalysis, RiskAssessment, RiskCriterion, SellerVerification
 
+# Evidence score: confirmed criteria earn their weight, attention earns none, unchecked earns half.
+WEIGHTS = {"official": 25, "description": 20, "purchase_terms": 15, "seller": 25, "price": 15}
+CREDIT = {"confirmed": 1.0, "unknown": 0.5, "attention": 0.0}
+# The evidence share is placed proportionally inside its level's band, so the score never reads better or
+# worse than the level but still shows how much of the evidence held up.
+RANGES = {"high": (0, 29), "moderate": (30, 59), "undetermined": (30, 79), "low": (80, 100)}
+MIN_COVERAGE = 40
+BANDS = [(80, "근거 양호"), (60, "대체로 양호"), (30, "주의 필요"), (0, "구매 보류 권장")]
+
+
+def score_evidence(criteria: list[RiskCriterion], level: str) -> dict:
+    total = sum(WEIGHTS[item.key] for item in criteria)
+    checked = [item for item in criteria if item.status != "unknown"]
+    coverage = round(sum(WEIGHTS[item.key] for item in checked) * 100 / total) if total else 0
+    result = {"coverage_percent": coverage, "checked_count": len(checked)}
+    # Half credit on mostly unchecked criteria would show a meaningless middle score, unless the level is decisive.
+    if not total or (coverage < MIN_COVERAGE and level not in {"high", "moderate"}):
+        return result
+    raw = sum(WEIGHTS[item.key] * CREDIT[item.status] for item in criteria) * 100 / total
+    low, high = RANGES[level]
+    score = int(low + (high - low) * raw / 100)
+    return {**result, "score": score, "score_label": next(label for floor, label in BANDS if score >= floor)}
+
 
 def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
                 seller: SellerVerification | None = None, market: MarketPrice | None = None) -> RiskAssessment:
@@ -91,4 +114,5 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         summary = "확인된 주의 표현은 없지만 필요한 정보가 부족해 낮음으로 분류하지 않았습니다."
         reasons = ["주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."]
     return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
-                          missing_checks=pending, criteria=criteria, rule_version="3")
+                          missing_checks=pending, criteria=criteria, rule_version="4",
+                          **score_evidence(criteria, level))

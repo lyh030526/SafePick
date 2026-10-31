@@ -12,6 +12,10 @@ const comparison = { status: 'unknown', label: '확인 불가', message: '공식
   price: { status: 'unavailable', message: '가격 비교 불가' }, seller_status: 'unknown', seller_message: '판매자 인증 결과가 아닙니다.', warnings: [] };
 function risk(status = 'completed', empty = false, level = empty ? 'undetermined' : 'moderate') {
   if (status !== 'completed') level = 'undetermined';
+  const scores = { high: { score: 20, score_label: '구매 보류 권장', coverage_percent: 100, checked_count: 1 },
+    moderate: { score: 45, score_label: '주의 필요', coverage_percent: 100, checked_count: 1 },
+    low: { score: 100, score_label: '근거 양호', coverage_percent: 100, checked_count: 1 },
+    undetermined: { score: null, score_label: '점수 보류', coverage_percent: 0, checked_count: 0 } };
   const levelLabel = { high: '높음', moderate: '보통', low: '낮음', undetermined: '판단 보류' }[level];
   const conditions = Object.fromEntries(['description', 'components', 'options', 'shipping', 'returns', 'warranty'].map(key => [key, { status: 'unknown', text: '확인 불가', quotes: [] }]));
   conditions.shipping = { status: 'found', text: '배송비 3,000원.', quotes: ['배송비 3,000원.'] };
@@ -24,7 +28,8 @@ function risk(status = 'completed', empty = false, level = empty ? 'undetermined
     ] : [], warnings: ['사기·가품 여부나 판매자의 신뢰도를 인증하지 않습니다.'],
     assessment: { level, label: levelLabel, summary: '수집한 근거로 정한 구매 전 주의 수준입니다.',
       reasons: ['테스트 판단 근거'], missing_checks: level === 'low' ? [] : ['공식 상품 동일 여부'],
-      criteria: [{ key: 'official', label: '공식 정보 비교', status: level === 'low' ? 'confirmed' : 'unknown', detail: '공식 정보 확인 상태입니다.' }], rule_version: '1' } };
+      criteria: [{ key: 'official', label: '공식 정보 비교', status: level === 'low' ? 'confirmed' : 'unknown', detail: '공식 정보 확인 상태입니다.' }],
+      ...scores[level], rule_version: '4' } };
 }
 
 (async () => {
@@ -83,10 +88,13 @@ function risk(status = 'completed', empty = false, level = empty ? 'undetermined
       await page.getByText('수집한 자료에서 추가 확인할 표현을 찾지 못했습니다. 안전성을 보장하는 결과는 아닙니다.', { exact: true }).waitFor();
       assert.equal(await page.getByRole('checkbox').count(), 0);
       await page.getByLabel('구매 전 주의 수준 판단 보류', { exact: true }).waitFor();
+      await page.getByLabel('신뢰 점수 보류', { exact: true }).waitFor();
       for (const [value, label] of [['high', '높음'], ['low', '낮음'], ['moderate', '보통']]) {
         level = value;
         await page.getByText('수정 정보로 다시 비교', { exact: true }).click();
         await page.getByLabel(`구매 전 주의 수준 ${label}`, { exact: true }).waitFor();
+        const score = { high: '신뢰 점수 20점 구매 보류 권장', low: '신뢰 점수 100점 근거 양호', moderate: '신뢰 점수 45점 주의 필요' }[value];
+        await page.getByLabel(score, { exact: true }).waitFor();
         await page.getByText('구매 전 주의 수준', { exact: true }).scrollIntoViewIfNeeded();
         await page.screenshot({ path: path.join(output, `level-${value}-${width}.png`) });
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));

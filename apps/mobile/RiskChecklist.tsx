@@ -15,6 +15,7 @@ export type RiskAnalysis = {
     level: 'high' | 'moderate' | 'low' | 'undetermined'; label: string; summary: string;
     reasons: string[]; missing_checks: string[];
     criteria: { key: string; label: string; status: 'confirmed' | 'attention' | 'unknown'; detail: string }[];
+    score?: number | null; score_label?: string; coverage_percent?: number; checked_count?: number;
     rule_version: string;
   };
 };
@@ -28,12 +29,14 @@ export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis 
   const [showConditions, setShowConditions] = useState(false);
   const complete = analysis?.status === 'completed';
   const assessment = analysis?.assessment;
-  const level = complete ? assessment?.level ?? 'undetermined' : 'undetermined';
+  // A closed or unregistered seller is high even when the description analysis did not finish.
+  const level = complete || assessment?.level === 'high' ? assessment?.level ?? 'undetermined' : 'undetermined';
   const levelLabel = level === 'undetermined' ? '판단 보류' : assessment?.label;
   const total = complete ? analysis.checklist.length : 0;
   return <View style={styles.section}>
     <Text style={styles.heading}>구매 전 주의 수준</Text>
     <View accessibilityLabel={`구매 전 주의 수준 ${levelLabel}`} style={styles.card}>
+      {complete || level === 'high' ? <ScoreSummary assessment={assessment} level={level} /> : null}
       <View style={[styles.levelBadge, levelSoftStyles[level]]}>
         <Text style={[styles.levelTitle, levelTextStyles[level]]}>{levelLabel}</Text>
       </View>
@@ -55,7 +58,7 @@ export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis 
         <Text style={styles.label}>아직 확인할 정보</Text>
         <Text style={styles.body}>{assessment.missing_checks.join(' · ')}</Text>
       </View> : null}
-      <Text style={styles.meta}>수집한 자료에서 확인한 신호의 주의 수준입니다. 판매자 신뢰도나 사기 확률, 정품·안전을 인증하는 결과가 아닙니다.</Text>
+      <Text style={styles.meta}>신뢰 점수는 확인한 근거로 계산한 참고 점수이고, 주의 수준은 수집한 자료에서 확인한 신호입니다. 사기 확률이 아니며 판매자나 정품·안전을 인증하지 않습니다.</Text>
     </View>
     <Text style={styles.heading}>구매 전 체크리스트</Text>
     <View style={[styles.card, styles.summary, !complete && styles.neutral]}>
@@ -106,10 +109,37 @@ export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis 
   </View>;
 }
 
+function ScoreSummary({ assessment, level }: { assessment: RiskAnalysis['assessment']; level: keyof typeof levelTextStyles }) {
+  if (!assessment || assessment.coverage_percent === undefined) return null;
+  const coverage = assessment.coverage_percent;
+  const total = assessment.criteria.length;
+  const scored = assessment.score !== null && assessment.score !== undefined;
+  return <View accessibilityLabel={scored ? `신뢰 점수 ${assessment.score}점 ${assessment.score_label}` : '신뢰 점수 보류'} style={styles.score}>
+    <Text style={styles.scoreCaption}>신뢰 점수</Text>
+    <View style={styles.scoreRow}>
+      {scored ? <Text style={[styles.scoreNumber, levelTextStyles[level]]}>{assessment.score}<Text style={styles.scoreUnit}> / 100</Text></Text>
+        : <Text style={styles.scoreWithheld}>점수 보류</Text>}
+      {scored ? <Text style={[styles.chip, styles.scoreChip, levelSoftStyles[level], levelTextStyles[level]]}>{assessment.score_label}</Text> : null}
+    </View>
+    <View style={styles.track}><View style={[styles.fill, { width: `${coverage}%` }]} /></View>
+    <Text style={styles.meta}>
+      근거 확인 {assessment.checked_count ?? 0} / {total}개 기준 · 반영 비중 {coverage}%
+      {scored ? '' : ' — 확인된 근거가 부족해 점수를 매기지 않았어요.'}
+    </Text>
+  </View>;
+}
+
 const styles = StyleSheet.create({
   section: { marginTop: 8, gap: 12 },
   heading: { color: colors.text, fontSize: 20, fontWeight: '700', lineHeight: 28, marginTop: 12, paddingHorizontal: 4, letterSpacing: -0.4 },
   card: { backgroundColor: colors.card, borderRadius: radius.card, padding: 20, gap: 10 },
+  score: { gap: 8, paddingBottom: 14, marginBottom: 2, borderBottomWidth: 1, borderBottomColor: colors.line },
+  scoreCaption: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  scoreNumber: { fontSize: 40, lineHeight: 48, fontWeight: '800', letterSpacing: -1 },
+  scoreUnit: { color: colors.textFaint, fontSize: 18, fontWeight: '700', letterSpacing: 0 },
+  scoreChip: { alignSelf: 'center' },
+  scoreWithheld: { color: colors.textSub, fontSize: 28, lineHeight: 36, fontWeight: '800', letterSpacing: -0.5 },
   levelBadge: { alignSelf: 'flex-start', borderRadius: radius.field, paddingHorizontal: 16, paddingVertical: 8 },
   levelTitle: { fontSize: 26, lineHeight: 34, fontWeight: '800', letterSpacing: -0.5 },
   summaryText: { color: colors.text, fontSize: 16, lineHeight: 24, fontWeight: '600', letterSpacing: -0.2 },

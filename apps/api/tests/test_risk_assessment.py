@@ -108,6 +108,29 @@ class RiskLevelTests(unittest.TestCase):
         self.assertEqual(far.level, "moderate")
         self.assertIn("가격 시세: 시세보다 지나치게 저렴 (중앙값의 31%)", far.reasons)
 
+    def test_score_follows_evidence_within_the_level_band(self):
+        typical = MarketPrice(status="typical", label="시세 범위", ratio_percent=95)
+        active = SellerVerification(status="active", label="계속사업자")
+        full = assess_risk(analyzed(), official(), active, typical)
+        self.assertEqual((full.level, full.score, full.score_label, full.coverage_percent, full.checked_count),
+                         ("low", 100, "근거 양호", 100, 5))
+        # An unchecked criterion earns half its weight: price 15 -> 92.5% of the evidence, 80 + 20 * 0.925.
+        partial = assess_risk(analyzed(), official(), active, MarketPrice(status="no_model"))
+        self.assertEqual((partial.level, partial.score, partial.coverage_percent), ("low", 98, 85))
+        # Same evidence without the official match is undetermined, so it cannot read as 근거 양호.
+        pending = assess_risk(analyzed(), None, active, typical)
+        self.assertEqual((pending.level, pending.score, pending.score_label), ("undetermined", 72, "대체로 양호"))
+        quote = "오늘만 90% 할인! 지금 구매하세요."
+        moderate = assess_risk(analyzed([SignalDraft(category="discount_claim", quotes=[quote])]), official(), active, typical)
+        self.assertEqual((moderate.level, moderate.score, moderate.score_label), ("moderate", 53, "주의 필요"))
+
+    def test_score_is_withheld_without_enough_evidence_unless_the_level_is_decisive(self):
+        empty = assess_risk(RiskAnalysis(), None, SellerVerification(status="unavailable"), MarketPrice(status="no_model"))
+        self.assertEqual((empty.level, empty.score, empty.score_label, empty.coverage_percent), ("undetermined", None, "점수 보류", 0))
+        closed = assess_risk(RiskAnalysis(), None, SellerVerification(status="closed", label="폐업한 사업자"))
+        self.assertEqual((closed.level, closed.score, closed.score_label), ("high", 10, "구매 보류 권장"))
+        self.assertLess(closed.coverage_percent, 40)
+
     @patch("main.check_market_price", return_value=MarketPrice(status="typical", label="시세 범위", ratio_percent=95))
     @patch("main.verify_seller", return_value=SellerVerification(status="active", label="계속사업자"))
     @patch("main.compare_product")

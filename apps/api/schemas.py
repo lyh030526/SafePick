@@ -182,6 +182,10 @@ class RiskAssessment(BaseModel):
     reasons: list[str] = Field(default_factory=list)
     missing_checks: list[str] = Field(default_factory=list)
     criteria: list[RiskCriterion] = Field(default_factory=list)
+    score: int | None = None
+    score_label: str = "점수 보류"
+    coverage_percent: int = 0
+    checked_count: int = 0
     rule_version: str = "1"
 
 
