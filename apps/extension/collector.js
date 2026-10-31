@@ -13,6 +13,15 @@ async function collectProductPage() {
   if (url.protocol !== 'https:' || url.username || url.password || url.port) {
     return { error: 'https 상품 상세 페이지에서 실행해 주세요.' };
   }
+  // 11st opens the seller's registration in a separate window after the user solves its CAPTCHA. That window is read
+  // on its own and merged into the product capture by the popup.
+  if (/^(www|m)\.11st\.co\.kr$/.test(url.hostname) && url.pathname.startsWith('/products/mw/pages') && url.searchParams.get('prdNo')) {
+    const lines = document.body.innerText.split('\n').map(line => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const at = lines.findIndex(line => /사업자\s*(등록)?\s*번호/.test(line));
+    if (at < 0) return { error: '보안 문자 인증을 마친 뒤, 판매자 정보가 보일 때 다시 눌러 주세요.' };
+    return { kind: 'seller_addon', product_no: url.searchParams.get('prdNo'),
+      seller_text: `판매자 정보:\n${lines.slice(Math.max(0, at - 12), at + 12).join('\n').slice(0, 1500)}` };
+  }
   if (market && !market[1].test(url.pathname) || /(^|\.)naver\.com$/.test(url.hostname) && !market) {
     return { error: '검색 결과나 목록이 아닌 상품 상세 페이지에서 실행해 주세요.' };
   }
@@ -142,7 +151,13 @@ async function collectProductPage() {
   if (visibleText.length < 30 && !products.length) return { error: '읽을 수 있는 상품 설명이 없습니다. 상품 설명을 펼친 뒤 다시 시도해 주세요.' };
   // Preserve the exact product URL, including option query parameters, but never a fragment.
   url.hash = '';
-  return { version: 1, expanded: clicked, product_url: url.toString(), page_title: document.title.slice(0, 300),
+  // Naver and 11st show the trade name openly but the number only after a verification the user completes.
+  const numberShown = sellerBlocks.some(block => /사업자\s*(등록)?\s*번호\s*[:：]?\s*\d{3}\s*-?\s*\d{2}/.test(block));
+  const hint = numberShown || !/(^|\.)(naver\.com|11st\.co\.kr)$/.test(url.hostname) ? ''
+    : /11st/.test(url.hostname)
+      ? "판매자 사업자번호는 보안 문자 뒤에 있어요. '판매자정보' 탭의 '상세정보 확인'에서 보안 문자를 직접 풀고, 열린 창에서 이 버튼을 한 번 더 누르면 판매자 정보를 합쳐요."
+      : "판매자 사업자번호는 인증 뒤에 있어요. '판매자 상세정보 확인'의 인증을 직접 마친 뒤 다시 가져오면 사업자 상태까지 확인할 수 있어요.";
+  return { version: 1, expanded: clicked, hint, product_url: url.toString(), page_title: document.title.slice(0, 300),
     provided_text: (seller + terms + structured + visibleText).slice(0, 12000),
     captured_at: new Date().toISOString(), input_source: 'browser_extension' };
 }
