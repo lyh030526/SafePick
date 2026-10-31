@@ -169,7 +169,7 @@ class PurchaseCheck(BaseModel):
 
 
 class RiskCriterion(BaseModel):
-    key: Literal["official", "description", "purchase_terms", "seller"]
+    key: Literal["official", "description", "purchase_terms", "seller", "price"]
     label: str
     status: Literal["confirmed", "attention", "unknown"]
     detail: str
@@ -203,6 +203,27 @@ class SellerVerification(BaseModel):
     closed_on: str | None = None
 
 
+class MarketListing(BaseModel):
+    title: str
+    mall: str
+    price: str
+    link: str
+
+
+class MarketPrice(BaseModel):
+    status: Literal["far_below", "below", "typical", "insufficient", "no_model", "no_price", "unavailable"] = "unavailable"
+    label: str = "시세 확인 불가"
+    message: str = "같은 상품의 시세를 확인하지 못했습니다."
+    query: str | None = None
+    sale_price: str | None = None
+    median_price: str | None = None
+    min_price: str | None = None
+    max_price: str | None = None
+    ratio_percent: int | None = None
+    match_count: int = 0
+    listings: list[MarketListing] = Field(default_factory=list)
+
+
 class RiskAnalysis(BaseModel):
     status: Literal["completed", "insufficient", "unavailable"] = "unavailable"
     message: str = "위험 신호 분석 결과가 없습니다. 상품 설명으로 다시 분석해 주세요."
@@ -217,6 +238,7 @@ class ComparisonResponse(BaseModel):
     comparison: ProductComparison
     risk_analysis: RiskAnalysis = Field(default_factory=RiskAnalysis)
     seller_verification: SellerVerification = Field(default_factory=SellerVerification)
+    market_price: MarketPrice = Field(default_factory=MarketPrice)
 
 
 class AnalysisResponse(BaseModel):
@@ -228,4 +250,5 @@ class AnalysisResponse(BaseModel):
     comparison: ProductComparison | None = None
     risk_analysis: RiskAnalysis = Field(default_factory=RiskAnalysis)
     seller_verification: SellerVerification = Field(default_factory=SellerVerification)
+    market_price: MarketPrice = Field(default_factory=MarketPrice)
     sale_text: str = Field(default="", max_length=12000)

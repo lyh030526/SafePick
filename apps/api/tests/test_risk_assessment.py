@@ -7,7 +7,7 @@ import main
 from extractor import unknown_product
 from risk_analysis import DetailsDraft, RiskDraft, SignalDraft, validate_risk_draft
 from risk_assessment import assess_risk
-from schemas import (OfficialEvidence, OfficialFacts, OfficialLookup, OfficialPageSummary,
+from schemas import (MarketPrice, OfficialEvidence, OfficialFacts, OfficialLookup, OfficialPageSummary,
                      PriceComparison, ProductComparison, RiskAnalysis, SellerVerification)
 
 
@@ -94,12 +94,27 @@ class RiskLevelTests(unittest.TestCase):
         self.assertEqual(result.level, "high")
         self.assertIn("판매자 사업자 상태: 폐업한 사업자", result.reasons)
 
+    def test_market_price_sets_the_level(self):
+        for status, level, criterion in [("far_below", "moderate", "attention"), ("below", "undetermined", "attention"),
+                                         ("typical", "low", "confirmed"), ("insufficient", "low", "unknown"),
+                                         ("no_model", "low", "unknown"), ("unavailable", "low", "unknown")]:
+            with self.subTest(status=status):
+                market = MarketPrice(status=status, label=status, ratio_percent=40)
+                result = assess_risk(analyzed(), official(), None, market)
+                self.assertEqual(result.level, level)
+                self.assertEqual(next(item for item in result.criteria if item.key == "price").status, criterion)
+                self.assertEqual("가격 시세" in result.missing_checks, status == "below")
+        far = assess_risk(analyzed(), None, None, MarketPrice(status="far_below", label="시세보다 지나치게 저렴", ratio_percent=31))
+        self.assertEqual(far.level, "moderate")
+        self.assertIn("가격 시세: 시세보다 지나치게 저렴 (중앙값의 31%)", far.reasons)
+
+    @patch("main.check_market_price", return_value=MarketPrice(status="typical", label="시세 범위", ratio_percent=95))
     @patch("main.verify_seller", return_value=SellerVerification(status="active", label="계속사업자"))
     @patch("main.compare_product")
     @patch("main.create_official_lookup")
     @patch("main.extract_product_details", return_value=(unknown_product(), []))
     @patch("main.analyze_listing_risks")
-    def test_analysis_and_correction_return_fresh_server_assessment(self, risk, extract, lookup, compare, seller):
+    def test_analysis_and_correction_return_fresh_server_assessment(self, risk, extract, lookup, compare, seller, market):
         lookup.return_value = OfficialLookup(status="found", message="테스트")
         compare.return_value = official()
         risk.return_value = analyzed()
@@ -108,6 +123,7 @@ class RiskLevelTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["risk_analysis"]["assessment"]["level"], "low")
         self.assertEqual(response.json()["seller_verification"]["status"], "active")
+        self.assertEqual(response.json()["market_price"]["status"], "typical")
         risk.return_value = analyzed([SignalDraft(category="model_mismatch", quotes=["상품 모델 WH-1000XM5", "상세 모델 WH-1000XM4"])])
         response = client.post("/comparisons", json={"product_url": "https://shop.example.com/p", "product": unknown_product().model_dump(), "sale_text": "보정 후 자료"})
         self.assertEqual(response.status_code, 200)

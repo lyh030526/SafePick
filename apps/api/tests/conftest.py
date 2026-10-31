@@ -9,3 +9,10 @@ def fresh_rate_limits():
     reset_rate_limits()
     yield
     reset_rate_limits()
+
+
+@pytest.fixture(autouse=True)
+def no_live_lookups(monkeypatch):
+    # The local .env may hold real keys; tests that need one set a fake key themselves.
+    monkeypatch.setenv("SERPER_API_KEY", "")
+    monkeypatch.setenv("DATA_GO_KR_SERVICE_KEY", "")

@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from comparison import compare_product
 from extractor import extract_product_details, generate_official_search_query, unknown_product
+from market_price import check_market_price
 from official_brands import OFFICIAL_BRANDS, find_official_brand
 from official_search import OfficialSearchError, search_official_pages
 from request_limits import AnalysisBodyLimit, AnalysisRateLimit
@@ -96,24 +97,26 @@ def create_official_lookup(product: ProductDetails) -> OfficialLookup:
 
 @app.post("/comparisons", response_model=ComparisonResponse)
 def create_comparison(request: ComparisonRequest) -> ComparisonResponse:
-    lookup, comparison, risk, seller = analyze_product(
+    lookup, comparison, risk, seller, market = analyze_product(
         request.product, str(request.product_url), request.page_title, request.sale_text,
     )
     return ComparisonResponse(official_lookup=lookup, comparison=comparison, risk_analysis=risk,
-                              seller_verification=seller)
+                              seller_verification=seller, market_price=market)
 
 
 def analyze_product(product, url, title, text):
-    # The listing risk review and seller check do not depend on the official lookup, so run them at once.
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    # The listing review, seller check, and market search do not depend on the official lookup, so run them at once.
+    with ThreadPoolExecutor(max_workers=3) as executor:
         risk_future = executor.submit(analyze_listing_risks, product, title, text)
         seller_future = executor.submit(verify_seller, text)
+        market_future = executor.submit(check_market_price, product)
         lookup = create_official_lookup(product)
         comparison = compare_product(product, url, lookup)
         analysis = risk_future.result()
         seller = seller_future.result()
-    assessment = assess_risk(analysis, comparison, seller)
-    return lookup, comparison, analysis.model_copy(update={"assessment": assessment}), seller
+        market = market_future.result()
+    assessment = assess_risk(analysis, comparison, seller, market)
+    return lookup, comparison, analysis.model_copy(update={"assessment": assessment}), seller, market
 
 
 @app.post("/analyses", response_model=AnalysisResponse)
@@ -121,7 +124,7 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
     if request.provided_text is not None or request.images:
         text = request.provided_text or ""
         product, warnings = extract_product_details(request.page_title, text, images=request.images)
-        lookup, comparison, risk, seller = analyze_product(product, str(request.product_url), request.page_title, text)
+        lookup, comparison, risk, seller, market = analyze_product(product, str(request.product_url), request.page_title, text)
         kind = ("mixed" if text and request.images else "user_images" if request.images
                 else request.input_source)
         notice = "사용자가 제공한 자료를 분석했습니다. 판매 페이지의 현재 내용과 일치하는지는 별도 확인이 필요합니다."
@@ -136,7 +139,7 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
                 image_count=len(request.images), captured_at=request.captured_at,
             ),
             warnings=[notice, *warnings], official_lookup=lookup,
-            comparison=comparison, risk_analysis=risk, seller_verification=seller, sale_text=text,
+            comparison=comparison, risk_analysis=risk, seller_verification=seller, market_price=market, sale_text=text,
         )
     try:
         page = fetch_product_page(str(request.product_url))
@@ -162,7 +165,7 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
 
     product, warnings = extract_product_details(page.title, page.text)
     status = "completed" if not warnings else "manual_input_required"
-    lookup, comparison, risk, seller = analyze_product(product, page.final_url, page.title, page.text)
+    lookup, comparison, risk, seller, market = analyze_product(product, page.final_url, page.title, page.text)
     return AnalysisResponse(
         status=status,
         product=product,
@@ -176,5 +179,6 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
         comparison=comparison,
         risk_analysis=risk,
         seller_verification=seller,
+        market_price=market,
         sale_text=page.text,
     )

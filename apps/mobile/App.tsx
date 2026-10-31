@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { parseBrowserImport } from './browserImport';
+import { MarketPriceCard, type MarketPrice } from './MarketPrice';
 import { RiskChecklist, type RiskAnalysis } from './RiskChecklist';
 import { SellerCheck, type SellerVerification } from './SellerCheck';
 import { colors, installWebFont, radius } from './theme';
@@ -44,6 +45,7 @@ type AnalysisResponse = {
   comparison: ProductComparison | null;
   risk_analysis?: RiskAnalysis;
   seller_verification?: SellerVerification;
+  market_price?: MarketPrice;
   sale_text?: string;
 };
 
@@ -117,6 +119,7 @@ export default function App() {
   const [comparison, setComparison] = useState<ProductComparison | null>(null);
   const [riskAnalysis, setRiskAnalysis] = useState<RiskAnalysis | null>(null);
   const [sellerVerification, setSellerVerification] = useState<SellerVerification | null>(null);
+  const [marketPrice, setMarketPrice] = useState<MarketPrice | null>(null);
   const [analysisText, setAnalysisText] = useState('');
   const [providedText, setProvidedText] = useState(initialImport.payload?.provided_text ?? '');
   const [images, setImages] = useState<AttachedImage[]>([]);
@@ -213,6 +216,7 @@ export default function App() {
       setComparison(payload.comparison);
       setRiskAnalysis(payload.risk_analysis ?? null);
       setSellerVerification(payload.seller_verification ?? null);
+      setMarketPrice(payload.market_price ?? null);
       setAnalysisText(payload.sale_text ?? providedText.trim());
       setSource(payload.source);
       setAnalysisState('correction');
@@ -241,6 +245,7 @@ export default function App() {
         initialComparison={comparison}
         initialRiskAnalysis={riskAnalysis}
         initialSeller={sellerVerification}
+        initialMarket={marketPrice}
         saleText={analysisText}
         productUrl={productUrl.trim()}
         warnings={warnings}
@@ -249,7 +254,7 @@ export default function App() {
         onBack={() => {
           setProductUrl(''); setProvidedText(''); setImages([]); setPageTitle('');
           setInputSource('user_text'); setCapturedAt(undefined); setConsent(false);
-          setError(''); setSource(null); setRiskAnalysis(null); setSellerVerification(null); setAnalysisText(''); setAnalysisState('input');
+          setError(''); setSource(null); setRiskAnalysis(null); setSellerVerification(null); setMarketPrice(null); setAnalysisText(''); setAnalysisState('input');
         }}
       />
     );
@@ -401,6 +406,7 @@ function CorrectionForm({
   initialComparison,
   initialRiskAnalysis,
   initialSeller,
+  initialMarket,
   saleText,
   productUrl,
   warnings,
@@ -413,6 +419,7 @@ function CorrectionForm({
   initialComparison: ProductComparison | null;
   initialRiskAnalysis: RiskAnalysis | null;
   initialSeller: SellerVerification | null;
+  initialMarket: MarketPrice | null;
   saleText: string;
   productUrl: string;
   warnings: string[];
@@ -424,6 +431,7 @@ function CorrectionForm({
   const [result, setResult] = useState(initialComparison);
   const [riskResult, setRiskResult] = useState(initialRiskAnalysis);
   const [seller, setSeller] = useState(initialSeller);
+  const [market, setMarket] = useState(initialMarket);
   const [lookup, setLookup] = useState(officialLookup);
   const [dirty, setDirty] = useState(false);
   const [comparing, setComparing] = useState(false);
@@ -458,6 +466,7 @@ function CorrectionForm({
       setResult(payload.comparison);
       setRiskResult(payload.risk_analysis ?? null);
       setSeller(payload.seller_verification ?? null);
+      setMarket(payload.market_price ?? null);
       setLookup(payload.official_lookup);
       setDirty(false);
     } catch (error) {
@@ -519,6 +528,7 @@ function CorrectionForm({
 
           {!dirty && !comparing ? <RiskChecklist analysis={riskResult} sourceUrl={source?.final_url ?? productUrl} /> : null}
           {!dirty && !comparing ? <SellerCheck verification={seller} /> : null}
+          {!dirty && !comparing ? <MarketPriceCard market={market} /> : null}
           <Text style={styles.sectionTitle}>공식 정보 비교 결과</Text>
           {result && !dirty ? <ComparisonPanel comparison={result} /> : null}
           {comparing ? (
