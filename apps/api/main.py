@@ -12,10 +12,11 @@ from official_brands import OFFICIAL_BRANDS, find_official_brand
 from official_search import OfficialSearchError, search_official_pages
 from request_limits import AnalysisBodyLimit, AnalysisRateLimit
 from risk_analysis import analyze_listing_risks
+from domain_check import check_domain
 from risk_assessment import assess_risk
 from schemas import (
     AnalysisRequest, AnalysisResponse, ComparisonRequest, ComparisonResponse, OfficialLookup,
-    ProductDetails, SourceSummary, SupportedBrand, UNKNOWN,
+    ProductDetails, RiskAnalysis, SourceSummary, SupportedBrand, UNKNOWN,
 )
 from scraper import ProductPageError, fetch_product_page
 from mail_order import with_mail_order
@@ -105,9 +106,11 @@ def create_comparison(request: ComparisonRequest) -> ComparisonResponse:
                               seller_verification=seller, market_price=market)
 
 
-def analyze_product(product, url, title, text):
+def analyze_product(product, url, title, text, entered_url=None):
     # The listing review, seller check, and market search do not depend on the official lookup, so run them at once.
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        # The address the shopper entered is the one to judge; a parked domain redirects to an old broker site.
+        domain_future = executor.submit(check_domain, entered_url or url)
         risk_future = executor.submit(analyze_listing_risks, product, title, text)
         seller_future = executor.submit(lambda: with_mail_order(verify_seller(text, url), url, text))
         market_future = executor.submit(check_market_price, product)
@@ -116,7 +119,7 @@ def analyze_product(product, url, title, text):
         analysis = risk_future.result()
         seller = seller_future.result()
         market = market_future.result()
-    assessment = assess_risk(analysis, comparison, seller, market)
+    assessment = assess_risk(analysis, comparison, seller, market, domain=domain_future.result())
     return lookup, comparison, analysis.model_copy(update={"assessment": assessment}), seller, market
 
 
@@ -146,7 +149,11 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
         page = fetch_product_page(str(request.product_url))
     except ProductPageError as error:
         if error.fallback_allowed:
+            # A page that cannot be read still has a domain to check: a missing or expired one is a warning by itself.
+            domain = check_domain(str(request.product_url))
+            unread = RiskAnalysis(message=f"판매 페이지를 읽지 못했습니다: {error}")
             return AnalysisResponse(
+                risk_analysis=unread.model_copy(update={"assessment": assess_risk(unread, None, domain=domain)}),
                 status="manual_input_required",
                 product=unknown_product(),
                 source=SourceSummary(
@@ -166,7 +173,8 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
 
     product, warnings = extract_product_details(page.title, page.text)
     status = "completed" if not warnings else "manual_input_required"
-    lookup, comparison, risk, seller, market = analyze_product(product, page.final_url, page.title, page.text)
+    lookup, comparison, risk, seller, market = analyze_product(product, page.final_url, page.title, page.text,
+                                                               str(request.product_url))
     return AnalysisResponse(
         status=status,
         product=product,

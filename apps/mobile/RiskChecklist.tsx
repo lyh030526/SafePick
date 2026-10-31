@@ -17,6 +17,8 @@ export type RiskAnalysis = {
     criteria: { key: string; label: string; status: 'confirmed' | 'partial' | 'attention' | 'unknown'; detail: string }[];
     score?: number | null; score_label?: string; coverage_percent?: number; checked_count?: number;
     rule_version: string;
+    domain?: { status: 'missing' | 'expired' | 'new_short' | 'new' | 'established' | 'marketplace' | 'unavailable';
+      label: string; message: string; domain: string | null; registered_on: string | null; expires_on: string | null } | null;
   };
 };
 const labels: Record<keyof RiskAnalysis['conditions'], string> = {
@@ -29,14 +31,17 @@ export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis 
   const [showConditions, setShowConditions] = useState(false);
   const complete = analysis?.status === 'completed';
   const assessment = analysis?.assessment;
-  // A closed or unregistered seller is high even when the description analysis did not finish.
-  const level = complete || assessment?.level === 'high' ? assessment?.level ?? 'undetermined' : 'undetermined';
+  // A closed seller or a missing domain is high, and a very new short-term domain is moderate, even when the page could
+  // not be read or the description analysis did not finish.
+  const decisive = assessment?.level === 'high' || assessment?.domain?.status === 'new_short';
+  const level = complete || decisive ? assessment?.level ?? 'undetermined' : 'undetermined';
+  const domain = assessment?.domain && !['marketplace', 'unavailable'].includes(assessment.domain.status) ? assessment.domain : null;
   const levelLabel = level === 'undetermined' ? '판단 보류' : assessment?.label;
   const total = complete ? analysis.checklist.length : 0;
   return <View style={styles.section}>
     <Text style={styles.heading}>구매 전 주의 수준</Text>
     <View accessibilityLabel={`구매 전 주의 수준 ${levelLabel}`} style={styles.card}>
-      {complete || level === 'high' ? <ScoreSummary assessment={assessment} level={level} /> : null}
+      {complete || decisive ? <ScoreSummary assessment={assessment} level={level} /> : null}
       <View style={[styles.levelBadge, levelSoftStyles[level]]}>
         <Text style={[styles.levelTitle, levelTextStyles[level]]}>{levelLabel}</Text>
       </View>
@@ -53,6 +58,12 @@ export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis 
           </View>
           <Text style={styles.meta}>{criterion.detail}</Text>
         </View>)}
+      </View> : null}
+      {domain ? <View accessibilityLabel={`도메인 ${domain.label}`} style={styles.block}>
+        <Text style={styles.label}>도메인 등록 정보</Text>
+        <Text style={styles.body}>{[domain.domain, domain.label, domain.registered_on && `등록 ${domain.registered_on}`,
+          domain.expires_on && `만료 ${domain.expires_on}`].filter(Boolean).join(' · ')}</Text>
+        <Text style={styles.meta}>{domain.message}</Text>
       </View> : null}
       {assessment?.missing_checks.length ? <View style={styles.block}>
         <Text style={styles.label}>아직 확인할 정보</Text>

@@ -9,6 +9,7 @@ from urllib.parse import unquote, urlparse
 
 import httpx
 
+from domain_check import registrable_domain as _site
 from mail_order_index import normalize_name as _name
 from schemas import UNKNOWN, MailOrderCheck, SellerVerification
 from seller_verification import is_marketplace
@@ -22,11 +23,6 @@ def _report_number(value: str) -> str:
     return re.sub(r"[^0-9가-힣]", "", re.sub(r"^제|호$", "", (value or "").strip()))
 
 
-def _site(host: str) -> str:
-    """Registrable domain: store.sony.co.kr and www.sony.co.kr are both sony.co.kr."""
-    labels = host.lower().removeprefix("www.").split(".")
-    size = 3 if len(labels) >= 3 and labels[-1] == "kr" and labels[-2] in {"co", "or", "ne", "go", "ac", "re", "pe"} else 2
-    return ".".join(labels[-size:])
 
 
 def _known(value) -> str:

@@ -39,7 +39,7 @@ if __name__ == "__main__":
                         "assessment": result.model_dump(), "expected_level": expected[case["case"]],
                         "passed": result.level == expected[case["case"]]})
     report = {"checked_at": datetime.now(timezone.utc).isoformat(), "fresh_page_fetch": False,
-              "new_model_calls": False, "rule_version": "6", "cases": reports}
+              "new_model_calls": False, "rule_version": "7", "cases": reports}
     (output / "replayed-evidence.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     for case in reports:
         print(case["id"], case["assessment"]["level"], "PASS" if case["passed"] else "REVIEW")

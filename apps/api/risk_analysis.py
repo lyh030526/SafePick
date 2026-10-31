@@ -1,7 +1,10 @@
 """Extract listing conditions and grounded purchase checks, without a fraud score."""
+import hashlib
 import json
 import os
 import re
+from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from typing import Literal
 
 from openai import APIConnectionError, APIStatusError, OpenAI
@@ -157,7 +160,15 @@ def signal_is_supported(category: str, quotes: list[str]) -> bool:
     return bool(re.search(r"배송|반품|교환|보증|구성|옵션|모델|조건", text))
 
 
-def validate_risk_draft(draft: RiskDraft, text: str) -> RiskAnalysis:
+def is_description(quote: str, title: str) -> bool:
+    """A real product description, not the product name repeated or a short label-value pair (브랜드 소니)."""
+    value = normalize(quote)
+    if title and value in normalize(title):
+        return False
+    return not (len(value.split()) <= 2 and len(value) <= 16)
+
+
+def validate_risk_draft(draft: RiskDraft, text: str, title: str = "") -> RiskAnalysis:
     conditions = ListingConditions()
     for field, values in draft.details.model_dump().items():
         quotes = grounded_quotes(values, text)
@@ -172,6 +183,10 @@ def validate_risk_draft(draft: RiskDraft, text: str) -> RiskAnalysis:
                         quotes[index] = attached.group()
         if field in DETAIL_PATTERNS:
             quotes = [quote for quote in quotes if re.search(DETAIL_PATTERNS[field], quote, re.I)]
+        if field == "description":
+            # Pages whose detail is all images leave only the name and spec labels; the model counts those as a
+            # description in some runs and not in others, so they never count.
+            quotes = [quote for quote in quotes if is_description(quote, title)]
         concrete = [quote for quote in quotes if not re.search(
             r"(?:로그인|회원).*확인|상세\s*(?:설명|페이지).*(?:참조|표시|확인)|추후.*안내", quote)]
         setattr(conditions, field, ListingCondition(
@@ -190,9 +205,15 @@ def validate_risk_draft(draft: RiskDraft, text: str) -> RiskAnalysis:
         if signal.category in seen:
             continue
         seen.add(signal.category)
-        title, explanation, action = SIGNALS[signal.category]
+        label, explanation, action = SIGNALS[signal.category]
         checks.append(PurchaseCheck(id=signal.category, category=signal.category, kind="attention",
-                                    title=title, explanation=explanation, quotes=quotes, how_to_check=action))
+                                    title=label, explanation=explanation, quotes=quotes, how_to_check=action))
+    return complete_analysis(conditions, checks, text, rejected)
+
+
+def complete_analysis(conditions: ListingConditions, checks: list[PurchaseCheck], text: str, rejected: bool) -> RiskAnalysis:
+    """Add the missing-information checks and the summary to validated conditions and attention checks."""
+    checks = list(checks)
     required = ["shipping", "returns"]
     if re.search(r"구성품|번들|(?:패키지|세트)\s*(?:구성|포함)", text):
         required.append("components")
@@ -216,12 +237,36 @@ def validate_risk_draft(draft: RiskDraft, text: str) -> RiskAnalysis:
                         conditions=conditions, checklist=checks, warnings=warnings)
 
 
-def analyze_listing_risks(product: ProductDetails, page_title: str, page_text: str) -> RiskAnalysis:
-    if len(page_text.strip()) < 30:
-        return RiskAnalysis(status="insufficient", message="위험 신호의 원문 근거를 확인할 상품 설명이 부족합니다. 상세 설명·배송·반품 안내를 추가해 주세요.",
-                            warnings=["이미지만으로는 위험 신호의 원문 문장을 검증하지 않습니다. 이미지의 상품 정보 추출 결과는 별도로 확인할 수 있습니다."])
-    if not os.getenv("OPENAI_API_KEY"):
-        return RiskAnalysis(message="AI 설정이 없어 위험 신호를 분석하지 못했습니다. 설정 후 다시 분석해 주세요.")
+# The review runs several times and keeps what most runs agree on: a single run flags a borderline expression or
+# finds a thin description in some runs and not others, which moved the attention level between analyses.
+REVIEW_RUNS = 3
+_CACHE: "OrderedDict[str, RiskAnalysis]" = OrderedDict()
+_CACHE_SIZE = 256
+
+
+def combine_analyses(analyses: list[RiskAnalysis], text: str) -> RiskAnalysis:
+    """Majority vote over completed runs: a condition or attention check stays only if most runs found it."""
+    completed = [item for item in analyses if item.status == "completed"]
+    if not completed:
+        return analyses[0]
+    need = len(completed) // 2 + 1
+    conditions = ListingConditions()
+    for field in ListingConditions.model_fields:
+        found = [getattr(item.conditions, field) for item in completed if getattr(item.conditions, field).status == "found"]
+        setattr(conditions, field, found[0] if len(found) >= need else ListingCondition(
+            status="unknown", text=UNKNOWN, quotes=next((getattr(item.conditions, field).quotes for item in completed
+                                                         if getattr(item.conditions, field).status != "found"), [])))
+    checks = []
+    for category in SIGNALS:
+        flagged = [check for item in completed for check in item.checklist if check.kind == "attention" and check.id == category]
+        if len(flagged) >= need:
+            checks.append(flagged[0])
+    rejected = any(len(item.warnings) > 1 for item in completed) or any(
+        check.kind == "attention" for item in completed for check in item.checklist if check not in checks)
+    return complete_analysis(conditions, checks, text, rejected)
+
+
+def _review_once(product: ProductDetails, page_title: str, page_text: str) -> RiskAnalysis:
     try:
         with OpenAI(api_key=os.environ["OPENAI_API_KEY"], base_url=os.getenv("OPENAI_BASE_URL") or None,
                     timeout=40.0, max_retries=0) as client:
@@ -237,10 +282,32 @@ def analyze_listing_risks(product: ProductDetails, page_title: str, page_text: s
                 }},
             )
         draft = RiskDraft.model_validate_json(completion.choices[0].message.content or "{}")
-        return validate_risk_draft(draft, page_text[:12000])
+        return validate_risk_draft(draft, page_text[:12000], page_title)
     except APIStatusError as error:
         return RiskAnalysis(message=f"AI 서비스 오류({error.status_code})로 위험 신호 분석을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.")
     except APIConnectionError:
         return RiskAnalysis(message="AI 서비스에 연결하지 못해 위험 신호 분석을 완료하지 못했습니다.")
     except Exception:
         return RiskAnalysis(message="위험 신호 결과 형식을 확인하지 못했습니다. 잠시 후 다시 분석해 주세요.")
+
+
+def analyze_listing_risks(product: ProductDetails, page_title: str, page_text: str) -> RiskAnalysis:
+    if len(page_text.strip()) < 30:
+        return RiskAnalysis(status="insufficient", message="위험 신호의 원문 근거를 확인할 상품 설명이 부족합니다. 상세 설명·배송·반품 안내를 추가해 주세요.",
+                            warnings=["이미지만으로는 위험 신호의 원문 문장을 검증하지 않습니다. 이미지의 상품 정보 추출 결과는 별도로 확인할 수 있습니다."])
+    if not os.getenv("OPENAI_API_KEY"):
+        return RiskAnalysis(message="AI 설정이 없어 위험 신호를 분석하지 못했습니다. 설정 후 다시 분석해 주세요.")
+    # The same material always gets the same answer, so analyzing a page again never changes its level by chance.
+    key = hashlib.sha256(json.dumps([os.getenv("OPENAI_MODEL", ""), RISK_INSTRUCTIONS, product.model_dump(), page_title,
+                                     page_text[:12000]], ensure_ascii=False).encode()).hexdigest()
+    if key in _CACHE:
+        _CACHE.move_to_end(key)
+        return _CACHE[key].model_copy(deep=True)
+    with ThreadPoolExecutor(max_workers=REVIEW_RUNS) as pool:
+        runs = list(pool.map(lambda _: _review_once(product, page_title, page_text), range(REVIEW_RUNS)))
+    result = combine_analyses(runs, page_text[:12000])
+    if result.status == "completed":
+        _CACHE[key] = result.model_copy(deep=True)
+        while len(_CACHE) > _CACHE_SIZE:
+            _CACHE.popitem(last=False)
+    return result

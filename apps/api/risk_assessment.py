@@ -4,7 +4,7 @@ Not a fraud probability or a calibrated seller-reliability model. No model calls
 """
 from dataclasses import dataclass, field
 
-from schemas import MarketPrice, ProductComparison, RiskAnalysis, RiskAssessment, RiskCriterion, SellerVerification
+from schemas import DomainCheck, MarketPrice, ProductComparison, RiskAnalysis, RiskAssessment, RiskCriterion, SellerVerification
 
 # Evidence score: confirmed criteria earn their weight, attention earns none, unchecked earns half.
 WEIGHTS = {"official": 25, "description": 20, "purchase_terms": 15, "seller": 25, "price": 15}
@@ -46,7 +46,7 @@ def score_evidence(criteria: list[RiskCriterion], level: str, params: ScoreParam
 
 def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
                 seller: SellerVerification | None = None, market: MarketPrice | None = None,
-                params: ScoreParams = DEFAULT_PARAMS) -> RiskAssessment:
+                params: ScoreParams = DEFAULT_PARAMS, domain: DomainCheck | None = None) -> RiskAssessment:
     complete = analysis.status == "completed"
     # Search status/not_found alone never proves a contradiction or a safe listing.
     official = bool(comparison and comparison.status == "exact" and any(
@@ -86,6 +86,12 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
     price_signal = market is not None and market.status == "far_below"
     if market is not None and market.status == "below":
         pending.append("가격 시세")
+    # A missing or expired domain is decisive on its own; a very new one-year registration is a signal; a new one needs
+    # a check. These hold even when the page could not be read. An old domain earns nothing.
+    domain_block = domain is not None and domain.status in {"missing", "expired"}
+    domain_warn = domain is not None and domain.status == "new_short"
+    if domain is not None and domain.status in {"new_short", "new"}:
+        pending.append("도메인 운영 기간")
     pending = list(dict.fromkeys(pending))
     criteria = [
         RiskCriterion(key="official", label="공식 정보 비교", status="confirmed" if official else "unknown",
@@ -117,20 +123,27 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
     price_reason = f"가격 시세: {market.label} (중앙값의 {market.ratio_percent}%)" if price_signal else None
     seller_reason = f"판매자 사업자 상태: {seller.label}" if seller_block or seller_warn else None
     mail_reason = f"통신판매업 신고: {mail_order.label}" if mail_warn else None
-    if seller_block or (complete and critical):
+    domain_reason = (f"도메인: {domain.label}" + (f" (등록 {domain.registered_on})" if domain.registered_on else "")
+                     if domain_block or domain_warn else None)
+    if domain_block or seller_block or (complete and critical):
         level, label = "high", "높음"
-        summary = ("판매자 정보의 사업자등록번호가 국세청에서 정상 사업자로 조회되지 않습니다. 판매자 정보를 확인하기 전에는 구매를 미뤄 주세요."
+        summary = ("이 주소의 도메인이 등록되어 있지 않거나 만료되었습니다. 이 주소로는 결제하지 마세요." if domain_block else
+                   "판매자 정보의 사업자등록번호가 국세청에서 정상 사업자로 조회되지 않습니다. 판매자 정보를 확인하기 전에는 구매를 미뤄 주세요."
                    if seller_block else
                    "모델 또는 구성품의 모순을 확인했습니다. 선택 옵션과 판매자 답변을 확인한 뒤 구매를 결정해 주세요.")
-        reasons = ([seller_reason] if seller_block else []) + [item.title for item in critical]
-    elif not complete:
+        reasons = (([domain_reason] if domain_block else []) + ([seller_reason] if seller_block else [])
+                   + [item.title for item in critical])
+    elif not complete and not domain_warn:
         level, label = "undetermined", "판단 보류"
         summary = "설명 분석을 완료하지 못해 주의 수준을 정하지 않았습니다. 자료를 추가하거나 다시 분석해 주세요."
         reasons = [analysis.message]
-    elif signals or seller_warn or mail_warn or price_signal:
+    elif signals or seller_warn or mail_warn or price_signal or domain_warn:
         level, label = "moderate", "보통"
-        summary = "추가 확인할 판매 표현이나 조건을 발견했습니다. 원문 근거와 적용 조건을 확인해 주세요."
-        reasons = (([seller_reason] if seller_warn else []) + ([mail_reason] if mail_warn else [])
+        summary = ("최근에 1년만 등록한 도메인의 사이트입니다. 사기 쇼핑몰에서 흔한 형태이니 판매자 정보와 결제 수단을 확인한 뒤 "
+                   "구매를 결정해 주세요." if domain_warn and not (signals or seller_warn or mail_warn or price_signal) else
+                   "추가 확인할 판매 표현이나 조건을 발견했습니다. 원문 근거와 적용 조건을 확인해 주세요.")
+        reasons = (([domain_reason] if domain_warn else []) + ([seller_reason] if seller_warn else [])
+                   + ([mail_reason] if mail_warn else [])
                    + ([price_reason] if price_signal else []) + [item.title for item in signals])
     elif not pending:
         level, label = "low", "낮음"
@@ -151,5 +164,5 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         summary = "확인된 주의 표현은 없지만 필요한 정보가 부족해 낮음으로 분류하지 않았습니다."
         reasons = ["주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."]
     return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
-                          missing_checks=pending, criteria=criteria, rule_version="6",
+                          missing_checks=pending, criteria=criteria, rule_version="7", domain=domain,
                           **score_evidence(criteria, level, params))

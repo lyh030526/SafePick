@@ -11,6 +11,7 @@ from openai import InternalServerError
 import main
 from extractor import unknown_product
 from risk_analysis import (
+    REVIEW_RUNS, combine_analyses,
     DETAIL_PATTERNS, DetailsDraft, RiskDraft, SignalDraft, analyze_listing_risks, signal_is_supported, validate_risk_draft,
 )
 from schemas import RiskAnalysis
@@ -207,6 +208,49 @@ class RiskModelTests(unittest.TestCase):
         self.assertEqual(result.status, "unavailable")
         self.assertIn("502", result.message)
         self.assertNotIn("PRIVATE", result.message)
+
+
+class StabilityTests(unittest.TestCase):
+    TEXT = ("소니 WH-1000XM5 블랙\n상품상태 새상품\n브랜드 소니\n제품은 노이즈 캔슬링 무선 헤드폰입니다.\n"
+            "배송비 3,000원.\n수령 후 7일 이내 반품 가능.\n반품은 상황에 따라 가능합니다.")
+
+    def run_once(self, description=(), ambiguous=False):
+        signals = [SignalDraft(category="ambiguous_conditions", quotes=["반품은 상황에 따라 가능합니다."])] if ambiguous else []
+        return validate_risk_draft(draft(signals, description=list(description), shipping=["배송비 3,000원."],
+                                         returns=["수령 후 7일 이내 반품 가능."]), self.TEXT, "소니 WH-1000XM5 블랙")
+
+    def test_name_and_label_pairs_are_not_a_description(self):
+        thin = self.run_once(["소니 WH-1000XM5 블랙", "상품상태 새상품", "브랜드 소니"])
+        self.assertEqual(thin.conditions.description.status, "unknown")
+        real = self.run_once(["제품은 노이즈 캔슬링 무선 헤드폰입니다."])
+        self.assertEqual(real.conditions.description.status, "found")
+
+    def test_majority_of_runs_decides_conditions_and_signals(self):
+        described = ["제품은 노이즈 캔슬링 무선 헤드폰입니다."]
+        one_flag = combine_analyses([self.run_once(described, True), self.run_once(described), self.run_once()], self.TEXT)
+        self.assertEqual([check.id for check in one_flag.checklist if check.kind == "attention"], [])
+        self.assertEqual(one_flag.conditions.description.status, "found")
+        two_flags = combine_analyses([self.run_once(described, True), self.run_once(ambiguous=True), self.run_once()], self.TEXT)
+        self.assertEqual([check.id for check in two_flags.checklist if check.kind == "attention"], ["ambiguous_conditions"])
+        self.assertEqual(two_flags.conditions.description.status, "unknown")
+        # A failed run does not count; the completed ones decide.
+        failed = combine_analyses([RiskAnalysis(), self.run_once(described), self.run_once(described)], self.TEXT)
+        self.assertEqual(failed.status, "completed")
+        self.assertEqual(combine_analyses([RiskAnalysis(), RiskAnalysis()], self.TEXT).status, "unavailable")
+
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch("risk_analysis.OpenAI")
+    def test_same_material_reuses_the_review(self, client):
+        content = json.dumps({"details": {"description": [], "components": [], "options": [], "shipping": ["배송비 3,000원."],
+                                          "returns": ["수령 후 7일 이내 반품 가능."], "warranty": []}, "signals": []})
+        create = client.return_value.__enter__.return_value.chat.completions.create
+        create.return_value = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+        first = analyze_listing_risks(unknown_product(), "상품", self.TEXT)
+        self.assertEqual(create.call_count, REVIEW_RUNS)
+        self.assertEqual(analyze_listing_risks(unknown_product(), "상품", self.TEXT), first)
+        self.assertEqual(create.call_count, REVIEW_RUNS)
+        analyze_listing_risks(unknown_product(), "상품", self.TEXT + " 추가 문장")
+        self.assertEqual(create.call_count, 2 * REVIEW_RUNS)
 
 
 class RiskApiTests(unittest.TestCase):

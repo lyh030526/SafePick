@@ -175,6 +175,16 @@ class RiskCriterion(BaseModel):
     detail: str
 
 
+class DomainCheck(BaseModel):
+    status: Literal["missing", "expired", "new_short", "new", "established", "marketplace", "unavailable"] = "unavailable"
+    label: str = "도메인 조회 불가"
+    message: str = ""
+    domain: str | None = None
+    registered_on: str | None = None
+    expires_on: str | None = None
+    age_days: int | None = None
+
+
 class RiskAssessment(BaseModel):
     level: Literal["high", "moderate", "low", "undetermined"] = "undetermined"
     label: str = "판단 보류"
@@ -187,6 +197,7 @@ class RiskAssessment(BaseModel):
     coverage_percent: int = 0
     checked_count: int = 0
     rule_version: str = "1"
+    domain: DomainCheck | None = None
 
 
 class SellerInfo(BaseModel):
