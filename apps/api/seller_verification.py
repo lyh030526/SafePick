@@ -6,10 +6,11 @@ means the business is registered, not that the seller is trustworthy.
 """
 import os
 import re
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 import httpx
 
+from mail_order_index import find_number
 from schemas import UNKNOWN, SellerInfo, SellerVerification
 
 NTS_STATUS_URL = "https://api.odcloud.kr/api/nts-businessman/v1/status"
@@ -18,7 +19,7 @@ _LABELS = {
     "business_name": r"상호\s*명?|회사\s*명",
     "representative": r"대표자(?:\s*명)?|대표\s*성명",
     "business_number": r"사업자\s*(?:등록)?\s*번호",
-    "mail_order_number": r"통신\s*판매\s*업?\s*(?:신고)?\s*번호",
+    "mail_order_number": r"통신\s*판매\s*업?\s*(?:신고\s*번호|신고|번호)",
     "address": r"사업장\s*(?:소재지|주소)|소재지",
 }
 _NEXT_LABEL = re.compile("|".join([*_LABELS.values(), r"고객\s*센터", r"e-?mail", r"이메일", r"전화\s*번호", r"연락처", r"사업자\s*정보\s*확인"]), re.I)
@@ -27,6 +28,8 @@ _NUMBER = re.compile(rf"(?:{_LABELS['business_number']})\s*[:：]?\s*(\d{{3}})\s
 _OPERATORS = r"(?:네이버|쿠팡|십일번가|11번가|지마켓|G마켓|이베이코리아|에스에스지닷컴|롯데쇼핑|인터파크|위메프|티몬|카카오)"
 _PLATFORM = re.compile(rf"{_OPERATORS}\s*(?:주식회사|㈜|\(주\))|(?:주식회사|㈜|\(주\))\s*{_OPERATORS}|NAVER\s*Corp|Coupang\s*Corp"
                        r"|통신판매\s*중개", re.I)
+# Marketplaces check a seller's registration at sign-up and show the trade name and representative openly.
+MARKETPLACES = ("naver.com", "coupang.com", "11st.co.kr", "gmarket.co.kr", "auction.co.kr", "ssg.com", "lotteon.com")
 _PLATFORM_NUMBERS = {"2208162517", "1208800767", "8158101244"}
 
 
@@ -76,11 +79,41 @@ def extract_seller_info(text: str) -> SellerInfo | None:
     return None
 
 
-def verify_seller(text: str) -> SellerVerification:
+def is_marketplace(page_url: str) -> bool:
+    host = (urlparse(page_url).hostname or "").lower()
+    return any(host == site or host.endswith("." + site) for site in MARKETPLACES)
+
+
+def extract_listed_identity(text: str) -> SellerInfo | None:
+    """Trade name and representative shown without a number (the number sits behind a verification step)."""
+    for match in re.finditer(rf"(?:{_LABELS['business_name']})\s*[:：]?\s*", text):
+        window = text[match.start():match.start() + 300]
+        name, representative = _field(window, "business_name"), _field(window, "representative")
+        if UNKNOWN in {name, representative} or _PLATFORM.search(window[:120]) or re.search(_OPERATORS, name):
+            continue
+        return SellerInfo(business_name=name, representative=representative, quote=" ".join(window.split())[:300])
+    return None
+
+
+def verify_seller(text: str, page_url: str = "") -> SellerVerification:
     seller = extract_seller_info(text or "")
+    listed = extract_listed_identity(text or "") if seller is None and is_marketplace(page_url) else None
+    # With the FTC file indexed, a unique trade name and representative gives the number the page hides.
+    found = find_number(listed.business_name, listed.representative) if listed is not None else None
+    if found:
+        seller = listed.model_copy(update={"business_number": f"{found[:3]}-{found[3:5]}-{found[5:]}"})
+        return _check_number(seller).model_copy(update={"number_source": "registry"})
+    if listed is not None:
+        return SellerVerification(status="marketplace_listed", label="오픈마켓 표시 판매자", seller=listed,
+                                  message="오픈마켓이 표시한 상호와 대표자를 확인했습니다. 사업자등록번호는 인증 뒤에만 보여 국세청 "
+                                  "상태는 조회하지 못했습니다. 마켓의 입점 심사를 거친 판매자라는 뜻일 뿐 신뢰도를 보증하지 않습니다.")
     if seller is None:
         return SellerVerification(message="판매 자료에서 판매자의 사업자등록번호를 찾지 못했습니다. "
                                   "네이버·11번가는 '판매자 상세정보 확인'의 인증을 직접 마친 뒤 가져와야 번호가 보입니다.")
+    return _check_number(seller)
+
+
+def _check_number(seller: SellerInfo) -> SellerVerification:
     digits = seller.business_number.replace("-", "")
     if not is_valid_business_number(digits):
         return SellerVerification(status="invalid_number", label="번호 형식 오류", seller=seller,

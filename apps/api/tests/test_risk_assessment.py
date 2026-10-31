@@ -7,7 +7,7 @@ import main
 from extractor import unknown_product
 from risk_analysis import DetailsDraft, RiskDraft, SignalDraft, validate_risk_draft
 from risk_assessment import assess_risk
-from schemas import (MarketPrice, OfficialEvidence, OfficialFacts, OfficialLookup, OfficialPageSummary,
+from schemas import (MailOrderCheck, MarketPrice, OfficialEvidence, OfficialFacts, OfficialLookup, OfficialPageSummary,
                      PriceComparison, ProductComparison, RiskAnalysis, SellerVerification)
 
 
@@ -101,6 +101,35 @@ class RiskLevelTests(unittest.TestCase):
                 self.assertEqual(seller.status, {"active": "confirmed", "not_found": "unknown",
                                                  "unavailable": "unknown"}.get(status, "attention"))
                 self.assertEqual("판매자 사업자 상태" in result.missing_checks, status != "active")
+
+    def test_marketplace_listed_seller_earns_partial_credit_but_not_low(self):
+        listed = SellerVerification(status="marketplace_listed", label="오픈마켓 표시 판매자")
+        result = assess_risk(analyzed(), None, listed, MarketPrice(status="typical", label="시세 범위", ratio_percent=95))
+        self.assertEqual(result.level, "undetermined")
+        self.assertIn("판매자 사업자 상태", result.missing_checks)
+        self.assertEqual(next(item for item in result.criteria if item.key == "seller").status, "partial")
+        unknown = assess_risk(analyzed(), None, SellerVerification(status="not_found"),
+                              MarketPrice(status="typical", label="시세 범위", ratio_percent=95))
+        self.assertGreater(result.score, unknown.score)
+        self.assertGreater(result.coverage_percent, unknown.coverage_percent)
+
+    def test_mail_order_record_must_agree_with_the_page(self):
+        def seller(status):
+            return SellerVerification(status="active", label="계속사업자",
+                                      mail_order=MailOrderCheck(status=status, label=status))
+        for status, level in [("matched", "low"), ("unavailable", "low"), ("domain_differs", "undetermined"), ("name_absent", "undetermined"),
+                              ("not_found", "undetermined"), ("mismatch", "moderate"), ("closed", "moderate")]:
+            with self.subTest(status=status):
+                result = assess_risk(analyzed(), None, seller(status))
+                self.assertEqual(result.level, level)
+                self.assertEqual("통신판매업 신고 정보" in result.missing_checks,
+                                 status in {"domain_differs", "name_absent", "not_found", "mismatch", "closed"})
+                criterion = next(item for item in result.criteria if item.key == "seller").status
+                self.assertEqual(criterion, {"mismatch": "attention", "closed": "attention",
+                                             "domain_differs": "unknown", "name_absent": "unknown", "not_found": "unknown"}.get(status, "confirmed"))
+        self.assertIn("통신판매업 신고: mismatch", assess_risk(analyzed(), official(), seller("mismatch")).reasons)
+        self.assertIn("페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다.",
+                      assess_risk(analyzed(), None, seller("matched")).reasons)
 
     def test_closed_seller_is_high_even_without_description_analysis(self):
         result = assess_risk(RiskAnalysis(), None, SellerVerification(status="closed", label="폐업한 사업자"))

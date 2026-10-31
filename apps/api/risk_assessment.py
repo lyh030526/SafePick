@@ -8,7 +8,8 @@ from schemas import MarketPrice, ProductComparison, RiskAnalysis, RiskAssessment
 
 # Evidence score: confirmed criteria earn their weight, attention earns none, unchecked earns half.
 WEIGHTS = {"official": 25, "description": 20, "purchase_terms": 15, "seller": 25, "price": 15}
-CREDIT = {"confirmed": 1.0, "unknown": 0.5, "attention": 0.0}
+# A marketplace-listed seller (trade name and representative shown, number behind verification) is partly checked.
+CREDIT = {"confirmed": 1.0, "partial": 0.75, "unknown": 0.5, "attention": 0.0}
 # The evidence share is placed proportionally inside its level's band, so the score never reads better or
 # worse than the level but still shows how much of the evidence held up.
 RANGES = {"high": (0, 29), "moderate": (30, 59), "undetermined": (30, 79), "low": (80, 100)}
@@ -62,7 +63,12 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
     unresolved = [item.title for item in analysis.checklist if item.kind == "needs_check"]
     # Most brands have no supported official page, so a seller registered as active with the NTS stands in
     # for the official match. A market price below the norm still holds the listing back.
-    seller_active = seller is not None and seller.status == "active"
+    # The FTC record of the number must agree with the page; a different trade name suggests a borrowed number.
+    mail_order = seller.mail_order if seller is not None else None
+    mail_warn = mail_order is not None and mail_order.status in {"mismatch", "closed"}
+    mail_pending = mail_order is not None and mail_order.status in {"name_absent", "domain_differs", "not_found"}
+    seller_active = (seller is not None and seller.status == "active"
+                     and (mail_order is None or mail_order.status in {"matched", "unavailable"}))
     pending = ([] if official or seller_active else ["공식 상품 동일 여부 또는 판매자 사업자 확인"])
     pending += ([] if description else ["상품 상세 설명"])
     pending += ([] if shipping else ["배송 조건"])
@@ -74,6 +80,8 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
     seller_warn = seller is not None and seller.status in {"suspended", "invalid_number"}
     if seller is not None and seller.status != "active":
         pending.append("판매자 사업자 상태")
+    if mail_warn or mail_pending:
+        pending.append("통신판매업 신고 정보")
     # Far below the market is a signal; somewhat below needs a reason. No market data is not a risk.
     price_signal = market is not None and market.status == "far_below"
     if market is not None and market.status == "below":
@@ -96,8 +104,10 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
     if seller is not None:
         criteria.append(RiskCriterion(
             key="seller", label="판매자 사업자 확인",
-            status="confirmed" if seller.status == "active" else "attention" if seller_block or seller_warn else "unknown",
-            detail=f"{seller.label}: {seller.message}"))
+            status="attention" if seller_block or seller_warn or mail_warn else "confirmed" if seller_active
+            else "partial" if seller.status == "marketplace_listed" else "unknown",
+            detail=f"{seller.label}: {seller.message}"
+            + (f" 통신판매업 신고: {mail_order.label}." if mail_order is not None else "")))
     if market is not None:
         criteria.append(RiskCriterion(
             key="price", label="가격 시세",
@@ -106,6 +116,7 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
             detail=f"{market.label}: {market.message}"))
     price_reason = f"가격 시세: {market.label} (중앙값의 {market.ratio_percent}%)" if price_signal else None
     seller_reason = f"판매자 사업자 상태: {seller.label}" if seller_block or seller_warn else None
+    mail_reason = f"통신판매업 신고: {mail_order.label}" if mail_warn else None
     if seller_block or (complete and critical):
         level, label = "high", "높음"
         summary = ("판매자 정보의 사업자등록번호가 국세청에서 정상 사업자로 조회되지 않습니다. 판매자 정보를 확인하기 전에는 구매를 미뤄 주세요."
@@ -116,10 +127,11 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         level, label = "undetermined", "판단 보류"
         summary = "설명 분석을 완료하지 못해 주의 수준을 정하지 않았습니다. 자료를 추가하거나 다시 분석해 주세요."
         reasons = [analysis.message]
-    elif signals or seller_warn or price_signal:
+    elif signals or seller_warn or mail_warn or price_signal:
         level, label = "moderate", "보통"
         summary = "추가 확인할 판매 표현이나 조건을 발견했습니다. 원문 근거와 적용 조건을 확인해 주세요."
-        reasons = ([seller_reason] if seller_warn else []) + ([price_reason] if price_signal else []) + [item.title for item in signals]
+        reasons = (([seller_reason] if seller_warn else []) + ([mail_reason] if mail_warn else [])
+                   + ([price_reason] if price_signal else []) + [item.title for item in signals])
     elif not pending:
         level, label = "low", "낮음"
         summary = ("확인한 공식 상품 정보와 판매 설명·구매 조건에서 추가 주의 신호를 찾지 못했습니다. 안전을 보장하지 않습니다."
@@ -130,6 +142,8 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
                    else "상세 설명과 배송·반품 원문을 확인했습니다."]
         if seller_active:
             reasons.append("판매자가 국세청에 정상 등록된 사업자로 조회됩니다.")
+        if mail_order is not None and mail_order.status == "matched":
+            reasons.append("페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다.")
         if market is not None and market.status == "typical":
             reasons.append("판매가가 같은 모델의 시세 범위 안에 있습니다.")
     else:
@@ -137,5 +151,5 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         summary = "확인된 주의 표현은 없지만 필요한 정보가 부족해 낮음으로 분류하지 않았습니다."
         reasons = ["주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."]
     return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
-                          missing_checks=pending, criteria=criteria, rule_version="5",
+                          missing_checks=pending, criteria=criteria, rule_version="6",
                           **score_evidence(criteria, level, params))

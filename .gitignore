@@ -12,3 +12,6 @@ __pycache__/
 .env
 .env.local
 apps/mobile/.env
+
+# Local data built from public downloads
+data/mail_order/

@@ -63,6 +63,21 @@ class ExtractionTests(unittest.TestCase):
                       "(주)지마켓 사업자등록번호 : 123-45-67891", "통신판매중개자 주식회사 어딘가 사업자등록번호 123-45-67891"]:
             self.assertIsNone(extract_seller_info(other), other)
 
+    def test_mail_order_label_variants(self):
+        for label in ["통신판매번호 :", "통신판매업신고 :", "통신판매업 신고번호"]:
+            seller = extract_seller_info(f"사업자등록번호 : 123-45-67891 {label} 2012-서울영등포-1038 소니코리아㈜")
+            self.assertEqual(seller.mail_order_number, "2012-서울영등포-1038", label)
+
+    def test_marketplace_identity_without_a_number(self):
+        naver = "판매자 정보:\n상호명\n소니코리아(주)\n(법인 사업자)\n대표자\nKITAJIMA YUKIHIRO\n판매자 상세정보 확인"
+        result = verify_seller(naver, "https://brand.naver.com/sonystore/products/1")
+        self.assertEqual((result.status, result.seller.business_name, result.seller.representative),
+                         ("marketplace_listed", "소니코리아(주)", "KITAJIMA YUKIHIRO"))
+        # Own malls and operator footers never count as a marketplace-checked identity.
+        self.assertEqual(verify_seller(naver, "https://some-shop.example/p/1").status, "not_found")
+        operator = "상호 : 십일번가(주)\n대표이사 : 안정은\n대표자 : 안정은"
+        self.assertEqual(verify_seller(operator, "https://www.11st.co.kr/products/1").status, "not_found")
+
     def test_unlabeled_numbers_are_ignored(self):
         self.assertIsNone(extract_seller_info("주문번호 123-45-67891 배송 조회"))
 

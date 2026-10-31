@@ -14,7 +14,7 @@ export type RiskAnalysis = {
   assessment?: {
     level: 'high' | 'moderate' | 'low' | 'undetermined'; label: string; summary: string;
     reasons: string[]; missing_checks: string[];
-    criteria: { key: string; label: string; status: 'confirmed' | 'attention' | 'unknown'; detail: string }[];
+    criteria: { key: string; label: string; status: 'confirmed' | 'partial' | 'attention' | 'unknown'; detail: string }[];
     score?: number | null; score_label?: string; coverage_percent?: number; checked_count?: number;
     rule_version: string;
   };
@@ -22,7 +22,7 @@ export type RiskAnalysis = {
 const labels: Record<keyof RiskAnalysis['conditions'], string> = {
   description: '상세 설명', components: '구성품', options: '옵션', shipping: '배송 조건', returns: '반품·교환 조건', warranty: '보증·AS',
 };
-const criterionLabels = { confirmed: '확인됨', attention: '주의 항목 있음', unknown: '추가 확인' };
+const criterionLabels = { confirmed: '확인됨', partial: '일부 확인', attention: '주의 항목 있음', unknown: '추가 확인' };
 
 export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis | null; sourceUrl: string }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -185,6 +185,7 @@ const levelTextStyles = StyleSheet.create({
 });
 const criterionStyles = StyleSheet.create({
   confirmed: { backgroundColor: colors.greenSoft, color: colors.green },
+  partial: { backgroundColor: colors.fill, color: colors.green },
   attention: { backgroundColor: colors.orangeSoft, color: colors.orangeText },
   unknown: { backgroundColor: colors.card, color: colors.textSub },
 });

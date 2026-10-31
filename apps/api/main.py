@@ -18,6 +18,7 @@ from schemas import (
     ProductDetails, SourceSummary, SupportedBrand, UNKNOWN,
 )
 from scraper import ProductPageError, fetch_product_page
+from mail_order import with_mail_order
 from seller_verification import verify_seller
 
 
@@ -108,7 +109,7 @@ def analyze_product(product, url, title, text):
     # The listing review, seller check, and market search do not depend on the official lookup, so run them at once.
     with ThreadPoolExecutor(max_workers=3) as executor:
         risk_future = executor.submit(analyze_listing_risks, product, title, text)
-        seller_future = executor.submit(verify_seller, text)
+        seller_future = executor.submit(lambda: with_mail_order(verify_seller(text, url), url, text))
         market_future = executor.submit(check_market_price, product)
         lookup = create_official_lookup(product)
         comparison = compare_product(product, url, lookup)

@@ -171,7 +171,7 @@ class PurchaseCheck(BaseModel):
 class RiskCriterion(BaseModel):
     key: Literal["official", "description", "purchase_terms", "seller", "price"]
     label: str
-    status: Literal["confirmed", "attention", "unknown"]
+    status: Literal["confirmed", "partial", "attention", "unknown"]
     detail: str
 
 
@@ -198,13 +198,27 @@ class SellerInfo(BaseModel):
     quote: str = ""
 
 
+class MailOrderCheck(BaseModel):
+    status: Literal["matched", "name_absent", "domain_differs", "mismatch", "closed", "not_found", "unavailable"] = "unavailable"
+    label: str = "신고 조회 불가"
+    message: str = ""
+    registered_name: str | None = None
+    registered_representative: str | None = None
+    report_number: str | None = None
+    registered_domains: list[str] = Field(default_factory=list)
+
+
 class SellerVerification(BaseModel):
-    status: Literal["active", "suspended", "closed", "unregistered", "invalid_number", "not_found", "unavailable"] = "not_found"
+    status: Literal["active", "suspended", "closed", "unregistered", "invalid_number", "marketplace_listed", "not_found",
+                    "unavailable"] = "not_found"
     label: str = "사업자 정보 없음"
     message: str = "판매 자료에서 사업자등록번호를 찾지 못했습니다."
     seller: SellerInfo = Field(default_factory=SellerInfo)
     tax_type: str | None = None
     closed_on: str | None = None
+    mail_order: MailOrderCheck | None = None
+    # "registry" when the page hid the number and it was found from the trade name and representative.
+    number_source: Literal["page", "registry"] = "page"
 
 
 class MarketListing(BaseModel):

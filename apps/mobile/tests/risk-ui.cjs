@@ -29,7 +29,7 @@ function risk(status = 'completed', empty = false, level = empty ? 'undetermined
     assessment: { level, label: levelLabel, summary: '수집한 근거로 정한 구매 전 주의 수준입니다.',
       reasons: ['테스트 판단 근거'], missing_checks: level === 'low' ? [] : ['공식 상품 동일 여부 또는 판매자 사업자 확인'],
       criteria: [{ key: 'official', label: '공식 정보 비교', status: level === 'low' ? 'confirmed' : 'unknown', detail: '공식 정보 확인 상태입니다.' }],
-      ...scores[level], rule_version: '5' } };
+      ...scores[level], rule_version: '6' } };
 }
 
 (async () => {
