@@ -19,6 +19,11 @@ def official(status="exact", evidence=True):
                             if evidence else []))])
 
 
+def unmatched_comparison():
+    """A supported brand whose official page could not be matched: the official criterion stays, unchecked."""
+    return ProductComparison(status="not_found", message="공식 페이지를 찾지 못했습니다.", price=PriceComparison(message="테스트 가격"))
+
+
 def analyzed(signals=None, shipping=True, returns=True):
     text = "제품은 테스트 무선 헤드폰입니다. 배송비 3,000원. 수령 후 7일 이내 반품 가능."
     details = {key: [] for key in DetailsDraft.model_fields}
@@ -138,13 +143,14 @@ class RiskLevelTests(unittest.TestCase):
 
     def test_market_price_sets_the_level(self):
         for status, level, criterion in [("far_below", "moderate", "attention"), ("below", "undetermined", "attention"),
-                                         ("typical", "low", "confirmed"), ("insufficient", "low", "unknown"),
-                                         ("no_model", "low", "unknown"), ("unavailable", "low", "unknown")]:
+                                         ("typical", "low", "confirmed"), ("insufficient", "low", None),
+                                         ("no_model", "low", None), ("unavailable", "low", None)]:
             with self.subTest(status=status):
                 market = MarketPrice(status=status, label=status, ratio_percent=40)
                 result = assess_risk(analyzed(), official(), None, market)
                 self.assertEqual(result.level, level)
-                self.assertEqual(next(item for item in result.criteria if item.key == "price").status, criterion)
+                # No market to compare against leaves the price out of the score rather than half-checked.
+                self.assertEqual(next((item.status for item in result.criteria if item.key == "price"), None), criterion)
                 self.assertEqual("가격 시세" in result.missing_checks, status == "below")
         far = assess_risk(analyzed(), None, None, MarketPrice(status="far_below", label="시세보다 지나치게 저렴", ratio_percent=31))
         self.assertEqual(far.level, "moderate")
@@ -156,12 +162,15 @@ class RiskLevelTests(unittest.TestCase):
         full = assess_risk(analyzed(), official(), active, typical)
         self.assertEqual((full.level, full.score, full.score_label, full.coverage_percent, full.checked_count),
                          ("low", 100, "근거 양호", 100, 5))
-        # An unchecked criterion earns half its weight: price 15 -> 92.5% of the evidence, 80 + 20 * 0.925.
-        partial = assess_risk(analyzed(), official(), active, MarketPrice(status="no_model"))
-        self.assertEqual((partial.level, partial.score, partial.coverage_percent), ("low", 98, 85))
-        # Without the official match the active seller still allows low; official 25 earns half -> 87.5%.
-        seller_only = assess_risk(analyzed(), None, active, typical)
-        self.assertEqual((seller_only.level, seller_only.score, seller_only.coverage_percent), ("low", 97, 75))
+        # An unchecked criterion earns half its weight: official 25 of 100 unknown -> 87.5%, 80 + 20 * 0.875.
+        unmatched = assess_risk(analyzed(), unmatched_comparison(), active, typical)
+        self.assertEqual((unmatched.level, unmatched.score, unmatched.coverage_percent), ("low", 97, 75))
+        # No market for the model and no supported official site leave those criteria out, so the seller and listing
+        # carry the score instead of two half-credited gaps, but an uncompared product tops out at 95.
+        seller_only = assess_risk(analyzed(), None, active, MarketPrice(status="no_model"))
+        self.assertEqual((seller_only.level, seller_only.score, seller_only.coverage_percent,
+                          [item.key for item in seller_only.criteria]),
+                         ("low", 95, 100, ["description", "purchase_terms", "seller"]))
         # Without either, the same evidence is undetermined, so it cannot read as 근거 양호.
         pending = assess_risk(analyzed(), None, SellerVerification(status="not_found"), typical)
         self.assertEqual((pending.level, pending.score_label), ("undetermined", "대체로 양호"))
@@ -172,7 +181,7 @@ class RiskLevelTests(unittest.TestCase):
     def test_score_is_withheld_without_enough_evidence_unless_the_level_is_decisive(self):
         empty = assess_risk(RiskAnalysis(), None, SellerVerification(status="unavailable"), MarketPrice(status="no_model"))
         self.assertEqual((empty.level, empty.score, empty.score_label, empty.coverage_percent), ("undetermined", None, "점수 보류", 0))
-        closed = assess_risk(RiskAnalysis(), None, SellerVerification(status="closed", label="폐업한 사업자"))
+        closed = assess_risk(RiskAnalysis(), unmatched_comparison(), SellerVerification(status="closed", label="폐업한 사업자"))
         self.assertEqual((closed.level, closed.score, closed.score_label), ("high", 10, "구매 보류 권장"))
         self.assertLess(closed.coverage_percent, 40)
 

@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from comparison import compare_product
+from group_comparison import compare_group
 from extractor import extract_product_details, generate_official_search_query, unknown_product
 from market_price import check_market_price
 from official_brands import OFFICIAL_BRANDS, find_official_brand
@@ -15,7 +16,8 @@ from risk_analysis import analyze_listing_risks
 from domain_check import check_domain
 from risk_assessment import assess_risk
 from schemas import (
-    AnalysisRequest, AnalysisResponse, ComparisonRequest, ComparisonResponse, OfficialLookup,
+    AnalysisRequest, AnalysisResponse, ComparisonRequest, ComparisonResponse, GroupAnalysisRequest, GroupAnalysisResponse,
+    OfficialLookup,
     ProductDetails, RiskAnalysis, SourceSummary, SupportedBrand, UNKNOWN,
 )
 from scraper import ProductPageError, fetch_product_page
@@ -119,32 +121,47 @@ def analyze_product(product, url, title, text, entered_url=None):
         analysis = risk_future.result()
         seller = seller_future.result()
         market = market_future.result()
-    assessment = assess_risk(analysis, comparison, seller, market, domain=domain_future.result())
+    # A brand without a supported official site has nothing to compare, so the criterion is left out of the score.
+    assessment = assess_risk(analysis, None if lookup.status == "not_supported" else comparison, seller, market,
+                             domain=domain_future.result())
     return lookup, comparison, analysis.model_copy(update={"assessment": assessment}), seller, market
+
+
+def analyze_provided(request: AnalysisRequest) -> AnalysisResponse:
+    """Analyze material the shopper provided (extension capture, pasted text, or images) instead of fetching the page."""
+    text = request.provided_text or ""
+    product, warnings = extract_product_details(request.page_title, text, images=request.images)
+    lookup, comparison, risk, seller, market = analyze_product(product, str(request.product_url), request.page_title, text)
+    kind = ("mixed" if text and request.images else "user_images" if request.images
+            else request.input_source)
+    notice = "사용자가 제공한 자료를 분석했습니다. 판매 페이지의 현재 내용과 일치하는지는 별도 확인이 필요합니다."
+    if request.images:
+        notice += " 이미지의 외형만으로 정품 여부나 판매자 신뢰도를 판정하지 않습니다."
+    return AnalysisResponse(
+        status="manual_input_required" if warnings else "completed",
+        product=product,
+        source=SourceSummary(
+            page_title=request.page_title or "사용자 제공 상품 자료",
+            final_url=str(request.product_url), text_length=len(text), kind=kind,
+            image_count=len(request.images), captured_at=request.captured_at,
+        ),
+        warnings=[notice, *warnings], official_lookup=lookup,
+        comparison=comparison, risk_analysis=risk, seller_verification=seller, market_price=market, sale_text=text,
+    )
+
+
+@app.post("/group-analyses", response_model=GroupAnalysisResponse)
+def create_group_analysis(request: GroupAnalysisRequest) -> GroupAnalysisResponse:
+    # Each listing runs the full analysis; a few at a time keeps the model and lookup APIs within their rate limits.
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        results = list(executor.map(analyze_provided, request.listings))
+    return compare_group(results)
 
 
 @app.post("/analyses", response_model=AnalysisResponse)
 def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
     if request.provided_text is not None or request.images:
-        text = request.provided_text or ""
-        product, warnings = extract_product_details(request.page_title, text, images=request.images)
-        lookup, comparison, risk, seller, market = analyze_product(product, str(request.product_url), request.page_title, text)
-        kind = ("mixed" if text and request.images else "user_images" if request.images
-                else request.input_source)
-        notice = "사용자가 제공한 자료를 분석했습니다. 판매 페이지의 현재 내용과 일치하는지는 별도 확인이 필요합니다."
-        if request.images:
-            notice += " 이미지의 외형만으로 정품 여부나 판매자 신뢰도를 판정하지 않습니다."
-        return AnalysisResponse(
-            status="manual_input_required" if warnings else "completed",
-            product=product,
-            source=SourceSummary(
-                page_title=request.page_title or "사용자 제공 상품 자료",
-                final_url=str(request.product_url), text_length=len(text), kind=kind,
-                image_count=len(request.images), captured_at=request.captured_at,
-            ),
-            warnings=[notice, *warnings], official_lookup=lookup,
-            comparison=comparison, risk_analysis=risk, seller_verification=seller, market_price=market, sale_text=text,
-        )
+        return analyze_provided(request)
     try:
         page = fetch_product_page(str(request.product_url))
     except ProductPageError as error:

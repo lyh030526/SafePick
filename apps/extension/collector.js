@@ -29,10 +29,20 @@ async function collectProductPage() {
   const operatorNumber = /220\s*-?\s*81\s*-?\s*62517|120\s*-?\s*88\s*-?\s*00767|815\s*-?\s*81\s*-?\s*01244/;
   const operator = /(네이버|쿠팡|십일번가|11번가|지마켓|G마켓|이베이코리아|인터파크|위메프|티몬)\s*(주식회사|㈜|\(주\))|(주식회사|㈜|\(주\))\s*(네이버|쿠팡|십일번가|지마켓)|NAVER\s*Corp|Coupang\s*Corp|통신판매\s*중개/i;
   const skip = 'script,style,noscript,nav,header,footer,form,input,textarea,select,button,iframe,[contenteditable="true"],[hidden],[aria-hidden="true"]';
+  // Recommendation carousels ("이런 상품은 어때요?") list other products, each card with its own price. On Coupang they
+  // are half the page and would be read as this listing's claims and prices, so a list of mostly priced cards is skipped.
+  const price = /\d{1,3}(,\d{3})+/;
+  const isProductList = element => {
+    if (element.children.length < 4) return false;
+    const cards = [...element.children].filter(child => child.textContent.trim());
+    const priced = cards.filter(child => child.textContent.length < 400 && price.test(child.textContent));
+    return priced.length >= 4 && priced.length >= cards.length * 0.75;
+  };
   const readVisible = () => {
     // Shops render seller and return details in modals outside the main element, so open dialogs count too.
     const roots = [document.querySelector('main, [role="main"], #content') || document.body,
       ...document.querySelectorAll('[role="dialog"], [aria-modal="true"], #MODAL_ROOT_ID')];
+    const productLists = roots.flatMap(root => [...root.querySelectorAll('ul, ol, div')].filter(isProductList));
     const lines = [];
     let length = 0;
     for (const root of roots) {
@@ -40,7 +50,7 @@ async function collectProductPage() {
       while (walker.nextNode() && length < 60000) {
         const node = walker.currentNode;
         const parent = node.parentElement;
-        if (!parent || parent.closest(skip)) continue;
+        if (!parent || parent.closest(skip) || productLists.some(list => list.contains(parent))) continue;
         const style = getComputedStyle(parent);
         if (style.display === 'none' || style.visibility === 'hidden' || !parent.getClientRects().length) continue;
         const text = node.textContent.replace(/\s+/g, ' ').trim();

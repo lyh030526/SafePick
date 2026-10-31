@@ -84,6 +84,17 @@ class ExtractionTests(unittest.TestCase):
         operator = "상호 : 십일번가(주)\n대표이사 : 안정은\n대표자 : 안정은"
         self.assertEqual(verify_seller(operator, "https://www.11st.co.kr/products/1").status, "not_found")
 
+    def test_coupang_puts_name_and_representative_in_one_cell(self):
+        table = ("판매자 정보:\n소비자상담 및 교환반품 문의\n쿠팡고객센터 1577-7011\n상호/대표자\n리샤무역 유한회사 / LI XIAOWEN(리샤오운)\n"
+                 "사업장 소재지\n경기도 용인시 처인구 1\ne-mail\nseller@example.com\n연락처\n010-0000-0000\n"
+                 "통신판매업 신고번호\n2026-용인처인-01238\n사업자번호\n123-45-67891")
+        seller = extract_seller_info(table)
+        self.assertEqual((seller.business_name, seller.representative, seller.business_number, seller.mail_order_number),
+                         ("리샤무역 유한회사", "LI XIAOWEN(리샤오운)", VALID, "2026-용인처인-01238"))
+        # Coupang's own footer stays the operator, not the seller.
+        footer = "상호명 및 호스팅 서비스 제공 : 쿠팡(주)\n대표이사 : 로저스 해롤드 린\n사업자 등록번호 : 120-88-00767"
+        self.assertIsNone(extract_seller_info(footer))
+
     def test_unlabeled_numbers_are_ignored(self):
         self.assertIsNone(extract_seller_info("주문번호 123-45-67891 배송 조회"))
 

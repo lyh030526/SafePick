@@ -21,7 +21,7 @@ from pathlib import Path
 
 from market_price import BELOW_PERCENT, FAR_BELOW_PERCENT, rate_ratio
 from risk_assessment import DEFAULT_PARAMS, WEIGHTS, ScoreParams, assess_risk
-from schemas import MarketPrice, ProductComparison, RiskAnalysis, RiskAssessment, SellerVerification
+from schemas import DomainCheck, MarketPrice, ProductComparison, RiskAnalysis, RiskAssessment, SellerVerification
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "calibration"
 LABELS = ("trusted", "risky", "unlabeled")
@@ -93,12 +93,17 @@ def replay(response: dict, settings: Settings = Settings()) -> RiskAssessment:
     """Recompute the assessment from saved evidence under `settings`, without any network call."""
     analysis = RiskAnalysis.model_validate(response["risk_analysis"])
     comparison = ProductComparison.model_validate(response["comparison"]) if response.get("comparison") else None
+    # A brand without a supported official site is left out of the score, as in a live analysis.
+    if comparison is not None and comparison.status == "unknown" and "지원 브랜드" in comparison.message:
+        comparison = None
     seller = SellerVerification.model_validate(response["seller_verification"]) if response.get("seller_verification") else None
     market = MarketPrice.model_validate(response["market_price"]) if response.get("market_price") else None
     if market is not None and market.ratio_percent is not None:
         status, label, message = rate_ratio(market.ratio_percent, settings.far_below, settings.below)
         market = market.model_copy(update={"status": status, "label": label, "message": message})
-    return assess_risk(analysis, comparison, seller, market, settings.params)
+    saved = (response["risk_analysis"].get("assessment") or {}).get("domain")
+    domain = DomainCheck.model_validate(saved) if saved else None
+    return assess_risk(analysis, comparison, seller, market, settings.params, domain=domain)
 
 
 def evaluate(rows: list[tuple[dict, RiskAssessment]]) -> dict:

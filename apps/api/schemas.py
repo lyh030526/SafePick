@@ -160,7 +160,8 @@ class ListingConditions(BaseModel):
 
 class PurchaseCheck(BaseModel):
     id: str
-    category: Literal["model_mismatch", "components_mismatch", "ambiguous_conditions", "discount_claim", "purchase_pressure", "missing_information"]
+    category: Literal["model_mismatch", "components_mismatch", "ambiguous_conditions", "discount_claim", "purchase_pressure",
+                      "review_pattern", "missing_information"]
     kind: Literal["attention", "needs_check"]
     title: str
     explanation: str
@@ -169,7 +170,7 @@ class PurchaseCheck(BaseModel):
 
 
 class RiskCriterion(BaseModel):
-    key: Literal["official", "description", "purchase_terms", "seller", "price"]
+    key: Literal["official", "description", "purchase_terms", "seller", "price", "history"]
     label: str
     status: Literal["confirmed", "partial", "attention", "unknown"]
     detail: str
@@ -220,7 +221,8 @@ class MailOrderCheck(BaseModel):
 
 
 class SellerVerification(BaseModel):
-    status: Literal["active", "suspended", "closed", "unregistered", "invalid_number", "marketplace_listed", "not_found",
+    status: Literal["active", "suspended", "closed", "unregistered", "invalid_number", "marketplace_listed", "platform_direct",
+                    "overseas", "not_found",
                     "unavailable"] = "not_found"
     label: str = "사업자 정보 없음"
     message: str = "판매 자료에서 사업자등록번호를 찾지 못했습니다."
@@ -230,6 +232,9 @@ class SellerVerification(BaseModel):
     mail_order: MailOrderCheck | None = None
     # "registry" when the page hid the number and it was found from the trade name and representative.
     number_source: Literal["page", "registry"] = "page"
+    # The marketplace's own buyer rating of the seller (Coupang: "판매자 평가 93% (70)").
+    marketplace_rating: int | None = None
+    rating_count: int | None = None
 
 
 class MarketListing(BaseModel):
@@ -281,3 +286,41 @@ class AnalysisResponse(BaseModel):
     seller_verification: SellerVerification = Field(default_factory=SellerVerification)
     market_price: MarketPrice = Field(default_factory=MarketPrice)
     sale_text: str = Field(default="", max_length=12000)
+
+
+class GroupAnalysisRequest(BaseModel):
+    """Several listings of the same product, each captured by the extension from the shopper's own browser."""
+    listings: list[AnalysisRequest] = Field(min_length=2, max_length=10)
+
+    @field_validator("listings")
+    @classmethod
+    def text_required(cls, value):
+        if any(item.provided_text is None for item in value):
+            raise ValueError("비교할 판매 페이지는 확장 프로그램으로 읽은 내용이 있어야 합니다.")
+        return value
+
+
+class GroupListing(BaseModel):
+    index: int
+    rank: int
+    product_url: str
+    page_title: str
+    seller_name: str
+    seller_kind: str
+    price: int | None = None
+    price_percent: int | None = None
+    model_number: str
+    level: Literal["high", "moderate", "low", "undetermined"]
+    label: str
+    score: int | None = None
+    summary: str
+    notes: list[str] = Field(default_factory=list)
+    analysis: AnalysisResponse
+
+
+class GroupAnalysisResponse(BaseModel):
+    listings: list[GroupListing]
+    median_price: int | None = None
+    model_number: str
+    summary: str
+    warnings: list[str] = Field(default_factory=list)

@@ -58,6 +58,17 @@ def _field(window: str, key: str) -> str:
     return value[:80] if value else UNKNOWN
 
 
+# Coupang puts both in one cell: "상호/대표자" then "리샤무역 유한회사 / LI XIAOWEN(리샤오운)".
+_NAME_AND_REPRESENTATIVE = re.compile(r"상호\s*명?\s*[/·]\s*대표자?\s*명?\s*[:：]?\s*([^\n\t]+?)\s+/\s+([^\n\t]+)")
+
+
+def _identity(window: str) -> tuple[str, str]:
+    combined = _NAME_AND_REPRESENTATIVE.search(window)
+    if combined:
+        return combined.group(1).strip()[:80], combined.group(2).strip()[:80]
+    return _field(window, "business_name"), _field(window, "representative")
+
+
 def extract_seller_info(text: str) -> SellerInfo | None:
     previous_end = 0
     for match in _NUMBER.finditer(text):
@@ -68,9 +79,10 @@ def extract_seller_info(text: str) -> SellerInfo | None:
         previous_end = match.end()
         if digits in _PLATFORM_NUMBERS or _PLATFORM.search(context):
             continue
+        name, representative = _identity(window)
         return SellerInfo(
-            business_name=_field(window, "business_name"),
-            representative=_field(window, "representative"),
+            business_name=name,
+            representative=representative,
             business_number=f"{digits[:3]}-{digits[3:5]}-{digits[5:]}",
             mail_order_number=_field(window, "mail_order_number"),
             address=_field(window, "address"),
@@ -88,7 +100,7 @@ def extract_listed_identity(text: str) -> SellerInfo | None:
     """Trade name and representative shown without a number (the number sits behind a verification step)."""
     for match in re.finditer(rf"(?:{_LABELS['business_name']})\s*[:：]?\s*", text):
         window = text[match.start():match.start() + 300]
-        name, representative = _field(window, "business_name"), _field(window, "representative")
+        name, representative = _identity(window)
         if UNKNOWN in {name, representative} or _PLATFORM.search(window[:120]) or re.search(_OPERATORS, name):
             continue
         return SellerInfo(business_name=name, representative=representative, quote=" ".join(window.split())[:300])
@@ -108,9 +120,45 @@ def _find_listed(listed: SellerInfo) -> tuple[SellerInfo, str] | None:
     return None
 
 
+# Coupang sells Rocket items itself: no seller table, and the sold-by line names Coupang. Marketplace sellers are named
+# under the price ("판매자:\n리샤무역 유한회사").
+_COUPANG_DIRECT = re.compile(r"판매자\s*[:：]?\s*쿠팡\s*(?:\(주\)|㈜|주식회사)")
+_NAMED_SELLER = re.compile(r"판매자\s*[:：]\s*\n?\s*(?!쿠팡)[^\n]{2,}\n\s*판매자\s*상품\s*보러\s*가기")
+# Overseas sellers fill the Korean fields with a foreign tax number (Japan's T + 13 digits) or "해당사항 없음".
+_OVERSEAS_NUMBER = re.compile(r"사업자\s*(?:등록)?\s*번호\s*[:：]?\s*(?:T\d{13}|\d{13}|해당\s*사항\s*없음|N/?A)\b", re.I)
+_OVERSEAS_ADDRESS = re.compile(r"\b(?:Japan|China|Hong\s*Kong|Taiwan|USA|[A-Z][a-z]+-?(?:ken|shi|ku))\b|日本|中国|香港")
+
+
+def _is_coupang(page_url: str) -> bool:
+    host = (urlparse(page_url).hostname or "").lower()
+    return host == "coupang.com" or host.endswith(".coupang.com")
+
+
+_RATING = re.compile(r"판매자\s*평가\s*(\d{1,3})\s*%\s*\(\s*([\d,]+)\s*\)")
+
+
 def verify_seller(text: str, page_url: str = "") -> SellerVerification:
+    result = _verify(text, page_url)
+    rating = _RATING.search(text or "")
+    if rating and result.status != "platform_direct":
+        result = result.model_copy(update={"marketplace_rating": int(rating.group(1)),
+                                           "rating_count": int(rating.group(2).replace(",", ""))})
+    return result
+
+
+def _verify(text: str, page_url: str) -> SellerVerification:
     seller = extract_seller_info(text or "")
     listed = extract_listed_identity(text or "") if seller is None and is_marketplace(page_url) else None
+    if seller is None and listed is None and _is_coupang(page_url) and _COUPANG_DIRECT.search(text or "") \
+            and not _NAMED_SELLER.search(text or ""):
+        return SellerVerification(status="platform_direct", label="쿠팡 직접 판매",
+                                  seller=SellerInfo(business_name="쿠팡(주)", business_number="120-88-00767"),
+                                  message="쿠팡이 직접 판매하는 상품(로켓배송)입니다. 판매와 반품의 책임이 쿠팡에 있습니다. "
+                                  "상품 자체의 정품 여부를 보증하지는 않습니다.")
+    if listed is not None and (_OVERSEAS_NUMBER.search(text or "") or _OVERSEAS_ADDRESS.search(listed.quote)):
+        return SellerVerification(status="overseas", label="해외 판매자", seller=listed,
+                                  message="국내 사업자등록·통신판매업 신고가 없는 해외 판매자입니다. 국세청·공정위 기록으로는 확인할 수 "
+                                  "없습니다. 해외 배송은 반품 비용과 기간이 크고 관부가세가 붙을 수 있으니 반품 조건을 꼭 확인해 주세요.")
     # With the FTC file indexed, a unique trade name and representative gives the number the page hides.
     found = _find_listed(listed) if listed is not None else None
     if found:

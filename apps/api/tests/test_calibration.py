@@ -6,12 +6,13 @@ from pathlib import Path
 from calibration import Settings, add_case, evaluate, labeled_rows, load_cases, rank_key, replay
 from risk_assessment import ScoreParams
 from schemas import MarketPrice, RiskAssessment, SellerVerification
-from test_risk_assessment import analyzed, official
+from test_risk_assessment import analyzed, official, unmatched_comparison
 
 
 def response(market=None, seller="active", comparison=True):
     return {"risk_analysis": analyzed().model_dump(mode="json"),
-            "comparison": official().model_dump(mode="json") if comparison else None,
+            "comparison": {True: official, "unmatched": unmatched_comparison}[comparison]().model_dump(mode="json")
+            if comparison else None,
             "seller_verification": SellerVerification(status=seller, label=seller).model_dump(mode="json"),
             "market_price": (market or MarketPrice(status="no_model")).model_dump(mode="json")}
 
@@ -48,7 +49,7 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(replay(saved, Settings(far_below=40, below=50)).level, "low")
 
     def test_score_params_change_only_the_score(self):
-        saved = response(comparison=False)
+        saved = response(comparison="unmatched")
         default, harsh = replay(saved), replay(saved, Settings(ScoreParams(unknown_credit=0.0)))
         self.assertEqual(default.level, harsh.level)
         self.assertGreater(default.score, harsh.score)

@@ -130,6 +130,13 @@ def is_safety_notice(quote: str) -> bool:
     return bool(re.search(r"(?:판매자|타\s*사이트|현금\s*결제|개인정보).*?(?:신고|예방|주의해|하지\s*마|금지)", quote))
 
 
+def is_platform_notice(quote: str) -> bool:
+    """The marketplace's own standard text (Coupang prints it under every listing), not the seller's terms. The usual
+    return restrictions of the e-commerce act (value lost by use, cannot be resold) are standard wording, not ambiguity."""
+    return bool(re.search(r"관계\s*법령이\s*우선|판매자의?\s*제시\s*사항이|마이쿠팡|쿠팡\s*고객\s*센터|통신판매\s*중개자"
+                          r"|재판매\s*(?:가|이)?\s*(?:불가|어려운)|가치가\s*(?:현저히\s*)?(?:감소|훼손)", quote))
+
+
 def is_purchase_pressure(quote: str) -> bool:
     urgency = re.search(r"오늘만|(?:구매|결제).*서두|마감\s*임박|품절\s*임박|한정\s*수량", quote)
     conditional_delivery = re.search(
@@ -140,7 +147,7 @@ def is_purchase_pressure(quote: str) -> bool:
 
 
 def signal_is_supported(category: str, quotes: list[str]) -> bool:
-    if not quotes or any(is_safety_notice(quote) for quote in quotes):
+    if not quotes or any(is_safety_notice(quote) or is_platform_notice(quote) for quote in quotes):
         return False
     text = " ".join(quotes)
     if category == "purchase_pressure":
@@ -211,11 +218,45 @@ def validate_risk_draft(draft: RiskDraft, text: str, title: str = "") -> RiskAna
     return complete_analysis(conditions, checks, text, rejected)
 
 
+# Reviews pasted from a chatbot keep its closing offer; a real buyer never writes these.
+_CHATBOT = re.compile(r"(?:다음|다른)\s*(?:제품|상품)?\s*리뷰\s*(?:작성|를\s*작성).{0,10}도와\s*드릴까요|리뷰\s*작성을\s*도와\s*드릴까요"
+                      r"|원하시는\s*(?:제품명|상품명).{0,30}알려\s*주세요|강조하고\s*싶은\s*(?:특징|부분).{0,10}알려\s*주세요"
+                      r"|AI\s*언어\s*모델로서|As an AI(?: language model)?", re.I)
+
+
+def review_checks(text: str) -> list[PurchaseCheck]:
+    """Review patterns found in the page text itself, without a model call: chatbot leftovers and copied sentences."""
+    lines = [normalize(line) for line in text.splitlines()]
+    checks = []
+    leftovers = list(dict.fromkeys(line for line in lines if _CHATBOT.search(line)))[:3]
+    if leftovers:
+        checks.append(PurchaseCheck(
+            id="review_ai_leftover", category="review_pattern", kind="attention", title="AI로 작성한 흔적이 있는 리뷰",
+            explanation="리뷰에 챗봇이 답변 끝에 붙이는 문장이 그대로 남아 있습니다. 구매 후기가 아니라 생성된 글일 수 있어 "
+                        "리뷰 수와 평점을 그대로 믿기 어렵습니다.",
+            quotes=leftovers, how_to_check="사진·영상이 있는 후기와 낮은 별점 후기를 따로 확인하고, 리뷰 수보다 판매자 정보와 반품 조건을 기준으로 판단해 주세요."))
+    # The same full sentence in three or more places is a template, not separate buyers. Seller tables and the product
+    # name repeat by design, so only sentences (ending like 다/요/!) of some length count.
+    counts: dict[str, int] = {}
+    for line in lines:
+        if len(line) >= 25 and re.search(r"(?:다|요|니다|!)[.!~]*$", line) and not re.search(r"판매자|반품|교환|환불|배송|쿠팡|고객센터", line):
+            counts[line] = counts.get(line, 0) + 1
+    copied = [line for line, count in counts.items() if count >= 3][:3]
+    if copied:
+        checks.append(PurchaseCheck(
+            id="review_copied", category="review_pattern", kind="attention", title="같은 문장이 반복되는 리뷰",
+            explanation="서로 다른 구매자의 후기에 같은 문장이 여러 번 나옵니다. 정해진 틀로 작성한 리뷰일 수 있습니다.",
+            quotes=copied, how_to_check="문장이 겹치지 않는 후기, 사진·영상 후기, 낮은 별점 후기를 따로 확인해 주세요."))
+    return checks
+
+
 def complete_analysis(conditions: ListingConditions, checks: list[PurchaseCheck], text: str, rejected: bool) -> RiskAnalysis:
     """Add the missing-information checks and the summary to validated conditions and attention checks."""
-    checks = list(checks)
+    checks = list(checks) + review_checks(text)
     required = ["shipping", "returns"]
-    if re.search(r"구성품|번들|(?:패키지|세트)\s*(?:구성|포함)", text):
+    # Return policies mention components ("구성품 누락으로 … 반품 불가"); only a line about the product itself asks for them.
+    if any(re.search(r"구성품|번들|(?:패키지|세트)\s*(?:구성|포함)", line) and not re.search(r"반품|교환|환불|누락|훼손", line)
+           for line in text.splitlines()):
         required.append("components")
     for field in required:
         condition = getattr(conditions, field)
@@ -262,7 +303,8 @@ def combine_analyses(analyses: list[RiskAnalysis], text: str) -> RiskAnalysis:
         if len(flagged) >= need:
             checks.append(flagged[0])
     rejected = any(len(item.warnings) > 1 for item in completed) or any(
-        check.kind == "attention" for item in completed for check in item.checklist if check not in checks)
+        check.kind == "attention" and check.category != "review_pattern"
+        for item in completed for check in item.checklist if check not in checks)
     return complete_analysis(conditions, checks, text, rejected)
 
 

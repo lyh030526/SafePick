@@ -2,8 +2,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { colors, radius } from './theme';
 
 export type SellerVerification = {
-  status: 'active' | 'suspended' | 'closed' | 'unregistered' | 'invalid_number' | 'marketplace_listed' | 'not_found'
-    | 'unavailable';
+  status: 'active' | 'suspended' | 'closed' | 'unregistered' | 'invalid_number' | 'marketplace_listed' | 'platform_direct'
+    | 'overseas' | 'not_found' | 'unavailable';
   label: string;
   message: string;
   seller: { business_name: string; representative: string; business_number: string;
@@ -11,6 +11,8 @@ export type SellerVerification = {
   tax_type: string | null;
   closed_on: string | null;
   number_source?: 'page' | 'registry';
+  marketplace_rating?: number | null;
+  rating_count?: number | null;
   mail_order?: {
     status: 'matched' | 'name_absent' | 'domain_differs' | 'mismatch' | 'closed' | 'not_found' | 'unavailable';
     label: string;
@@ -24,7 +26,7 @@ export type SellerVerification = {
 
 const tones = {
   active: 'good', suspended: 'warn', invalid_number: 'warn', closed: 'bad', unregistered: 'bad',
-  marketplace_listed: 'neutral', not_found: 'neutral', unavailable: 'neutral',
+  marketplace_listed: 'neutral', platform_direct: 'good', overseas: 'neutral', not_found: 'neutral', unavailable: 'neutral',
 } as const;
 const mailTones = {
   matched: 'good', name_absent: 'warn', domain_differs: 'warn', not_found: 'warn', mismatch: 'bad', closed: 'bad', unavailable: 'neutral',
@@ -37,6 +39,7 @@ export function SellerCheck({ verification }: { verification: SellerVerification
   const rows = [
     ['상호', seller.business_name], ['대표자', seller.representative], [verification.number_source === 'registry' ? '사업자등록번호 (상호·대표자로 찾음)' : '사업자등록번호', seller.business_number],
     ['통신판매업 신고번호', seller.mail_order_number], ['사업장 소재지', seller.address],
+    ['마켓 판매자 평가', verification.marketplace_rating != null ? `${verification.marketplace_rating}% (${verification.rating_count}명)` : ''],
   ].filter(([, value]) => value && value !== '확인 불가');
   return <View style={styles.section}>
     <Text style={styles.heading}>판매자 사업자 확인</Text>

@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { parseBrowserImport } from './browserImport';
+import { GroupComparisonScreen } from './GroupComparison';
 import { MarketPriceCard, type MarketPrice } from './MarketPrice';
 import { RiskChecklist, type RiskAnalysis } from './RiskChecklist';
 import { SellerCheck, type SellerVerification } from './SellerCheck';
@@ -109,6 +110,12 @@ function initialBrowserImport() {
 }
 
 export default function App() {
+  // The extension opens #safepick-group to compare several pages of the same product.
+  const [group] = useState(() => Platform.OS === 'web' && typeof window !== 'undefined' && window.location.hash === '#safepick-group');
+  return group ? <GroupComparisonScreen apiBaseUrl={apiBaseUrl} /> : <SingleAnalysis />;
+}
+
+function SingleAnalysis() {
   const [initialImport] = useState(initialBrowserImport);
   const [productUrl, setProductUrl] = useState(initialImport.payload?.product_url ?? '');
   const [error, setError] = useState(initialImport.error);
