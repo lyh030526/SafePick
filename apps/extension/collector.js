@@ -1,28 +1,116 @@
 // Runs only when the user clicks the popup button. No network requests or cookies.
-function collectProductPage() {
+async function collectProductPage() {
   const url = new URL(location.href);
-  const storeProduct = ['smartstore.naver.com', 'brand.naver.com'].includes(url.hostname)
-    && /^\/[^/]+\/products\/\d+\/?$/.test(url.pathname);
-  const windowProduct = url.hostname === 'shopping.naver.com'
-    && /^\/window-products\/[^/]+\/\d+\/?$/.test(url.pathname);
-  if (url.protocol !== 'https:' || url.username || url.password || url.port || !(storeProduct || windowProduct)) {
-    return { error: '네이버 스마트스토어·브랜드스토어 또는 네이버 쇼핑 상품 상세 페이지에서 실행해 주세요.' };
+  // Marketplaces must be on a product detail page; other https shops (own malls) are read as they are.
+  const marketplaces = [
+    [/^(smartstore|brand)\.naver\.com$/, /^\/[^/]+\/products\/\d+\/?$/],
+    [/^shopping\.naver\.com$/, /^\/window-products\/[^/]+\/\d+\/?$/],
+    [/^(www|m)\.11st\.co\.kr$/, /^\/products\/(m\/)?\d+\/?$/],
+    [/^(www|m)\.coupang\.com$/, /^\/vp\/products\/\d+\/?$/],
+    [/^item\.(gmarket|auction)\.co\.kr$/, /^\/(Item|DetailView\/Item\.aspx)$/i],
+  ];
+  const market = marketplaces.find(([host]) => host.test(url.hostname));
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) {
+    return { error: 'https 상품 상세 페이지에서 실행해 주세요.' };
   }
-  const root = document.querySelector('main, [role="main"], #content') || document.body;
+  if (market && !market[1].test(url.pathname) || /(^|\.)naver\.com$/.test(url.hostname) && !market) {
+    return { error: '검색 결과나 목록이 아닌 상품 상세 페이지에서 실행해 주세요.' };
+  }
+  // Marketplace operators print their own registration in footers; it is not the seller.
+  const operatorNumber = /220\s*-?\s*81\s*-?\s*62517|120\s*-?\s*88\s*-?\s*00767|815\s*-?\s*81\s*-?\s*01244/;
+  const operator = /(네이버|쿠팡|십일번가|11번가|지마켓|G마켓|이베이코리아|인터파크|위메프|티몬)\s*(주식회사|㈜|\(주\))|(주식회사|㈜|\(주\))\s*(네이버|쿠팡|십일번가|지마켓)|NAVER\s*Corp|Coupang\s*Corp|통신판매\s*중개/i;
   const skip = 'script,style,noscript,nav,header,footer,form,input,textarea,select,button,iframe,[contenteditable="true"],[hidden],[aria-hidden="true"]';
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const readVisible = () => {
+    // Shops render seller and return details in modals outside the main element, so open dialogs count too.
+    const roots = [document.querySelector('main, [role="main"], #content') || document.body,
+      ...document.querySelectorAll('[role="dialog"], [aria-modal="true"], #MODAL_ROOT_ID')];
+    const lines = [];
+    let length = 0;
+    for (const root of roots) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode() && length < 60000) {
+        const node = walker.currentNode;
+        const parent = node.parentElement;
+        if (!parent || parent.closest(skip)) continue;
+        const style = getComputedStyle(parent);
+        if (style.display === 'none' || style.visibility === 'hidden' || !parent.getClientRects().length) continue;
+        const text = node.textContent.replace(/\s+/g, ' ').trim();
+        if (text) { lines.push(text); length += text.length + 1; }
+      }
+    }
+    return lines;
+  };
+  // The seller disclosure often sits in a collapsed tab, a modal, or past the text cut, so read its block on its own.
+  const sellerBlocks = [];
+  const readSellers = () => {
+    const labelWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (labelWalker.nextNode() && sellerBlocks.length < 3) {
+      const node = labelWalker.currentNode;
+      // Own malls print the seller only in the footer, so footers count; operator blocks are skipped below.
+      // Naver and 11st show the number only after a check the user completes, but the trade name and representative
+      // are open, so a 상호 label starts a block too.
+      if (!/사업자\s*(등록)?\s*번호|^\s*상호\s*(명)?\s*$/.test(node.textContent)
+          || node.parentElement?.closest('script,style,form')) continue;
+      let block = node.parentElement;
+      // Climb only while the parent stays small, so a label in a large container never pulls in the page header.
+      while (block.parentElement && block.parentElement !== document.body && block.parentElement.textContent.length <= 1500
+        && !(/대표/.test(block.textContent) && /상호|사업자\s*(등록)?\s*번호/.test(block.textContent))) block = block.parentElement;
+      const lines = [];
+      const cellWalker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+      while (cellWalker.nextNode()) {
+        const text = cellWalker.currentNode.textContent.replace(/\s+/g, ' ').trim();
+        if (text && !cellWalker.currentNode.parentElement.closest('script,style')) lines.push(text);
+      }
+      const blockText = lines.join('\n').slice(0, 1500);
+      if (operator.test(blockText) || operatorNumber.test(blockText) || sellerBlocks.some(seen => seen.includes(blockText))) continue;
+      sellerBlocks.push(blockText);
+    }
+  };
+  // Tabs and modals may hide what was shown before, so keep every read and add only the newly shown lines.
   const parts = [];
-  let length = 0;
-  while (walker.nextNode() && length < 14000) {
-    const node = walker.currentNode;
-    const parent = node.parentElement;
-    if (!parent || parent.closest(skip)) continue;
-    const style = getComputedStyle(parent);
-    if (style.display === 'none' || style.visibility === 'hidden' || !parent.getClientRects().length) continue;
-    const text = node.textContent.replace(/\s+/g, ' ').trim();
-    if (text) { parts.push(text); length += text.length + 1; }
+  const seen = new Set();
+  const read = () => {
+    parts.push(...readVisible().filter(line => !seen.has(line) && seen.add(line)));
+    readSellers();
+  };
+  read();
+  // Seller, shipping, and return sections are often collapsed or behind tabs. Open those on this page only:
+  // never controls that buy, log in, open windows (11st puts the seller number behind a CAPTCHA popup), or navigate.
+  const opener = /^(판매자\s*정보.{0,12}|(반품|교환|배송|환불)\s*[/·]?\s*(반품|교환|배송|환불)\s*(정보|안내|규정|정책)?.{0,6}|상품\s*정보\s*제공\s*고시|(상품\s*)?(상세\s*)?(정보|설명)\s*(더\s*보기|펼치기|펼쳐\s*보기)|펼쳐\s*보기)$/;
+  const forbidden = /구매|장바구니|결제|주문|로그인|공유|찜|선물|쿠폰|리뷰|문의|확인|팝업/;
+  const samePage = element => {
+    const href = element.tagName === 'A' ? element.getAttribute('href') : null;
+    if (!href || /^(#|javascript:)/i.test(href)) return true;
+    try {
+      const target = new URL(href, location.href);
+      return target.origin === location.origin && target.pathname === location.pathname;
+    } catch { return false; }
+  };
+  const clicked = [];
+  for (const element of [...document.querySelectorAll('button, a, summary, [role="tab"], [role="button"]')]) {
+    if (clicked.length >= 6) break;
+    const label = (element.innerText || '').replace(/\s+/g, ' ').trim();
+    if (!label || label.length > 24 || !opener.test(label) || forbidden.test(label) || clicked.includes(label)) continue;
+    if (element.getAttribute('aria-expanded') === 'true' || element.getAttribute('aria-selected') === 'true'
+        || element.target === '_blank' || /window\.open|location/.test(element.getAttribute('onclick') || '')
+        || element.closest('form') || !samePage(element) || !element.isConnected || !element.getClientRects().length) continue;
+    try { element.click(); clicked.push(label); } catch { continue; }
+    await new Promise(resolve => setTimeout(resolve, 700));
+    read();
   }
-  const visibleText = parts.join('\n');
+  const visibleText = parts.join('\n').slice(0, 14000);
+  // Shipping and return terms often sit at the end of long pages, past the text cut, so lift their lines out first.
+  const termLines = [];
+  let termLength = 0;
+  parts.forEach((line, index) => {
+    if (termLength > 2500 || !/반품|교환|환불|청약\s*철회|배송\s*(비|기간|방법|안내|일)/.test(line)) return;
+    for (const near of parts.slice(index, index + 4)) {
+      if (termLines.includes(near) || termLength > 2500) continue;
+      termLines.push(near);
+      termLength += near.length + 1;
+    }
+  });
+  const terms = termLines.length ? `배송·반품 안내:\n${termLines.join('\n')}\n\n` : '';
   if (/시스템오류|접근.{0,12}제한|비정상적인 접근|access denied|captcha/i.test(document.title)
       || (visibleText.length < 1000 && /접근.{0,12}제한|비정상적인 접근|보안 확인|captcha/i.test(visibleText))) {
     return { error: '접근 제한 또는 보안 확인 화면입니다. 상품 페이지를 정상적으로 연 뒤 다시 시도해 주세요.' };
@@ -49,31 +137,12 @@ function collectProductPage() {
     if (script.textContent.length > 100000) continue;
     try { visit(JSON.parse(script.textContent)); } catch { /* Malformed JSON-LD is optional. */ }
   }
-  // The seller disclosure often sits in a collapsed tab or past the text cut, so read its block on its own.
-  const sellerBlocks = [];
-  const labelWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  while (labelWalker.nextNode() && sellerBlocks.length < 2) {
-    const node = labelWalker.currentNode;
-    if (!/사업자\s*(등록)?\s*번호/.test(node.textContent) || node.parentElement?.closest('script,style,footer,form')) continue;
-    let block = node.parentElement;
-    while (block.parentElement && block.parentElement !== document.body && block.textContent.length < 1500
-      && !/상호|대표자/.test(block.textContent)) block = block.parentElement;
-    const lines = [];
-    const cellWalker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-    while (cellWalker.nextNode()) {
-      const text = cellWalker.currentNode.textContent.replace(/\s+/g, ' ').trim();
-      if (text && !cellWalker.currentNode.parentElement.closest('script,style')) lines.push(text);
-    }
-    const blockText = lines.join('\n').slice(0, 1500);
-    if (/네이버\s*(주식회사|㈜|\(주\))|NAVER\s*Corp/i.test(blockText) || sellerBlocks.includes(blockText)) continue;
-    sellerBlocks.push(blockText);
-  }
   const seller = sellerBlocks.length ? `판매자 정보:\n${sellerBlocks.join('\n\n')}\n\n` : '';
   const structured = products.length ? `페이지에 포함된 상품 구조화 데이터:\n${JSON.stringify(products).slice(0, 3500)}\n\n화면 텍스트:\n` : '';
   if (visibleText.length < 30 && !products.length) return { error: '읽을 수 있는 상품 설명이 없습니다. 상품 설명을 펼친 뒤 다시 시도해 주세요.' };
   // Preserve the exact product URL, including option query parameters, but never a fragment.
   url.hash = '';
-  return { version: 1, product_url: url.toString(), page_title: document.title.slice(0, 300),
-    provided_text: (seller + structured + visibleText).slice(0, 12000),
+  return { version: 1, expanded: clicked, product_url: url.toString(), page_title: document.title.slice(0, 300),
+    provided_text: (seller + terms + structured + visibleText).slice(0, 12000),
     captured_at: new Date().toISOString(), input_source: 'browser_extension' };
 }
