@@ -10,7 +10,8 @@ from typing import Literal
 from openai import APIConnectionError, APIStatusError, OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
-from schemas import ListingCondition, ListingConditions, ProductDetails, PurchaseCheck, RiskAnalysis, UNKNOWN
+from schemas import (ListingCondition, ListingConditions, ProductDetails, PurchaseCheck, ReviewComplaints, RiskAnalysis,
+                     UNKNOWN)
 
 
 RISK_INSTRUCTIONS = """판매 페이지 자료에서 구매 전 확인할 항목을 찾으세요. 사기/가품 여부나 안전성, 확률을 판정하지 마세요.
@@ -240,20 +241,23 @@ _WARNING = re.compile(r"거부하|신고하|주의하|요구하면|요구하는\
 
 
 def off_platform_checks(text: str) -> list[PurchaseCheck]:
-    source = normalize(text)
     found = {"off_platform_contact": [], "off_platform_payment": []}
+    # Collected and transcribed text keeps its lines, so a quote ends where the seller's line ends; a server read is
+    # one long run of words and is cut at sentence ends instead.
+    lines = [normalize(line) for line in (text or "").splitlines() if line.strip()]
     for key, pattern in (("off_platform_contact", _CONTACT), ("off_platform_payment", _PAYMENT)):
-        for match in pattern.finditer(source):
-            # The sentence around the match, so the quote reads as the seller wrote it.
-            starts = [source.rfind(boundary, 0, match.start()) for boundary in (". ", "! ", "? ", " / ")]
-            start = max([position + 2 for position in starts if position >= 0] or [0])
-            end = min([position for position in (source.find(boundary, match.end()) for boundary in (". ", "! ", "? "))
-                       if position >= 0] or [len(source)])
-            quote = source[max(start, match.start() - 80):min(end + 1, match.end() + 80)].strip()
-            if key == "off_platform_contact" and not _DEAL.search(quote):
-                continue
-            if not _WARNING.search(quote) and quote not in found[key]:
-                found[key].append(quote)
+        for source in lines if len(lines) > 3 else [normalize(text)]:
+            for match in pattern.finditer(source):
+                # The sentence around the match, so the quote reads as the seller wrote it.
+                starts = [source.rfind(boundary, 0, match.start()) for boundary in (". ", "! ", "? ", " / ")]
+                start = max([position + 2 for position in starts if position >= 0] or [0])
+                end = min([position for position in (source.find(boundary, match.end()) for boundary in (". ", "! ", "? "))
+                           if position >= 0] or [len(source)])
+                quote = source[max(start, match.start() - 80):min(end + 1, match.end() + 80)].strip()
+                if key == "off_platform_contact" and not _DEAL.search(quote):
+                    continue
+                if not _WARNING.search(quote) and quote not in found[key]:
+                    found[key].append(quote)
     checks = []
     if found["off_platform_payment"]:
         checks.append(PurchaseCheck(
@@ -268,6 +272,26 @@ def off_platform_checks(text: str) -> list[PurchaseCheck]:
                         "사기에서 흔한 방식입니다.",
             quotes=found["off_platform_contact"][:3], how_to_check="문의는 마켓의 상품 문의로만 하고, 메신저로 결제 안내를 받으면 응하지 마세요."))
     return checks
+
+
+# Damage reports in low-star reviews. They are not a signal: they also label the calibration cases, and a single
+# "가품인 듯" is a guess. The summary only tells the shopper what other buyers said about this seller.
+_COMPLAINT = re.compile(r"가품|짝퉁|정품\s*(?:이|이가)?\s*아니|정품\s*아님|미배송|배송\s*(?:이|이가)?\s*안\s*(?:와|옴|됨)|안\s*왔|오지\s*않|"
+                        r"받지\s*못|연락\s*(?:두절|이\s*안|안\s*됨|불가)|잠수|사기|환불\s*(?:을|이)?\s*(?:안|거부|못)|중고(?:를|품)?\s*(?:보냄|보내|배송)|"
+                        r"사용(?:한|된)\s*흔적|다른\s*(?:상품|제품)\s*(?:이|을|가)?\s*(?:와|옴|보냄|배송|왔)|송장만")
+_COMPANY = re.compile(r"\s*(?:주식회사|유한회사|\(주\)|㈜)\s*")
+
+
+def review_complaints(text: str, seller_name: str = "") -> ReviewComplaints | None:
+    section = re.search(r"낮은 별점 리뷰:\n(.*?)(?:\n\n|$)", text or "", re.S)
+    if not section:
+        return None
+    lines = [line for line in section.group(1).splitlines() if line.startswith("[")]
+    name = _COMPANY.sub("", seller_name or "")[:6]
+    complaints = [line for line in lines if _COMPLAINT.search(line.split("|", 1)[-1])]
+    same = [line for line in complaints if name and name in _COMPANY.sub("", line.split("|", 1)[0])]
+    return ReviewComplaints(low_reviews=len(lines), complaints=len(complaints), same_seller=len(same),
+                            quotes=[line.split("|", 1)[-1].strip()[:200] for line in (same or complaints)[:3]])
 
 
 def review_checks(text: str) -> list[PurchaseCheck]:
@@ -298,7 +322,9 @@ def review_checks(text: str) -> list[PurchaseCheck]:
 
 def complete_analysis(conditions: ListingConditions, checks: list[PurchaseCheck], text: str, rejected: bool) -> RiskAnalysis:
     """Add the missing-information checks and the summary to validated conditions and attention checks."""
-    checks = list(checks) + review_checks(text) + off_platform_checks(text)
+    # Buyers' low-star reviews quote what sellers did; they are summarized separately, not read as the seller's own text.
+    own = re.sub(r"낮은 별점 리뷰:\n.*?(?:\n\n|$)", "", text, flags=re.S)
+    checks = list(checks) + review_checks(own) + off_platform_checks(own)
     required = ["shipping", "returns"]
     # Return policies mention components ("구성품 누락으로 … 반품 불가"); only a line about the product itself asks for them.
     if any(re.search(r"구성품|번들|(?:패키지|세트)\s*(?:구성|포함)", line) and not re.search(r"반품|교환|환불|누락|훼손", line)
@@ -348,9 +374,18 @@ def combine_analyses(analyses: list[RiskAnalysis], text: str) -> RiskAnalysis:
         flagged = [check for item in completed for check in item.checklist if check.kind == "attention" and check.id == category]
         if len(flagged) >= need:
             checks.append(flagged[0])
+        elif flagged and category != "purchase_pressure":
+            # Raised by a minority of runs: dropping it let the same page read 'low' one time and 'moderate' the next.
+            # Kept as a check to make, the page is held at 'undetermined' rather than declared clear.
+            label, _explanation, action = SIGNALS[category]
+            checks.append(flagged[0].model_copy(update={
+                "id": f"split_{category}", "kind": "needs_check", "title": f"{label} (판단이 엇갈림)",
+                "explanation": "분석을 여러 번 했을 때 일부에서만 이 표현을 주의로 보았습니다. 원문을 직접 확인해 주세요.",
+                "how_to_check": action}))
     rejected = any(len(item.warnings) > 1 for item in completed) or any(
         check.kind == "attention" and check.category not in {"review_pattern", "off_platform"}
-        for item in completed for check in item.checklist if check not in checks)
+        for item in completed for check in item.checklist
+        if check.kind == "attention" and not any(kept.quotes == check.quotes for kept in checks))
     return complete_analysis(conditions, checks, text, rejected)
 
 

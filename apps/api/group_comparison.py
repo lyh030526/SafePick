@@ -30,9 +30,20 @@ def _model(value: str) -> str:
     return re.sub(r"[^0-9A-Z]", "", value.upper())
 
 
-def group_market(prices: list[int | None], index: int) -> MarketPrice | None:
-    """The other pages' median price as this page's market, when at least two others show a price."""
-    others = [price for position, price in enumerate(prices) if position != index and price]
+def units(title: str) -> int:
+    """How many items one order brings: "1+1" is 2, "3개입"/"2팩"/"2세트" their number, otherwise 1."""
+    plus = re.search(r"(\d+)\s*\+\s*(\d+)", title or "")
+    if plus:
+        return int(plus.group(1)) + int(plus.group(2))
+    count = re.search(r"(?<![\d.])(\d{1,2})\s*(?:개입|개|팩|세트|set|매|입|켤레|병|박스)(?![가-힣])", title or "", re.I)
+    return int(count.group(1)) if count and int(count.group(1)) > 0 else 1
+
+
+def group_market(prices: list[int | None], index: int, peers: list[int] | None = None) -> MarketPrice | None:
+    """The other pages' median price as this page's market, when at least two others show a price. Only `peers`
+    (pages bringing as many items per order) are compared when given."""
+    others = [price for position, price in enumerate(prices)
+              if position != index and price and (peers is None or position in peers)]
     if len(others) < 2 or not prices[index]:
         return None
     median = int(statistics.median(others))
@@ -54,12 +65,20 @@ def compare_group(results: list[AnalysisResponse]) -> GroupAnalysisResponse:
     # page at or above that price is not too cheap however far below the others it is (overseas resellers mark up).
     direct = [prices[index] for index, item in enumerate(results)
               if item.seller_verification.status == "platform_direct" and prices[index]]
+    # "1+1" and two-packs cost more for the same product, so prices are compared only between pages bringing as many
+    # items per order. The commonest count is the group's; a page with another count is compared with its own kind.
+    counts = [units(f"{item.source.page_title} {item.product.product_name}") for item in results]
+    usual = Counter(counts).most_common(1)[0][0]
     for index, result in enumerate(results):
         notes = []
+        peers = [position for position, count in enumerate(counts) if count == counts[index]]
+        if counts[index] != usual:
+            notes.append(f"한 번에 {counts[index]}개를 받는 구성이라 다른 판매 페이지 대부분({usual}개)과 가격을 비교하지 않고, "
+                         "같은 구성끼리만 비교했습니다.")
         market = result.market_price
         # A web market price found for the model is kept; otherwise the other pages are the reference.
         if market.status not in {"typical", "below", "far_below"}:
-            market = group_market(prices, index) or market
+            market = group_market(prices, index, peers) or market
             if direct and market.status in {"below", "far_below"} and prices[index] >= min(direct) * 0.9:
                 market = market.model_copy(update={
                     "status": "typical", "label": "마켓 직접 판매가 수준",
@@ -91,7 +110,7 @@ def compare_group(results: list[AnalysisResponse]) -> GroupAnalysisResponse:
                                                "risk_analysis": risk.model_copy(update={"assessment": assessment})})))
     listings.sort(key=lambda item: (ORDER[item["level"]], -(item["score"] or 0), item["price"] or float("inf")))
     ranked = [GroupListing(rank=rank, **item) for rank, item in enumerate(listings, 1)]
-    known = [price for price in prices if price]
+    known = [price for price, count in zip(prices, counts) if price and count == usual]
     best = ranked[0]
     low = [item for item in ranked if item.level == "low"]
     cheapest_low = min(low, key=lambda item: item.price or float("inf")) if low else None

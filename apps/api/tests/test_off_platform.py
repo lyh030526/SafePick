@@ -82,3 +82,22 @@ class DomainFlagTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReviewComplaintTests(unittest.TestCase):
+    TEXT = ("판매자 정보:\n상호/대표자\n테스트무역 유한회사 / 홍길동\n\n낮은 별점 리뷰:\n"
+            "[나쁨] 판매자: 테스트무역 유한회사 | 2026.10.01 판매자: 테스트무역 유한회사 받아보니 가품이에요 박음질이 엉망\n"
+            "[나쁨] 판매자: 다른상회 | 2026.09.01 판매자: 다른상회 한 달째 배송이 안 와요\n"
+            "[별로] 판매자: 테스트무역 유한회사 | 2026.08.01 판매자: 테스트무역 유한회사 소리가 작아요\n"
+            "[나쁨] 판매자: 테스트무역 유한회사 | 2026.07.01 판매자가 카톡으로 계좌이체 하라고 했어요\n\n화면 텍스트:\n이어폰")
+
+    def test_complaints_are_counted_per_seller_and_kept_out_of_the_level(self):
+        from risk_analysis import complete_analysis, review_complaints
+        from schemas import ListingConditions
+        summary = review_complaints(self.TEXT, "테스트무역 유한회사")
+        self.assertEqual((summary.low_reviews, summary.complaints, summary.same_seller), (4, 2, 1))
+        self.assertIn("가품이에요", summary.quotes[0])
+        self.assertIsNone(review_complaints("화면 텍스트:\n이어폰", "테스트무역"))
+        # A buyer quoting a seller's KakaoTalk request is the buyer's report, not the seller's own text.
+        analysis = complete_analysis(ListingConditions(), [], self.TEXT, False)
+        self.assertEqual([item.id for item in analysis.checklist if item.category == "off_platform"], [])

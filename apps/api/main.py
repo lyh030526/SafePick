@@ -1,3 +1,4 @@
+import re
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import FastAPI, HTTPException
@@ -7,12 +8,12 @@ from fastapi.responses import JSONResponse
 
 from comparison import compare_product
 from group_comparison import compare_group
-from extractor import extract_product_details, generate_official_search_query, unknown_product
+from extractor import extract_product_details, generate_official_search_query, transcribe_images, unknown_product
 from market_price import check_market_price
 from official_brands import OFFICIAL_BRANDS, find_official_brand
 from official_search import OfficialSearchError, search_official_pages
 from request_limits import AnalysisBodyLimit, AnalysisRateLimit
-from risk_analysis import analyze_listing_risks
+from risk_analysis import analyze_listing_risks, review_complaints
 from domain_check import check_domain
 from risk_assessment import assess_risk
 from schemas import (
@@ -20,7 +21,7 @@ from schemas import (
     OfficialLookup,
     ProductDetails, RiskAnalysis, SourceSummary, SupportedBrand, UNKNOWN,
 )
-from scraper import ProductPageError, fetch_product_page
+from scraper import FOOTER_LENGTH, RETURN_TERMS, ProductPage, ProductPageError, fetch_product_page
 from mail_order import with_mail_order
 from seller_verification import verify_seller
 
@@ -124,12 +125,18 @@ def analyze_product(product, url, title, text, entered_url=None):
     # A brand without a supported official site has nothing to compare, so the criterion is left out of the score.
     assessment = assess_risk(analysis, None if lookup.status == "not_supported" else comparison, seller, market,
                              domain=domain_future.result())
-    return lookup, comparison, analysis.model_copy(update={"assessment": assessment}), seller, market
+    complaints = review_complaints(text, seller.seller.business_name)
+    return lookup, comparison, analysis.model_copy(update={"assessment": assessment, "review_complaints": complaints}), seller, market
 
 
 def analyze_provided(request: AnalysisRequest) -> AnalysisResponse:
     """Analyze material the shopper provided (extension capture, pasted text, or images) instead of fetching the page."""
     text = request.provided_text or ""
+    # A phone shopper's screenshots are transcribed so the seller table, Q&A, and reviews in them are checked too. Quotes
+    # from this part come from the transcription, which the notice below says.
+    screen = transcribe_images(request.images) if request.images else ""
+    if screen:
+        text = f"{text}\n\n화면 캡처에서 읽은 글자:\n{screen}".strip()[:12000]
     product, warnings = extract_product_details(request.page_title, text, images=request.images)
     lookup, comparison, risk, seller, market = analyze_product(product, str(request.product_url), request.page_title, text)
     kind = ("mixed" if text and request.images else "user_images" if request.images
@@ -137,6 +144,8 @@ def analyze_provided(request: AnalysisRequest) -> AnalysisResponse:
     notice = "사용자가 제공한 자료를 분석했습니다. 판매 페이지의 현재 내용과 일치하는지는 별도 확인이 필요합니다."
     if request.images:
         notice += " 이미지의 외형만으로 정품 여부나 판매자 신뢰도를 판정하지 않습니다."
+    if screen:
+        notice += " 화면 캡처의 글자는 AI가 옮겨 적은 것이라 원문과 다를 수 있으니, 인용된 문장을 캡처에서 직접 확인해 주세요."
     return AnalysisResponse(
         status="manual_input_required" if warnings else "completed",
         product=product,
@@ -148,6 +157,28 @@ def analyze_provided(request: AnalysisRequest) -> AnalysisResponse:
         warnings=[notice, *warnings], official_lookup=lookup,
         comparison=comparison, risk_analysis=risk, seller_verification=seller, market_price=market, sale_text=text,
     )
+
+
+def with_return_policy(page: ProductPage) -> ProductPage:
+    """Own malls keep their return terms on a guide page; when the product page shows none, read the first such page of
+    the same site and put its return sentences in front, keeping the page's head and footer within the length limit."""
+    if RETURN_TERMS.search(page.text) or not page.policy_links:
+        return page
+    for link in page.policy_links[:2]:
+        try:
+            guide = fetch_product_page(link)
+        except (ProductPageError, ValueError):
+            continue
+        sentences = [part.strip() for part in re.split(r"(?<=[.다요])\s+|\s{2,}", guide.text)
+                     if re.search(r"반품|교환|환불|청약\s*철회", part)]
+        excerpt = " ".join(sentences)[:1500]
+        if not RETURN_TERMS.search(excerpt):
+            continue
+        head = f"반품·교환 안내(같은 쇼핑몰 안내 페이지 {link}):\n{excerpt}\n\n"
+        room = 12000 - len(head)
+        text = page.text if len(page.text) <= room else f"{page.text[:room - FOOTER_LENGTH - 3]} … {page.text[-FOOTER_LENGTH:]}"
+        return ProductPage(final_url=page.final_url, title=page.title, text=head + text, policy_links=page.policy_links)
+    return page
 
 
 @app.post("/group-analyses", response_model=GroupAnalysisResponse)
@@ -188,6 +219,7 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
     except Exception:
         raise HTTPException(status_code=502, detail="상품 페이지를 불러오는 중 오류가 발생했습니다.") from None
 
+    page = with_return_policy(page)
     product, warnings = extract_product_details(page.title, page.text)
     status = "completed" if not warnings else "manual_input_required"
     lookup, comparison, risk, seller, market = analyze_product(product, page.final_url, page.title, page.text,

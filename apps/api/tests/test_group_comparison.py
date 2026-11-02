@@ -102,6 +102,18 @@ class GroupTests(unittest.TestCase):
         self.assertEqual(group["국내"].level, "low")
         self.assertEqual(group["이름표기"].notes, [])
 
+    def test_pages_with_another_item_count_are_compared_with_their_own_kind(self):
+        results = [response(active("A"), 10000), response(active("B"), 10500), response(active("C"), 9800),
+                   response(active("묶음"), 19000)]
+        results[3].source.page_title = "레드미 버즈 6 플레이 1+1"
+        group = {item.seller_name: item for item in compare_group(results).listings}
+        bundle = group["묶음"]
+        self.assertEqual(bundle.level, "low")
+        self.assertIsNone(bundle.price_percent)
+        self.assertIn("한 번에 2개를 받는 구성", bundle.notes[0])
+        # The bundle's price does not pull the single-item median.
+        self.assertEqual(compare_group(results).median_price, 10000)
+
     @patch("main.analyze_provided")
     def test_the_endpoint_needs_extension_captures(self, analyze):
         analyze.side_effect = [response(active("A"), 26000), response(active("B"), 25000)]

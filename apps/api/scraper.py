@@ -1,6 +1,7 @@
 import ipaddress
+import re
 import socket
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 import httpx
@@ -27,6 +28,27 @@ class ProductPage:
     final_url: str
     title: str
     text: str
+    # Same-site guide pages (반품·교환·이용안내) that may hold the return terms the product page itself leaves out.
+    policy_links: list[str] = field(default_factory=list)
+
+
+_POLICY_LINK = re.compile(r"반품|교환|환불|이용\s*안내|쇼핑\s*가이드|배송\s*안내|이용\s*약관|return|refund|guide|policy", re.I)
+# Concrete return terms: a withdrawal period, a number of days, or a return fee.
+RETURN_TERMS = re.compile(r"청약\s*철회|\d+\s*일\s*이내.{0,30}(?:반품|교환|환불)|(?:반품|교환|환불).{0,30}\d+\s*일\s*이내|반품\s*(?:배송)?\s*비")
+
+
+def _policy_links(html: str, base_url: str) -> list[str]:
+    soup = BeautifulSoup(html, "html.parser")
+    host = httpx.URL(base_url).host
+    links = []
+    for anchor in soup.find_all("a", href=True):
+        label = f"{anchor.get_text(' ', strip=True)} {anchor['href']}"
+        if not _POLICY_LINK.search(label) or anchor["href"].startswith(("javascript:", "mailto:", "tel:", "#")):
+            continue
+        link = str(httpx.URL(base_url).join(anchor["href"]))
+        if httpx.URL(link).host == host and link not in links and link != base_url:
+            links.append(link)
+    return links[:3]
 
 
 def _validate_public_url(url: str, allowed_domains: tuple[str, ...] | None = None) -> str:
@@ -119,7 +141,7 @@ def fetch_product_page(url: str, allowed_domains: tuple[str, ...] | None = None)
                 title, text = _extract_visible_text(html)
                 if not text:
                     raise ProductPageError("판매 페이지에서 읽을 수 있는 상품 정보를 찾지 못했습니다.")
-                return ProductPage(final_url=current_url, title=title, text=text)
+                return ProductPage(final_url=current_url, title=title, text=text, policy_links=_policy_links(html, current_url))
             except httpx.TimeoutException as error:
                 raise ProductPageError("판매 페이지 응답 시간이 초과되었습니다.") from error
             except httpx.HTTPError as error:

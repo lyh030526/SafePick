@@ -49,35 +49,49 @@ def _won(amount: Decimal) -> str:
     return str(int(amount.quantize(Decimal("1"))))
 
 
-def check_market_price(product: ProductDetails) -> MarketPrice:
-    model = product.model_number.strip()
-    pattern = _model_pattern(model) if model != UNKNOWN else None
-    if pattern is None:
-        return MarketPrice(status="no_model", label="시세 판단 보류",
-                           message="모델명이 확인되지 않아 같은 상품의 시세를 찾지 않았습니다. 모델명을 입력하면 비교할 수 있어요.")
-    currency = currency_code(product.currency)
-    if currency not in {None, "KRW"}:
-        return MarketPrice(message="원화 가격만 국내 쇼핑 시세와 비교합니다.")
-    key = os.getenv("SERPER_API_KEY", "").strip()
-    brand = product.brand_name.strip()
-    query = f"{brand} {model}" if brand and brand != UNKNOWN else model
-    if not key:
-        return MarketPrice(query=query, message="쇼핑 검색 키가 설정되지 않아 시세를 확인하지 못했습니다.")
-    try:
-        response = httpx.post(SHOPPING_URL, headers={"X-API-KEY": key},
-                              json={"q": query, "gl": "kr", "hl": "ko", "num": 40}, timeout=10.0)
-        response.raise_for_status()
-        items = response.json()["shopping"]
-    except (httpx.HTTPError, ValueError, KeyError, TypeError):
-        return MarketPrice(query=query, message="쇼핑 시세 조회에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+# Tier words decide which product a name is (버즈6 플레이 vs 버즈6 라이트), so they must agree exactly.
+_TIERS = {"프로", "플러스", "울트라", "맥스", "미니", "라이트", "플레이", "액티브", "에어", "엣지", "폴드", "플립", "슬림",
+          "pro", "plus", "ultra", "max", "mini", "lite", "play", "active", "air", "edge", "fold", "flip", "slim", "se", "fe"}
 
+
+def _name_pattern(name: str, brand: str = ""):
+    """A matcher for listings of the same named product when its model code is not in shop titles ("레드미 버즈 6
+    플레이" for M2420E1): every number and nearly every word of the name must appear. A name without a number
+    ("무선 블루투스 이어폰") is too generic to compare, and so is one without a brand, which every title must also carry
+    so that another company's look-alike is not taken for the same product."""
+    # Shops write "버즈6" and "버즈 6" alike, so letters and numbers are split apart on both sides.
+    split = lambda text: re.sub(r"(?<=[가-힣a-z])(?=\d)|(?<=\d)(?=[가-힣a-z])", " ", text.lower())
+    name = split(re.sub(r"\([^)]*\)|\[[^\]]*\]|,.*$", " ", name or ""))
+    words = [word.lower() for word in re.findall(r"[0-9A-Za-z가-힣]+", name) if len(word) >= 2 or word.isdigit()][:7]
+    numbers = [word for word in words if any(char.isdigit() for char in word)]
+    if len(words) < 2 or not numbers or not brand:
+        return None, ""
+
+    def matches(title: str) -> bool:
+        title = split(title)
+        tokens = set(re.findall(r"[0-9a-z가-힣]+", title))
+        return (brand.lower() in title and all(number in tokens for number in numbers)
+                and tokens & _TIERS == set(words) & _TIERS
+                and sum(word in title for word in words) >= len(words) * 0.8)
+    return matches, " ".join(words)
+
+
+def _search(key: str, query: str) -> list:
+    response = httpx.post(SHOPPING_URL, headers={"X-API-KEY": key}, json={"q": query, "gl": "kr", "hl": "ko", "num": 40},
+                          timeout=10.0)
+    response.raise_for_status()
+    items = response.json()["shopping"]
+    return items if isinstance(items, list) else []
+
+
+def _collect(items: list, matches_title, product: ProductDetails) -> list[MarketListing]:
     # A word in the product's own name (a case sold as a case) does not exclude its matches, and then only listings
     # sharing one of those words count, so replacement ear pads are not measured against the headphones they fit.
-    own_name = f"{product.product_name} {model}"
+    own_name = f"{product.product_name} {product.model_number}"
     excluded = [word for word in _EXCLUDED if word not in own_name]
     required = [word for word in _EXCLUDED if word in own_name]
     matches, seen = [], set()
-    for item in items if isinstance(items, list) else []:
+    for item in items:
         if not isinstance(item, dict):
             continue
         title = html.unescape(str(item.get("title", "")))
@@ -86,7 +100,7 @@ def check_market_price(product: ProductDetails) -> MarketPrice:
         # Only single won prices; foreign-currency and ranged offers are not the domestic market.
         price = parse_price(raw_price) if raw_price.startswith("₩") else None
         seen_key = item.get("productId") or (title, source, raw_price)
-        if (price is None or seen_key in seen or _USED_SOURCES.search(source) or not pattern.search(title)
+        if (price is None or seen_key in seen or _USED_SOURCES.search(source) or not matches_title(title)
                 or any(word in title for word in excluded) or (required and not any(word in title for word in required))):
             continue
         seen.add(seen_key)
@@ -95,6 +109,35 @@ def check_market_price(product: ProductDetails) -> MarketPrice:
     if matches:
         rough = Decimal(median(Decimal(item.price) for item in matches))
         matches = [item for item in matches if rough * Decimal("0.3") <= Decimal(item.price) <= rough * 3]
+    return matches
+
+
+def check_market_price(product: ProductDetails) -> MarketPrice:
+    model = product.model_number.strip()
+    pattern = _model_pattern(model) if model != UNKNOWN else None
+    brand_name = product.brand_name.strip() if product.brand_name.strip() != UNKNOWN else ""
+    by_name, name_query = _name_pattern(product.product_name if product.product_name != UNKNOWN else "", brand_name)
+    if pattern is None and by_name is None:
+        return MarketPrice(status="no_model", label="시세 판단 보류",
+                           message="모델명이 확인되지 않아 같은 상품의 시세를 찾지 않았습니다. 모델명을 입력하면 비교할 수 있어요.")
+    currency = currency_code(product.currency)
+    if currency not in {None, "KRW"}:
+        return MarketPrice(message="원화 가격만 국내 쇼핑 시세와 비교합니다.")
+    key = os.getenv("SERPER_API_KEY", "").strip()
+    brand = product.brand_name.strip() if product.brand_name.strip() != UNKNOWN else ""
+    query = f"{brand} {model}".strip() if pattern else f"{brand} {name_query}".strip()
+    if not key:
+        return MarketPrice(query=query, message="쇼핑 검색 키가 설정되지 않아 시세를 확인하지 못했습니다.")
+    try:
+        matches = _collect(_search(key, query), pattern.search, product) if pattern else []
+        # Shops often leave the model code out of titles, so the product name is the second way to find the same item.
+        if len(matches) < MIN_MATCHES and by_name is not None:
+            named_query = f"{brand} {name_query}".strip()
+            named = _collect(_search(key, named_query), by_name, product)
+            if len(named) > len(matches):
+                matches, query = named, named_query
+    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        return MarketPrice(query=query, message="쇼핑 시세 조회에 실패했습니다. 잠시 후 다시 시도해 주세요.")
     if len(matches) < MIN_MATCHES:
         return MarketPrice(status="insufficient", label="시세 판단 보류", query=query, match_count=len(matches),
                            listings=matches[:3],

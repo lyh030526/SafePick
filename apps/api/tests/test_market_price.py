@@ -97,3 +97,17 @@ class MarketPriceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NameFallbackTests(unittest.TestCase):
+    def test_a_named_product_is_found_when_shops_leave_the_model_code_out(self):
+        from market_price import _name_pattern
+        matches, query = _name_pattern("레드미 버즈 6 플레이", "샤오미")
+        self.assertEqual(query, "레드미 버즈 6 플레이")
+        self.assertTrue(matches("샤오미 레드미 버즈6 플레이 블루투스 이어폰"))
+        self.assertFalse(matches("샤오미 레드미 버즈6 라이트 블루투스 이어폰"))  # another tier
+        self.assertFalse(matches("샤오미 레드미 버즈 7 플레이"))  # another number
+        self.assertFalse(matches("레드미 버즈 6 플레이 호환"))  # no brand
+        # Generic or brandless names are not compared at all.
+        self.assertIsNone(_name_pattern("무선 블루투스 이어폰", "TECNONEXO")[0])
+        self.assertIsNone(_name_pattern("갤럭시 버즈3 프로", "")[0])

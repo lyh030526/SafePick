@@ -11,6 +11,7 @@ export type RiskAnalysis = {
   checklist: { id: string; category: string; kind: 'attention' | 'needs_check'; title: string;
     explanation: string; quotes: string[]; how_to_check: string }[];
   warnings: string[];
+  review_complaints?: { low_reviews: number; complaints: number; same_seller: number; quotes: string[] } | null;
   assessment?: {
     level: 'high' | 'moderate' | 'low' | 'undetermined'; label: string; summary: string;
     reasons: string[]; missing_checks: string[];
@@ -49,6 +50,13 @@ export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis 
       {assessment?.reasons.length ? <View style={styles.block}>
         <Text style={styles.label}>판단 근거</Text>
         {assessment.reasons.map((reason, index) => <Text key={index} style={styles.body}>• {reason}</Text>)}
+      </View> : null}
+      {analysis?.review_complaints?.complaints ? <View accessibilityLabel="낮은 별점 리뷰 요약" style={styles.criteria}>
+        <Text style={styles.label}>낮은 별점 리뷰 (참고)</Text>
+        <Text style={styles.body}>1~2점 리뷰 {analysis.review_complaints.low_reviews}개 중 {analysis.review_complaints.complaints}개가
+          가품·미배송·연락두절 등을 언급했고, 그중 이 판매자에 대한 리뷰는 {analysis.review_complaints.same_seller}개예요.
+          한 상품의 리뷰에는 다른 판매자 리뷰가 섞여 있고 추측도 많아 주의 수준에는 반영하지 않았어요.</Text>
+        {analysis.review_complaints.quotes.map((quote, index) => <Text key={index} style={styles.meta}>“{quote}”</Text>)}
       </View> : null}
       {assessment?.criteria.length ? <View style={styles.criteria}>
         {assessment.criteria.map(criterion => <View key={criterion.key} style={styles.criterion}>

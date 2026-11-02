@@ -66,7 +66,9 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
     # Marketplace detail pages are mostly images, so a component list missing from the text is shown but does not hold
     # the level back; the platform's own order and return flow covers what arrives.
     marketplace = domain is not None and domain.status == "marketplace"
-    image_only = {"missing_components"} if marketplace else set()
+    # Returns on a marketplace go through its own order page under the e-commerce act's withdrawal rules (Coupang,
+    # Naver and 11st print them under every listing), so a seller who adds no terms of their own is not a gap.
+    image_only = {"missing_components", "missing_returns"} if marketplace else set()
     # Search status/not_found alone never proves a contradiction or a safe listing.
     official = bool(comparison and comparison.status == "exact" and any(
         page.url == comparison.selected_url and page.facts.match == "exact" and page.facts.evidence
@@ -85,7 +87,7 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
                 and len(set(item.quotes)) >= 2]
     description = complete and analysis.conditions.description.status == "found"
     shipping = complete and analysis.conditions.shipping.status == "found"
-    returns = complete and analysis.conditions.returns.status == "found"
+    returns = complete and (analysis.conditions.returns.status == "found" or marketplace)
     # A completed analysis may still have required bundle/option conditions unresolved.
     unresolved = [item.title for item in analysis.checklist if item.kind == "needs_check" and item.id not in image_only]
     # Most brands have no supported official page, so a seller registered as active with the NTS stands in
@@ -270,7 +272,7 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         if new_seller:
             reasons.insert(0, f"통신판매업 신고: {report_year.group(1)}년 신고 ({report})")
     return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
-                          missing_checks=pending, criteria=criteria, rule_version="12", domain=domain,
+                          missing_checks=pending, criteria=criteria, rule_version="13", domain=domain,
                           **score_evidence(criteria, level, params,
                                            None if official or (market is not None and market.status == "typical")
                                            else UNCOMPARED_CEILING))

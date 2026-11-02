@@ -135,3 +135,46 @@ class AnalysisApiTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReturnGuideTests(unittest.TestCase):
+    def test_an_own_mall_without_return_terms_borrows_them_from_its_guide_page(self):
+        import main
+        page = ProductPage(final_url="https://shop.example/p/1", title="상품", text="상품 설명 " * 2000 + "상호 테스트몰 사업자등록번호 123-45-67891",
+                           policy_links=["https://shop.example/guide"])
+        guide = ProductPage(final_url="https://shop.example/guide", title="이용안내",
+                            text="회원 가입 안내. 상품 수령 후 7일 이내 반품 가능합니다. 반품 배송비 3,000원은 고객 부담입니다.")
+        with patch("main.fetch_product_page", return_value=guide) as fetch:
+            result = main.with_return_policy(page)
+        fetch.assert_called_once_with("https://shop.example/guide")
+        self.assertTrue(result.text.startswith("반품·교환 안내(같은 쇼핑몰 안내 페이지 https://shop.example/guide):"))
+        self.assertIn("7일 이내 반품 가능합니다.", result.text)
+        self.assertNotIn("회원 가입", result.text.split("\n\n")[0])
+        self.assertLessEqual(len(result.text), 12000)
+        self.assertTrue(result.text.endswith("사업자등록번호 123-45-67891"))
+        # A page that already shows its terms is left alone.
+        shown = ProductPage(final_url="https://shop.example/p/2", title="상품", text="수령 후 7일 이내 반품 가능", policy_links=["x"])
+        self.assertIs(main.with_return_policy(shown), shown)
+
+
+class ScreenshotTextTests(unittest.TestCase):
+    def test_screenshot_text_is_checked_like_page_text(self):
+        import base64
+        import main
+        from io import BytesIO
+        from PIL import Image
+        buffer = BytesIO()
+        Image.new("RGB", (8, 8), "white").save(buffer, "PNG")
+        png = base64.b64encode(buffer.getvalue()).decode()
+        screen = "판매자 정보\n상호/대표자\n테스트무역 / 홍길동\nA 재고 문의는 카톡 ID sale77 로 주시면 더 저렴하게 드려요"
+        with patch("main.transcribe_images", return_value=screen), patch("main.extract_product_details",
+                return_value=(main.unknown_product(), [])), patch("main.analyze_product") as analyze:
+            from schemas import MarketPrice, OfficialLookup, SellerVerification
+            analyze.return_value = (OfficialLookup(status="not_supported", message="-"), None, RiskAnalysis(),
+                                    SellerVerification(), MarketPrice())
+            body = TestClient(main.app).post("/analyses", json={"product_url": "https://www.coupang.com/vp/products/1",
+                                                               "images": [{"mime_type": "image/png", "base64_data": png}]}).json()
+        text = analyze.call_args.args[3]
+        self.assertTrue(text.startswith("화면 캡처에서 읽은 글자:\n판매자 정보"))
+        self.assertIn("카톡 ID sale77", body["sale_text"])
+        self.assertIn("AI가 옮겨 적은 것", body["warnings"][0])

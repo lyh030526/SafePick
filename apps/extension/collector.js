@@ -121,6 +121,29 @@ async function collectProductPage() {
     await new Promise(resolve => setTimeout(resolve, 700));
     read();
   }
+  // Coupang: read the 1-2 star reviews through the read-only star filter, for a complaint summary that does not set the
+  // level. A product's reviews mix every seller of it, so each keeps its seller name.
+  const lowReviews = [];
+  if (/(^|\.)coupang\.com$/.test(url.hostname)) {
+    const leaf = test => [...document.querySelectorAll('div, span, li')].find(e => e.childElementCount === 0 && test(e));
+    const open = () => leaf(e => e.textContent.trim() === '모든 별점' || /^(최고|좋음|보통|별로|나쁨)$/.test(e.textContent.trim())
+      && e.parentElement && /^(최고|좋음|보통|별로|나쁨)$/.test(e.parentElement.textContent.trim()))?.parentElement?.click();
+    for (const star of ['나쁨', '별로']) {
+      open();
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const option = leaf(e => e.textContent.trim() === star && e.parentElement
+        && new RegExp(`^${star}[\d,]+$`).test(e.parentElement.textContent.replace(/\s/g, '')));
+      if (!option || /^\D+0$/.test(option.parentElement.textContent.replace(/\s/g, ''))) continue;
+      option.parentElement.click();
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const text = document.body.innerText;
+      for (const chunk of text.split(/\n(?=\d{4}\.\d{2}\.\d{2}\n)/).slice(1, 7)) {
+        const seller = (chunk.match(/판매자:\s*([^\n]+)/) || [])[1];
+        if (seller) lowReviews.push(`[${star}] 판매자: ${seller.trim()} | ${chunk.replace(/\s+/g, ' ').slice(0, 220)}`);
+      }
+    }
+  }
+  const reviews = lowReviews.length ? `낮은 별점 리뷰:\n${lowReviews.join('\n').slice(0, 2000)}\n\n` : '';
   const visibleText = parts.join('\n').slice(0, 14000);
   // Shipping and return terms often sit at the end of long pages, past the text cut, so lift their lines out first.
   const termLines = [];
@@ -177,6 +200,6 @@ async function collectProductPage() {
       ? "판매자 사업자번호는 보안 문자 뒤에 있어요. '판매자정보' 탭의 '상세정보 확인'에서 보안 문자를 직접 풀고, 열린 창에서 이 버튼을 한 번 더 누르면 판매자 정보를 합쳐요."
       : "판매자 사업자번호는 인증 뒤에 있어요. '판매자 상세정보 확인'의 인증을 직접 마친 뒤 다시 가져오면 사업자 상태까지 확인할 수 있어요.";
   return { version: 1, expanded: clicked, hint, product_url: url.toString(), page_title: document.title.slice(0, 300),
-    provided_text: (seller + contact + terms + structured + visibleText).slice(0, 12000),
+    provided_text: (seller + contact + terms + reviews + structured + visibleText).slice(0, 12000),
     captured_at: new Date().toISOString(), input_source: 'browser_extension' };
 }

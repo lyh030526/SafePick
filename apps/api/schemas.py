@@ -261,6 +261,14 @@ class MarketPrice(BaseModel):
     listings: list[MarketListing] = Field(default_factory=list)
 
 
+class ReviewComplaints(BaseModel):
+    """1-2 star reviews that report a counterfeit, non-delivery, no answer, or fraud. Shown for reference only."""
+    low_reviews: int = 0
+    complaints: int = 0
+    same_seller: int = 0
+    quotes: list[str] = Field(default_factory=list)
+
+
 class RiskAnalysis(BaseModel):
     status: Literal["completed", "insufficient", "unavailable"] = "unavailable"
     message: str = "위험 신호 분석 결과가 없습니다. 상품 설명으로 다시 분석해 주세요."
@@ -268,6 +276,7 @@ class RiskAnalysis(BaseModel):
     checklist: list[PurchaseCheck] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     assessment: RiskAssessment = Field(default_factory=RiskAssessment)
+    review_complaints: ReviewComplaints | None = None
 
 
 class ComparisonResponse(BaseModel):

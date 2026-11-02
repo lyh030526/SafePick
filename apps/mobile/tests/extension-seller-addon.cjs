@@ -1,4 +1,4 @@
-/* global __dirname */
+/* global __dirname, chrome */
 // Fixture check of the extension on 11st: auto-expanded seller tab, the verification hint, and merging the seller
 // window that 11st opens after its CAPTCHA, then Coupang's seller table and its recommendation carousels. Fixture pages
 // stand in for both sites; no network, login, or CAPTCHA.

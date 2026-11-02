@@ -230,6 +230,11 @@ class StabilityTests(unittest.TestCase):
         one_flag = combine_analyses([self.run_once(described, True), self.run_once(described), self.run_once()], self.TEXT)
         self.assertEqual([check.id for check in one_flag.checklist if check.kind == "attention"], [])
         self.assertEqual(one_flag.conditions.description.status, "found")
+        # One run out of three is not a finding, but it holds the page back instead of letting it read clear.
+        split = next(check for check in one_flag.checklist if check.id == "split_ambiguous_conditions")
+        self.assertEqual((split.kind, split.title), ("needs_check", "모호한 조건 확인 (판단이 엇갈림)"))
+        from risk_assessment import assess_risk
+        self.assertIn("모호한 조건 확인 (판단이 엇갈림)", assess_risk(one_flag, None).missing_checks)
         two_flags = combine_analyses([self.run_once(described, True), self.run_once(ambiguous=True), self.run_once()], self.TEXT)
         self.assertEqual([check.id for check in two_flags.checklist if check.kind == "attention"], ["ambiguous_conditions"])
         self.assertEqual(two_flags.conditions.description.status, "unknown")

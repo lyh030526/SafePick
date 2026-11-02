@@ -39,6 +39,18 @@ class ComponentTests(unittest.TestCase):
         self.assertEqual(next(item.status for item in coupang.criteria if item.key == "purchase_terms"), "confirmed")
 
 
+class MarketplaceReturnsTests(unittest.TestCase):
+    def test_marketplaces_run_returns_themselves(self):
+        text = "무선 블루투스 이어폰 LX-96은 블루투스 5.4로 끊김 없이 연결됩니다.\n배송비 무료, 1-2일 이내 도착"
+        details = {key: [] for key in DetailsDraft.model_fields}
+        details.update(description=["무선 블루투스 이어폰 LX-96은 블루투스 5.4로 끊김 없이 연결됩니다."], shipping=["배송비 무료, 1-2일 이내 도착"])
+        analysis = validate_risk_draft(RiskDraft(details=DetailsDraft(**details), signals=[]), text)
+        coupang = assess_risk(analysis, None, seller(), domain=MARKETPLACE, today=TODAY)
+        self.assertEqual((coupang.level, coupang.missing_checks), ("low", []))
+        own = assess_risk(analysis, None, seller(), domain=DomainCheck(status="established"), today=TODAY)
+        self.assertIn("반품·교환 조건", own.missing_checks)
+
+
 class NewSellerTests(unittest.TestCase):
     def test_a_report_filed_this_year_holds_the_level_back(self):
         fresh = assess_risk(listing(), None, seller("2026-용인처인-01238"), domain=MARKETPLACE, today=TODAY)
