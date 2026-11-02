@@ -24,7 +24,11 @@ const coupangPage = `<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <main><h1>테스트 이어폰 TE-1</h1><p>12,900원</p><p>판매자: 테스트무역 유한회사</p>
 <h2>함께 비교하면 좋을 상품</h2><ul>${[1, 2, 3, 4, 5].map(card).join('')}</ul>
 <table><tbody><tr><th><div>상호/대표자</div></th><td>테스트무역 유한회사 / 홍길동</td></tr>
-<tr><th><div>통신판매업 신고번호</div></th><td>2026-서울강남-00001</td><th><div>사업자번호</div></th><td>123-45-67891</td></tr></tbody></table></main>
+<tr><th><div>통신판매업 신고번호</div></th><td>2026-서울강남-00001</td><th><div>사업자번호</div></th><td>123-45-67891</td></tr></tbody></table>
+<button onclick="document.getElementById('qna').hidden=false">상품문의 (3)</button>
+<div id="qna" hidden><p>Q 재고 있나요?</p><p>A 재고 문의는 카톡 ID sale77 로 주시면 더 저렴하게 드려요</p>
+<button onclick="document.body.dataset.asked='yes'">문의하기</button></div>
+<p>판매자가 현금거래를 요구하면 거부하시고 즉시 사기 거래 신고센터에 신고하시기 바랍니다.</p></main>
 <footer>상호명 및 호스팅 서비스 제공 : 쿠팡(주) 사업자 등록번호 : 120-88-00767</footer></body></html>`;
 
 (async () => {
@@ -76,6 +80,10 @@ const coupangPage = `<!doctype html><html lang="ko"><head><meta charset="utf-8">
     assert.match(listing.text, /^판매자 정보:\n[\s\S]*상호\/대표자\n테스트무역 유한회사 \/ 홍길동[\s\S]*사업자번호\n123-45-67891/);
     assert.match(listing.text, /테스트 이어폰 TE-1\n12,900원/);
     assert.doesNotMatch(listing.text, /다른상품|120-88-00767/);
+    // The Q&A tab opens (read-only) and an off-platform answer is lifted to the top; the ask button is never pressed.
+    assert.match(listing.text, /판매자 연락·결제 안내:\nA 재고 문의는 카톡 ID sale77 로 주시면 더 저렴하게 드려요\n\n/);
+    assert.doesNotMatch(listing.text.split('판매자 연락·결제 안내:')[1].split('\n\n')[0], /현금거래를 요구하면/);
+    assert.equal(await coupang.evaluate(() => document.body.dataset.asked), undefined);
 
     // Two pages of the same product go into the compare list, and 비교하기 hands both to a new app tab.
     let posted = null;

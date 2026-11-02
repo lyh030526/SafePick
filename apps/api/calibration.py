@@ -6,6 +6,7 @@ OpenAI, Serper, and the NTS API; report and tune only replay the saved evidence 
 rules, so settings can be compared without new calls.
 
     python calibration.py add --label risky --source "피해 신고 3건 (더치트)" --url URL --text-file page.txt
+    python calibration.py add --label risky --source "서울시 전자상거래센터 공지" --url URL --fetch
     python calibration.py snapshot
     python calibration.py report
     python calibration.py tune
@@ -19,6 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from domain_check import domain_flags
 from market_price import BELOW_PERCENT, FAR_BELOW_PERCENT, rate_ratio
 from risk_assessment import DEFAULT_PARAMS, WEIGHTS, ScoreParams, assess_risk
 from schemas import DomainCheck, MarketPrice, ProductComparison, RiskAnalysis, RiskAssessment, SellerVerification
@@ -45,24 +47,27 @@ def load_cases(data_dir: Path = DATA_DIR) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def add_case(*, url: str, label: str, source: str, text: str, title: str = "", synthetic: bool = False,
-             note: str = "", case_id: str | None = None, captured_at: str | None = None,
+def add_case(*, url: str, label: str, source: str, text: str = "", title: str = "", synthetic: bool = False,
+             note: str = "", case_id: str | None = None, captured_at: str | None = None, fetch: bool = False,
              data_dir: Path = DATA_DIR) -> str:
+    """A case is the collected page text, or with `fetch` only the address: the server reads the page itself at
+    snapshot time, as a shopper pasting the link would get (scam shops reported by address, often already gone)."""
     if label not in LABELS:
         raise ValueError(f"label은 {', '.join(LABELS)} 중 하나여야 합니다.")
     if label != "unlabeled" and not source.strip():
         raise ValueError("라벨의 근거(--source)를 적어 주세요. 예: '공식 브랜드 스토어', '피해 신고 3건'.")
-    if not text.strip():
+    if not fetch and not text.strip():
         raise ValueError("판매 페이지 텍스트가 비어 있습니다.")
     cases = load_cases(data_dir)
     case_id = case_id or f"c{len(cases) + 1:03d}"
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,60}", case_id) or any(case["id"] == case_id for case in cases):
         raise ValueError(f"사용할 수 없거나 이미 있는 id입니다: {case_id}")
-    (data_dir / "texts").mkdir(parents=True, exist_ok=True)
-    (data_dir / "texts" / f"{case_id}.txt").write_text(text.strip(), encoding="utf-8")
+    if not fetch:
+        (data_dir / "texts").mkdir(parents=True, exist_ok=True)
+        (data_dir / "texts" / f"{case_id}.txt").write_text(text.strip(), encoding="utf-8")
     record = {"id": case_id, "url": url, "title": title, "label": label, "label_source": source.strip(),
               "synthetic": synthetic, "captured_at": captured_at or datetime.now(timezone.utc).isoformat(),
-              "note": note}
+              "note": note, **({"fetch": True} if fetch else {})}
     with (data_dir / "cases.jsonl").open("a", encoding="utf-8") as file:
         file.write(json.dumps(record, ensure_ascii=False) + "\n")
     return case_id
@@ -72,10 +77,16 @@ def take_snapshot(case: dict, data_dir: Path = DATA_DIR) -> dict:
     import main  # Imported here: loads .env and the model clients only when a snapshot is taken.
     from schemas import AnalysisRequest
 
-    text = (data_dir / "texts" / f"{case['id']}.txt").read_text(encoding="utf-8")
-    response = main.create_analysis(AnalysisRequest(product_url=case["url"], provided_text=text[:12000],
-                                                    page_title=case.get("title", "")[:300],
-                                                    input_source="browser_extension"))
+    if case.get("fetch"):
+        try:
+            response = main.create_analysis(AnalysisRequest(product_url=case["url"]))
+        except main.HTTPException as error:
+            raise ValueError(f"{case['id']}: 판매 페이지를 분석하지 못했습니다 ({error.detail})") from None
+    else:
+        text = (data_dir / "texts" / f"{case['id']}.txt").read_text(encoding="utf-8")
+        response = main.create_analysis(AnalysisRequest(product_url=case["url"], provided_text=text[:12000],
+                                                        page_title=case.get("title", "")[:300],
+                                                        input_source="browser_extension"))
     snapshot = {"case_id": case["id"], "snapshot_at": datetime.now(timezone.utc).isoformat(),
                 "response": response.model_dump(mode="json")}
     (data_dir / "snapshots").mkdir(parents=True, exist_ok=True)
@@ -89,7 +100,7 @@ def load_snapshot(case_id: str, data_dir: Path = DATA_DIR) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
-def replay(response: dict, settings: Settings = Settings()) -> RiskAssessment:
+def replay(response: dict, settings: Settings = Settings(), url: str | None = None) -> RiskAssessment:
     """Recompute the assessment from saved evidence under `settings`, without any network call."""
     analysis = RiskAnalysis.model_validate(response["risk_analysis"])
     comparison = ProductComparison.model_validate(response["comparison"]) if response.get("comparison") else None
@@ -103,6 +114,10 @@ def replay(response: dict, settings: Settings = Settings()) -> RiskAssessment:
         market = market.model_copy(update={"status": status, "label": label, "message": message})
     saved = (response["risk_analysis"].get("assessment") or {}).get("domain")
     domain = DomainCheck.model_validate(saved) if saved else None
+    # Brand-lookalike marks need no network, so older snapshots get them too. The reported-domain list is left out: it
+    # was built from the same Seoul notices as the risky cases, so it would only find itself.
+    if domain is not None and url and domain.status != "marketplace":
+        domain = domain.model_copy(update=domain_flags(url, include_reported=False))
     return assess_risk(analysis, comparison, seller, market, settings.params, domain=domain)
 
 
@@ -137,9 +152,9 @@ def evaluate(rows: list[tuple[dict, RiskAssessment]]) -> dict:
 def candidate_settings() -> list[Settings]:
     presets = {
         "현재 가중치": dict(WEIGHTS),
-        "판매자 중심": {"official": 20, "description": 15, "purchase_terms": 10, "seller": 35, "price": 20},
-        "가격 중심": {"official": 20, "description": 15, "purchase_terms": 15, "seller": 25, "price": 25},
-        "설명 중심": {"official": 20, "description": 30, "purchase_terms": 20, "seller": 20, "price": 10},
+        "판매자 중심": {"official": 20, "description": 15, "purchase_terms": 10, "seller": 35, "price": 20, "history": 30},
+        "가격 중심": {"official": 20, "description": 15, "purchase_terms": 15, "seller": 25, "price": 25, "history": 20},
+        "설명 중심": {"official": 20, "description": 30, "purchase_terms": 20, "seller": 20, "price": 10, "history": 15},
         "균등": {key: 20 for key in WEIGHTS},
     }
     settings = []
@@ -162,7 +177,7 @@ def labeled_rows(settings: Settings, cases: list[dict], data_dir: Path = DATA_DI
     for case in cases:
         snapshot = load_snapshot(case["id"], data_dir)
         if snapshot and (include_synthetic or not case.get("synthetic")):
-            rows.append((case, replay(snapshot["response"], settings)))
+            rows.append((case, replay(snapshot["response"], settings, case["url"])))
     return rows
 
 
@@ -187,7 +202,9 @@ def main_cli(argv: list[str] | None = None) -> None:
     add.add_argument("--url", required=True)
     add.add_argument("--label", required=True, choices=LABELS)
     add.add_argument("--source", default="", help="라벨의 근거")
-    add.add_argument("--text-file", required=True, help="확장 미리보기의 텍스트를 저장한 파일")
+    source = add.add_mutually_exclusive_group(required=True)
+    source.add_argument("--text-file", help="확장 미리보기의 텍스트를 저장한 파일")
+    source.add_argument("--fetch", action="store_true", help="텍스트 없이 주소만: 스냅샷 때 서버가 페이지를 직접 읽음")
     add.add_argument("--title", default="")
     add.add_argument("--id")
     add.add_argument("--note", default="")
@@ -202,8 +219,8 @@ def main_cli(argv: list[str] | None = None) -> None:
 
     if args.command == "add":
         case_id = add_case(url=args.url, label=args.label, source=args.source, title=args.title, note=args.note,
-                           text=Path(args.text_file).read_text(encoding="utf-8"), synthetic=args.synthetic,
-                           case_id=args.id)
+                           text=Path(args.text_file).read_text(encoding="utf-8") if args.text_file else "",
+                           synthetic=args.synthetic, case_id=args.id, fetch=args.fetch)
         print(f"추가했습니다: {case_id}. 'python calibration.py snapshot'으로 분석을 저장하세요.")
         return
     cases = load_cases()
@@ -211,7 +228,11 @@ def main_cli(argv: list[str] | None = None) -> None:
         targets = [case for case in cases if (not args.id or case["id"] in args.id)
                    and (args.force or load_snapshot(case["id"]) is None)]
         for index, case in enumerate(targets, 1):
-            result = take_snapshot(case)["response"]["risk_analysis"]["assessment"]
+            try:
+                result = take_snapshot(case)["response"]["risk_analysis"]["assessment"]
+            except ValueError as error:
+                print(f"[{index}/{len(targets)}] 건너뜀 {error}")
+                continue
             print(f"[{index}/{len(targets)}] {case['id']}: {result['label']} · 점수 {result['score']}")
         print(f"스냅샷 {len(targets)}개를 저장했습니다." if targets else "새로 분석할 사례가 없습니다.")
         return

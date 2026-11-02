@@ -72,7 +72,15 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         page.url == comparison.selected_url and page.facts.match == "exact" and page.facts.evidence
         for page in comparison.pages
     ))
-    signals = [item for item in analysis.checklist if complete and item.kind == "attention" and item.quotes]
+    # A stock badge ("품절임박 서두르세요") appears on official malls too, so urgency wording alone is shown but does not
+    # set the level; labeled official-mall pages were the only cases it flagged.
+    signals = [item for item in analysis.checklist if complete and item.kind == "attention" and item.quotes
+               and item.category not in {"purchase_pressure", "off_platform"}]
+    # Moving the payment or the conversation off the platform is the commonest marketplace scam: a marketplace seller
+    # may not do it at all, so either is decisive there. Own malls often take bank transfers and chat on KakaoTalk, so
+    # only a discount for paying outside the normal checkout counts for them.
+    off_platform = [item for item in analysis.checklist if complete and item.category == "off_platform" and item.quotes]
+    off_payment = any(item.id == "off_platform_payment" for item in off_platform)
     critical = [item for item in signals if item.category in {"model_mismatch", "components_mismatch"}
                 and len(set(item.quotes)) >= 2]
     description = complete and analysis.conditions.description.status == "found"
@@ -114,7 +122,18 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
     # A missing or expired domain is decisive on its own; a very new one-year registration is a signal; a new one needs
     # a check. These hold even when the page could not be read. An old domain earns nothing.
     domain_block = domain is not None and domain.status in {"missing", "expired"}
-    domain_warn = domain is not None and domain.status == "new_short"
+    # An own mall must show its business registration. A product page that does not, on a domain under a year old, is
+    # how the scam shops the Seoul center reported in 2026 looked while they were selling. Older malls are not judged
+    # by this alone: some load the footer with scripts, which a server read does not see.
+    unregistered_new = (complete and description and seller is not None and seller.status == "not_found"
+                        and domain is not None and domain.status in {"new", "new_short"})
+    domain_warn = domain is not None and domain.status == "new_short" or unregistered_new
+    # A domain on the Seoul center's scam list, or one borrowing a brand name that is not the brand's own, is how most
+    # reported shops presented themselves. A borrowed name on a new or dead domain is decisive; on an old one it is a sign.
+    reported = domain is not None and domain.reported_notice is not None
+    lookalike_block = (domain is not None and domain.impersonates is not None
+                       and domain.status in {"missing", "expired", "new", "new_short"})
+    lookalike_warn = domain is not None and domain.impersonates is not None and not lookalike_block
     if domain is not None and domain.status in {"new_short", "new"}:
         pending.append("도메인 운영 기간")
     # A mail-order report filed this year means a seller with no track record yet, the marketplace counterpart of a new
@@ -175,21 +194,38 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
     mail_reason = f"통신판매업 신고: {mail_order.label}" if mail_warn else None
     domain_reason = (f"도메인: {domain.label}" + (f" (등록 {domain.registered_on})" if domain.registered_on else "")
                      if domain_block or domain_warn else None)
-    if domain_block or seller_block or (complete and critical):
+    unregistered_reason = "사업자 정보를 표시하지 않은 신규 쇼핑몰" if unregistered_new else None
+    off_high = bool(off_platform) and marketplace
+    off_warn = off_payment and not marketplace
+    off_reasons = [item.title for item in off_platform] if off_high or off_warn else []
+    domain_flags = ([f"서울시전자상거래센터 사기 의심 사이트 공지: {domain.reported_notice}"] if reported else []) + (
+        [f"{domain.impersonates}의 이름을 쓴 공식이 아닌 도메인"] if lookalike_block or lookalike_warn else [])
+    if reported or lookalike_block or off_high or domain_block or seller_block or (complete and critical):
         level, label = "high", "높음"
-        summary = ("이 주소의 도메인이 등록되어 있지 않거나 만료되었습니다. 이 주소로는 결제하지 마세요." if domain_block else
+        summary = ("서울시전자상거래센터가 사기 의심 사이트로 공지한 주소입니다. 이 주소로는 결제하지 마세요." if reported else
+                   f"{domain.impersonates}의 이름을 썼지만 공식 도메인이 아니고, 최근에 등록했거나 이미 사라진 주소입니다. 브랜드 사칭 "
+                   "쇼핑몰에서 흔한 형태이니 공식 사이트에서 구매해 주세요." if lookalike_block else
+                   "판매자가 마켓 밖의 연락처나 결제(카카오톡·계좌이체·외부 링크)로 유도합니다. 마켓 결제를 벗어나면 피해를 보상받기 "
+                   "어려우니 응하지 말고 마켓 고객센터에 신고해 주세요." if off_high else
+                   "이 주소의 도메인이 등록되어 있지 않거나 만료되었습니다. 이 주소로는 결제하지 마세요." if domain_block else
                    "판매자 정보의 사업자등록번호가 국세청에서 정상 사업자로 조회되지 않습니다. 판매자 정보를 확인하기 전에는 구매를 미뤄 주세요."
                    if seller_block else
                    "모델 또는 구성품의 모순을 확인했습니다. 선택 옵션과 판매자 답변을 확인한 뒤 구매를 결정해 주세요.")
-        reasons = (([domain_reason] if domain_block else []) + ([seller_reason] if seller_block else [])
-                   + [item.title for item in critical])
-    elif not complete and not domain_warn:
+        reasons = (domain_flags + (off_reasons if off_high else []) + ([domain_reason] if domain_block else [])
+                   + ([seller_reason] if seller_block else []) + [item.title for item in critical])
+    elif not complete and not domain_warn and not lookalike_warn:
         level, label = "undetermined", "판단 보류"
         summary = "설명 분석을 완료하지 못해 주의 수준을 정하지 않았습니다. 자료를 추가하거나 다시 분석해 주세요."
         reasons = [analysis.message]
-    elif signals or seller_warn or mail_warn or price_signal or domain_warn or rating_warn:
+    elif signals or seller_warn or mail_warn or price_signal or domain_warn or rating_warn or lookalike_warn or off_warn:
         level, label = "moderate", "보통"
-        summary = ("최근에 1년만 등록한 도메인의 사이트입니다. 사기 쇼핑몰에서 흔한 형태이니 판매자 정보와 결제 수단을 확인한 뒤 "
+        summary = ("현금이나 계좌이체로 결제하면 할인해 준다고 안내합니다. 정상 결제 수단(카드·에스크로)을 벗어나면 피해를 보상받기 "
+                   "어려우니 정상 결제로 구매해 주세요." if off_warn else
+                   f"{domain.impersonates}의 이름을 썼지만 공식 도메인이 아닙니다. 공식 판매처인지 브랜드 공식 사이트에서 확인해 주세요."
+                   if lookalike_warn and not (signals or seller_warn or mail_warn or price_signal or domain_warn) else "상품을 팔고 있지만 쇼핑몰이 반드시 표시해야 하는 사업자 정보가 보이지 않고, 도메인도 등록한 지 1년이 안 됐습니다. "
+                   "서울시가 공표한 사기 쇼핑몰이 이런 형태였습니다. 사업자 정보를 확인하기 전에는 결제하지 마세요."
+                   if unregistered_new and not (signals or seller_warn or mail_warn or price_signal) else
+                   "최근에 1년만 등록한 도메인의 사이트입니다. 사기 쇼핑몰에서 흔한 형태이니 판매자 정보와 결제 수단을 확인한 뒤 "
                    "구매를 결정해 주세요." if domain_warn and not (signals or seller_warn or mail_warn or price_signal) else
                    "리뷰가 실제 구매 후기가 아닐 수 있는 흔적을 발견했습니다. 리뷰 수와 평점보다 판매자 정보와 반품 조건을 기준으로 "
                    "판단해 주세요." if signals and all(item.category == "review_pattern" for item in signals)
@@ -198,7 +234,9 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
                    "이유(배송 지연, 상품 상태 등)를 확인한 뒤 구매를 결정해 주세요." if rating_warn
                    and not (signals or seller_warn or mail_warn or price_signal or domain_warn) else
                    "추가 확인할 판매 표현이나 조건을 발견했습니다. 원문 근거와 적용 조건을 확인해 주세요.")
-        reasons = (([domain_reason] if domain_warn else []) + ([seller_reason] if seller_warn else [])
+        reasons = (domain_flags + off_reasons + ([unregistered_reason] if unregistered_new else [])
+                   + ([domain_reason] if domain_warn else [])
+                   + ([seller_reason] if seller_warn else [])
                    + ([rating_reason] if rating_warn else [])
                    + ([mail_reason] if mail_warn else [])
                    + ([price_reason] if price_signal else []) + [item.title for item in signals]
@@ -232,7 +270,7 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         if new_seller:
             reasons.insert(0, f"통신판매업 신고: {report_year.group(1)}년 신고 ({report})")
     return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
-                          missing_checks=pending, criteria=criteria, rule_version="10", domain=domain,
+                          missing_checks=pending, criteria=criteria, rule_version="12", domain=domain,
                           **score_evidence(criteria, level, params,
                                            None if official or (market is not None and market.status == "typical")
                                            else UNCOMPARED_CEILING))

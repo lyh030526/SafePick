@@ -224,6 +224,52 @@ _CHATBOT = re.compile(r"(?:다음|다른)\s*(?:제품|상품)?\s*리뷰\s*(?:작
                       r"|AI\s*언어\s*모델로서|As an AI(?: language model)?", re.I)
 
 
+# Payment or contact moved off the platform: KakaoTalk or messenger IDs, open-chat links, a bank account to deposit to,
+# or a discount for paying in cash or by transfer. The platform's own warnings ("현금거래를 요구하면 거부하시고") quote
+# the same words, so warning sentences are left out.
+_CONTACT = re.compile(r"(?:카카오\s*톡|카톡|오픈\s*채팅|open\.kakao\.com/\S+|텔레그램|위챗|라인\s*(?:아이디|ID))"
+                      r".{0,25}(?:문의|상담|연락|주문|친구\s*추가|아이디|ID|추가)|(?:문의|상담|연락|주문).{0,15}(?:카카오\s*톡|카톡|"
+                      r"오픈\s*채팅|텔레그램)|open\.kakao\.com/\S+", re.I)
+_PAYMENT = re.compile(r"(?:계좌\s*이체|무통장\s*입금|현금\s*(?:결제|거래|입금|구매)|직접\s*입금|송금).{0,20}(?:할인|추가\s*할인|더\s*저렴|"
+                      r"특가|적립|빠른\s*(?:배송|발송))|(?:개인\s*계좌|아래\s*계좌|계좌\s*번호|계좌로).{0,15}(?:입금|송금)|"
+                      r"(?:국민|신한|우리|하나|농협|기업|카카오\s*뱅크|토스\s*뱅크|우체국|새마을)\s*(?:은행)?\s*:?\s*\d{2,6}-\d{2,6}-\d{2,8}|"
+                      r"(?:외부|별도)\s*결제\s*(?:링크|페이지|창)|결제\s*링크.{0,10}(?:보내|드립|전달)")
+# A support channel ("카카오톡 채널 상담 10시~17시") is ordinary; moving the order or the price there is not.
+_DEAL = re.compile(r"주문|구매|할인|결제|입금|재고|가격|특가|직거래|저렴|최저가|open\.kakao\.com")
+_WARNING = re.compile(r"거부하|신고하|주의하|요구하면|요구하는\s*경우|유도하는|절대|피해\s*예방|사기\s*거래|하지\s*마")
+
+
+def off_platform_checks(text: str) -> list[PurchaseCheck]:
+    source = normalize(text)
+    found = {"off_platform_contact": [], "off_platform_payment": []}
+    for key, pattern in (("off_platform_contact", _CONTACT), ("off_platform_payment", _PAYMENT)):
+        for match in pattern.finditer(source):
+            # The sentence around the match, so the quote reads as the seller wrote it.
+            starts = [source.rfind(boundary, 0, match.start()) for boundary in (". ", "! ", "? ", " / ")]
+            start = max([position + 2 for position in starts if position >= 0] or [0])
+            end = min([position for position in (source.find(boundary, match.end()) for boundary in (". ", "! ", "? "))
+                       if position >= 0] or [len(source)])
+            quote = source[max(start, match.start() - 80):min(end + 1, match.end() + 80)].strip()
+            if key == "off_platform_contact" and not _DEAL.search(quote):
+                continue
+            if not _WARNING.search(quote) and quote not in found[key]:
+                found[key].append(quote)
+    checks = []
+    if found["off_platform_payment"]:
+        checks.append(PurchaseCheck(
+            id="off_platform_payment", category="off_platform", kind="attention", title="정상 결제 밖으로 유도하는 안내",
+            explanation="계좌 입금이나 현금 결제를 안내하거나, 그렇게 하면 할인해 준다고 합니다. 정상 결제(카드·에스크로)를 벗어나면 "
+                        "미배송·환불 거부 때 보상받기 어렵습니다.",
+            quotes=found["off_platform_payment"][:3], how_to_check="마켓이나 쇼핑몰의 정상 결제로만 구매하고, 개인 계좌로 입금하지 마세요."))
+    if found["off_platform_contact"]:
+        checks.append(PurchaseCheck(
+            id="off_platform_contact", category="off_platform", kind="attention", title="마켓 밖 연락처로 유도하는 안내",
+            explanation="카카오톡·오픈채팅·메신저로 문의나 주문을 유도합니다. 오픈마켓 판매자가 마켓 밖에서 거래를 이어가는 것은 "
+                        "사기에서 흔한 방식입니다.",
+            quotes=found["off_platform_contact"][:3], how_to_check="문의는 마켓의 상품 문의로만 하고, 메신저로 결제 안내를 받으면 응하지 마세요."))
+    return checks
+
+
 def review_checks(text: str) -> list[PurchaseCheck]:
     """Review patterns found in the page text itself, without a model call: chatbot leftovers and copied sentences."""
     lines = [normalize(line) for line in text.splitlines()]
@@ -252,7 +298,7 @@ def review_checks(text: str) -> list[PurchaseCheck]:
 
 def complete_analysis(conditions: ListingConditions, checks: list[PurchaseCheck], text: str, rejected: bool) -> RiskAnalysis:
     """Add the missing-information checks and the summary to validated conditions and attention checks."""
-    checks = list(checks) + review_checks(text)
+    checks = list(checks) + review_checks(text) + off_platform_checks(text)
     required = ["shipping", "returns"]
     # Return policies mention components ("구성품 누락으로 … 반품 불가"); only a line about the product itself asks for them.
     if any(re.search(r"구성품|번들|(?:패키지|세트)\s*(?:구성|포함)", line) and not re.search(r"반품|교환|환불|누락|훼손", line)
@@ -303,7 +349,7 @@ def combine_analyses(analyses: list[RiskAnalysis], text: str) -> RiskAnalysis:
         if len(flagged) >= need:
             checks.append(flagged[0])
     rejected = any(len(item.warnings) > 1 for item in completed) or any(
-        check.kind == "attention" and check.category != "review_pattern"
+        check.kind == "attention" and check.category not in {"review_pattern", "off_platform"}
         for item in completed for check in item.checklist if check not in checks)
     return complete_analysis(conditions, checks, text, rejected)
 

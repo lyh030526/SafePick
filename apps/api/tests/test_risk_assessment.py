@@ -67,13 +67,16 @@ class RiskLevelTests(unittest.TestCase):
             self.assertEqual(result.level, "undetermined")
             self.assertTrue(result.missing_checks)
 
-    def test_discount_and_pressure_are_moderate_even_without_official_comparison(self):
+    def test_discount_is_moderate_but_urgency_alone_is_only_shown(self):
         quote = "오늘만 90% 할인! 지금 구매하세요."
-        for category in ["discount_claim", "purchase_pressure"]:
-            result = assess_risk(analyzed([SignalDraft(category=category, quotes=[quote])]), None)
-            self.assertEqual(result.level, "moderate")
-            self.assertTrue(result.reasons)
-            self.assertTrue(result.missing_checks)
+        result = assess_risk(analyzed([SignalDraft(category="discount_claim", quotes=[quote])]), None)
+        self.assertEqual(result.level, "moderate")
+        self.assertTrue(result.reasons)
+        self.assertTrue(result.missing_checks)
+        # Official malls show "품절임박 서두르세요" badges, so urgency stays in the checklist without setting the level.
+        urgent = analyzed([SignalDraft(category="purchase_pressure", quotes=[quote])])
+        self.assertIn("purchase_pressure", [item.category for item in urgent.checklist])
+        self.assertEqual(assess_risk(urgent, None).level, "undetermined")
 
     def test_grounded_conflict_overrides_incomplete_information(self):
         for category, quotes in [

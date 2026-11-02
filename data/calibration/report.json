@@ -1,27 +1,27 @@
 {
- "checked_at": "2026-10-31T09:05:48.116338+00:00",
+ "checked_at": "2026-11-02T05:15:06.191328+00:00",
  "settings": "현재 설정",
  "metrics": {
-  "trusted": 10,
-  "risky": 4,
+  "trusted": 27,
+  "risky": 71,
   "unlabeled": 2,
-  "detection_rate": 1.0,
+  "detection_rate": 0.648,
   "risky_cleared": 0,
   "false_alarm_rate": 0.0,
-  "trusted_low_rate": 0.2,
+  "trusted_low_rate": 0.296,
   "score_separation": 1.0,
-  "scored": 6,
+  "scored": 71,
   "confusion": {
    "trusted": {
     "high": 0,
     "moderate": 0,
-    "undetermined": 8,
-    "low": 2
+    "undetermined": 19,
+    "low": 8
    },
    "risky": {
-    "high": 2,
-    "moderate": 2,
-    "undetermined": 0,
+    "high": 13,
+    "moderate": 33,
+    "undetermined": 25,
     "low": 0
    },
    "unlabeled": {
@@ -39,7 +39,7 @@
    "synthetic": false,
    "level": "undetermined",
    "score": null,
-   "coverage_percent": 20,
+   "coverage_percent": 33,
    "reasons": [
     "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
    ]
@@ -49,8 +49,8 @@
    "label": "trusted",
    "synthetic": false,
    "level": "undetermined",
-   "score": null,
-   "coverage_percent": 35,
+   "score": 68,
+   "coverage_percent": 58,
    "reasons": [
     "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
    ]
@@ -60,8 +60,8 @@
    "label": "trusted",
    "synthetic": false,
    "level": "undetermined",
-   "score": null,
-   "coverage_percent": 35,
+   "score": 68,
+   "coverage_percent": 58,
    "reasons": [
     "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
    ]
@@ -71,8 +71,8 @@
    "label": "trusted",
    "synthetic": false,
    "level": "undetermined",
-   "score": null,
-   "coverage_percent": 35,
+   "score": 68,
+   "coverage_percent": 58,
    "reasons": [
     "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
    ]
@@ -82,8 +82,8 @@
    "label": "trusted",
    "synthetic": false,
    "level": "undetermined",
-   "score": null,
-   "coverage_percent": 35,
+   "score": 68,
+   "coverage_percent": 58,
    "reasons": [
     "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
    ]
@@ -93,8 +93,8 @@
    "label": "trusted",
    "synthetic": false,
    "level": "undetermined",
-   "score": null,
-   "coverage_percent": 35,
+   "score": 68,
+   "coverage_percent": 58,
    "reasons": [
     "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
    ]
@@ -104,8 +104,8 @@
    "label": "trusted",
    "synthetic": false,
    "level": "undetermined",
-   "score": null,
-   "coverage_percent": 35,
+   "score": 68,
+   "coverage_percent": 58,
    "reasons": [
     "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
    ]
@@ -126,8 +126,8 @@
    "label": "unlabeled",
    "synthetic": false,
    "level": "undetermined",
-   "score": null,
-   "coverage_percent": 35,
+   "score": 64,
+   "coverage_percent": 41,
    "reasons": [
     "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
    ]
@@ -137,8 +137,8 @@
    "label": "unlabeled",
    "synthetic": false,
    "level": "undetermined",
-   "score": null,
-   "coverage_percent": 35,
+   "score": 68,
+   "coverage_percent": 58,
    "reasons": [
     "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
    ]
@@ -159,11 +159,10 @@
    "label": "risky",
    "synthetic": true,
    "level": "moderate",
-   "score": 41,
+   "score": 47,
    "coverage_percent": 50,
    "reasons": [
-    "가격 시세: 시세보다 지나치게 저렴 (중앙값의 23%)",
-    "구매를 서두르게 하는 표현"
+    "가격 시세: 시세보다 지나치게 저렴 (중앙값의 23%)"
    ]
   },
   {
@@ -213,6 +212,950 @@
     "상세 설명과 배송·반품 원문을 확인했습니다.",
     "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
     "판매가가 같은 모델의 시세 범위 안에 있습니다."
+   ]
+  },
+  {
+   "id": "ecc-ultra-mall-shop",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 49,
+   "coverage_percent": 33,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 최근 1년 단기 등록 (등록 2026-10-20)"
+   ]
+  },
+  {
+   "id": "ecc-dyna-shopping-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-10-14)"
+   ]
+  },
+  {
+   "id": "ecc-aurora-market-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-18)"
+   ]
+  },
+  {
+   "id": "ecc-ceramimarket-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-07-07)"
+   ]
+  },
+  {
+   "id": "ecc-damonpick-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-08-30)"
+   ]
+  },
+  {
+   "id": "ecc-modernwbay-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-07-06)"
+   ]
+  },
+  {
+   "id": "ecc-retronewmarket-net",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 49,
+   "coverage_percent": 33,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-16)"
+   ]
+  },
+  {
+   "id": "ecc-bittem-net",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-11)"
+   ]
+  },
+  {
+   "id": "ecc-flynntem24-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-09-11)"
+   ]
+  },
+  {
+   "id": "ecc-imtemsoul-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (521)"
+   ]
+  },
+  {
+   "id": "ecc-spditem-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-08-07)"
+   ]
+  },
+  {
+   "id": "ecc-temjoa-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-09-07)"
+   ]
+  },
+  {
+   "id": "ecc-www-itemnunbi-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-07-19)"
+   ]
+  },
+  {
+   "id": "ecc-fable-sale-mall-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-09-22)"
+   ]
+  },
+  {
+   "id": "ecc-jy-shopping-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-09-08)"
+   ]
+  },
+  {
+   "id": "ecc-esom-store-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-28)"
+   ]
+  },
+  {
+   "id": "ecc-juju-pop-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (403)"
+   ]
+  },
+  {
+   "id": "ecc-maliardo-mall-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-08-14)"
+   ]
+  },
+  {
+   "id": "ecc-olive-mall-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 49,
+   "coverage_percent": 33,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2025-12-26)"
+   ]
+  },
+  {
+   "id": "ecc-start-brige-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (520)"
+   ]
+  },
+  {
+   "id": "ecc-ever-shpping-shop",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-08-05)"
+   ]
+  },
+  {
+   "id": "ecc-lg-bestshop-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "LG전자의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-shinsegae-mall-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "SSG·신세계의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-ssg-mall-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "SSG·신세계의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-full-days-mall-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-07-01)"
+   ]
+  },
+  {
+   "id": "ecc-griteestore-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-05-19)"
+   ]
+  },
+  {
+   "id": "ecc-jennales-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ]
+  },
+  {
+   "id": "ecc-judahash-shop",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-connectra-shop",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-22)"
+   ]
+  },
+  {
+   "id": "ecc-secondhands-net",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 49,
+   "coverage_percent": 33,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2026-04-24)"
+   ]
+  },
+  {
+   "id": "ecc-theinrionmarket-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ]
+  },
+  {
+   "id": "ecc-tubularmarket-net",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-www-jzzmallshop-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (521)"
+   ]
+  },
+  {
+   "id": "ecc-matinkim-kr-shop",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "마뗑킴의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-matinkimonline-shop",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "마뗑킴의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-matinkimsell-shop",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "마뗑킴의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-www-kr-matinkim-shop",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "마뗑킴의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-www-blakiey-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 52,
+   "coverage_percent": 58,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2026-01-26)"
+   ]
+  },
+  {
+   "id": "ecc-www-horcadge-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 49,
+   "coverage_percent": 33,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2026-04-01)"
+   ]
+  },
+  {
+   "id": "ecc-www-lormant-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 49,
+   "coverage_percent": 33,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2026-02-09)"
+   ]
+  },
+  {
+   "id": "ecc-www-vularion-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 49,
+   "coverage_percent": 33,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2026-04-01)"
+   ]
+  },
+  {
+   "id": "ecc-www-rewears-co-kr",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "ecc-crocbandclog-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-thenorthfaces-kr-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "노스페이스의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-thenorthxfaceskr-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "노스페이스의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-www-shopmoncler-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 49,
+   "coverage_percent": 33,
+   "reasons": [
+    "몽클레르의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-www-shopmonclkr-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-cbcmall-net",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ]
+  },
+  {
+   "id": "ecc-sw-jewelrysale-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-limicoco-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ]
+  },
+  {
+   "id": "ecc-ruilben-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (403)"
+   ]
+  },
+  {
+   "id": "ecc-secondsmall-net",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-storebiz24-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에서 읽을 수 있는 상품 정보를 찾지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-www-buyselllife-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에서 읽을 수 있는 상품 정보를 찾지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-www-goodpricestore-net",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에서 읽을 수 있는 상품 정보를 찾지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-aloyogashop-us-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "알로 요가의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-land-stockmall-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-wpm365-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-10-22)"
+   ]
+  },
+  {
+   "id": "ecc-www-bigbytal-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ]
+  },
+  {
+   "id": "ecc-a-ark-mall-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-17)"
+   ]
+  },
+  {
+   "id": "ecc-a-sale-mall-net",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ]
+  },
+  {
+   "id": "ecc-redleafshop-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (403)"
+   ]
+  },
+  {
+   "id": "ecc-marimekko-sale-shop",
+   "label": "risky",
+   "synthetic": false,
+   "level": "high",
+   "score": 14,
+   "coverage_percent": 0,
+   "reasons": [
+    "마리메꼬의 이름을 쓴 공식이 아닌 도메인"
+   ]
+  },
+  {
+   "id": "ecc-dabinshop-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 0,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ]
+  },
+  {
+   "id": "ecc-move-market-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-10-26)"
+   ]
+  },
+  {
+   "id": "ecc-www-happymartshop-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "moderate",
+   "score": 44,
+   "coverage_percent": 0,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-08-28)"
+   ]
+  },
+  {
+   "id": "ecc-oujob-com",
+   "label": "risky",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": null,
+   "coverage_percent": 33,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-lge-1",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "low",
+   "score": 98,
+   "coverage_percent": 100,
+   "reasons": [
+    "공식 상품 일치, 상세 설명, 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ]
+  },
+  {
+   "id": "official-lge-2",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 72,
+   "coverage_percent": 86,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-lge-3",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 73,
+   "coverage_percent": 88,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-lge-4",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "low",
+   "score": 98,
+   "coverage_percent": 100,
+   "reasons": [
+    "공식 상품 일치, 상세 설명, 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ]
+  },
+  {
+   "id": "official-innisfree-1",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 74,
+   "coverage_percent": 82,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-innisfree-2",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 74,
+   "coverage_percent": 82,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-innisfree-3",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 74,
+   "coverage_percent": 82,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-amoremall-1",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 68,
+   "coverage_percent": 58,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-amoremall-2",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 68,
+   "coverage_percent": 58,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-amoremall-3",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 68,
+   "coverage_percent": 58,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-aladin-1",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 74,
+   "coverage_percent": 82,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-aladin-2",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 74,
+   "coverage_percent": 82,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-aladin-3",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "undetermined",
+   "score": 74,
+   "coverage_percent": 82,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ]
+  },
+  {
+   "id": "official-mixxo-1",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "low",
+   "score": 92,
+   "coverage_percent": 71,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ]
+  },
+  {
+   "id": "official-mixxo-2",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "low",
+   "score": 92,
+   "coverage_percent": 71,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ]
+  },
+  {
+   "id": "official-mixxo-3",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "low",
+   "score": 92,
+   "coverage_percent": 71,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ]
+  },
+  {
+   "id": "coupang-rocket-redmi",
+   "label": "trusted",
+   "synthetic": false,
+   "level": "low",
+   "score": 95,
+   "coverage_percent": 100,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "쿠팡이 직접 판매하는 상품입니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
    ]
   }
  ]

@@ -18,7 +18,8 @@ NTS_STATUS_URL = "https://api.odcloud.kr/api/nts-businessman/v1/status"
 _LABELS = {
     "business_name": r"상호\s*명?|회사\s*명",
     "representative": r"대표자(?:\s*명)?|대표\s*성명",
-    "business_number": r"사업자\s*(?:등록)?\s*번호",
+    # Aladin writes "사업자등록 201-81-23094", without 번호.
+    "business_number": r"사업자\s*(?:등록\s*)?번호|사업자\s*등록",
     "mail_order_number": r"통신\s*판매\s*업?\s*(?:신고\s*번호|신고|번호)",
     "address": r"사업장\s*(?:소재지|주소)|소재지",
 }

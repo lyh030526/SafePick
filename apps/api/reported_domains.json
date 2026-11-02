@@ -1,0 +1,1410 @@
+{
+ "source": "서울시전자상거래센터 사기 의심 사이트 공지 (ecc.seoul.go.kr), 2026-10-31 수집",
+ "excluded": "공지에 함께 적힌 사칭 대상 공식 도메인(ssg.com, kolonsport.com)과 공지 페이지 자체의 기반 도메인",
+ "domains": {
+  "2lve12.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "40flower.store": {
+   "notice": "오픈마켓 경유 세일몰(구 댄디마켓)  주의",
+   "notice_id": "6315"
+  },
+  "abrego.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "acnevip.shop": {
+   "notice": "아크네스튜디오 (Acne Studios) 온라인스토어 사칭사이트 주의",
+   "notice_id": "6341"
+  },
+  "adorable-mall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (2)",
+   "notice_id": "6356"
+  },
+  "aladdin-mall.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "aloyoga-kr.vip": {
+   "notice": "요가복 브랜드 알로[alo yoga] 사칭사이트 주의",
+   "notice_id": "6333"
+  },
+  "aloyogashop-us.com": {
+   "notice": "요가복 브랜드 알로[alo yoga] 사칭사이트 주의",
+   "notice_id": "6333"
+  },
+  "aritrendsale.com": {
+   "notice": "스포츠브랜드 아레나 사칭사이트 주의",
+   "notice_id": "7381"
+  },
+  "ark-mall.com": {
+   "notice": "오픈마켓 경유 세일몰(구 댄디마켓)  주의",
+   "notice_id": "6315"
+  },
+  "asicaonlinekr.shop": {
+   "notice": "스포츠브랜드 아식스 사칭사이트 주의",
+   "notice_id": "6329"
+  },
+  "asicscokr.shop": {
+   "notice": "스포츠브랜드 아식스 사칭사이트 주의",
+   "notice_id": "6329"
+  },
+  "asicsshoessale.com": {
+   "notice": "스포츠브랜드 아식스 사칭사이트 주의",
+   "notice_id": "6329"
+  },
+  "asscskronline.shop": {
+   "notice": "스포츠브랜드 아식스 사칭사이트 주의",
+   "notice_id": "6329"
+  },
+  "atoomall.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "aurora-market.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "ayiepmarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "baemannmarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "band-namu.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "bape-vip.shop": {
+   "notice": "의류브랜드 베이프 사칭사이트 주의",
+   "notice_id": "6331"
+  },
+  "bapestore-kr.shop": {
+   "notice": "의류브랜드 베이프 사칭사이트 주의",
+   "notice_id": "6331"
+  },
+  "baromarket.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "beigemarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "bellashops.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (2)",
+   "notice_id": "6356"
+  },
+  "belsen-m.com": {
+   "notice": "온라인 쇼핑몰 벨젠 이용주의",
+   "notice_id": "7394"
+  },
+  "beornie.com": {
+   "notice": "의류브랜드 랄프로렌 사칭사이트 주의",
+   "notice_id": "6327"
+  },
+  "bigbytal.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "bingmarkets.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "bittem.net": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "blakiey.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "8419"
+  },
+  "blueskyyy.vip": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "bluewink.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "bureton.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "8419"
+  },
+  "buygogomoll.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "buyselllife.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "byemotion.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "byulbyul-market.shop": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "carhartt-wip.vip": {
+   "notice": "해외 유명 의류 브랜드 칼하트 사칭사이트 주의",
+   "notice_id": "6308"
+  },
+  "carharttkrsale.shop": {
+   "notice": "해외 유명 의류 브랜드 칼하트 사칭사이트 주의",
+   "notice_id": "6308"
+  },
+  "carharttssvip.shop": {
+   "notice": "해외 유명 의류 브랜드 칼하트 사칭사이트 주의",
+   "notice_id": "6308"
+  },
+  "cbcmall.net": {
+   "notice": "온라인 사이트 씨비시(CBC) 주의",
+   "notice_id": "8410"
+  },
+  "ceenlvmall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "centralmarket24.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "ceramimarket.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "chilremart.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "chunghamart.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "closetwave.shop": {
+   "notice": "의류브랜드 스투시 사칭사이트 주의",
+   "notice_id": "6311"
+  },
+  "cmj-mall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "cocojewelry.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "cocomkt.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "condo365review.com": {
+   "notice": "온라인 여행사 리뷰 알바 사기사이트 주의",
+   "notice_id": "6343"
+  },
+  "congcong2mall.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "connectra.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "constancens.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "6360"
+  },
+  "creammarket24.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "cretmarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "crocbandclog.com": {
+   "notice": "신발 브랜드 크록스 온라인몰 사칭 사이트 주의",
+   "notice_id": "8420"
+  },
+  "crofits.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "crownjonggo.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "dabinshop.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "damonpick.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "dangnemol.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "daol-store.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (1)",
+   "notice_id": "8408"
+  },
+  "daoumarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "datemkorea.com": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "daycaree-mall.com": {
+   "notice": "온라인 사이트 풀데이즈몰 ((구)티그린스토어) 주의",
+   "notice_id": "8433"
+  },
+  "dcmarket-mall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "dear-living.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "dereumol.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "desantonlinestore-kr.shop": {
+   "notice": "데상트 온라인스토어 사칭사이트 주의",
+   "notice_id": "6314"
+  },
+  "deserteskr-online.shop": {
+   "notice": "데상트 온라인스토어 사칭사이트 주의",
+   "notice_id": "6314"
+  },
+  "desertkr-online.shop": {
+   "notice": "데상트 온라인스토어 사칭사이트 주의",
+   "notice_id": "6314"
+  },
+  "desertsab-kr.shop": {
+   "notice": "데상트 온라인스토어 사칭사이트 주의",
+   "notice_id": "6314"
+  },
+  "desetoline-kr.shop": {
+   "notice": "데상트 온라인스토어 사칭사이트 주의",
+   "notice_id": "6314"
+  },
+  "desettaas-kr.shop": {
+   "notice": "데상트 온라인스토어 사칭사이트 주의",
+   "notice_id": "6314"
+  },
+  "desettosos-kr.shop": {
+   "notice": "데상트 온라인스토어 사칭사이트 주의",
+   "notice_id": "6314"
+  },
+  "deywooepems.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "diesel-kr.shop": {
+   "notice": "패션브랜드 디젤(diesel) 사칭사이트 주의",
+   "notice_id": "6354"
+  },
+  "dieselvip-kr.shop": {
+   "notice": "패션브랜드 디젤(diesel) 사칭사이트 주의",
+   "notice_id": "6354"
+  },
+  "dinzgij.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "6360"
+  },
+  "dipylon1.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (1)",
+   "notice_id": "8408"
+  },
+  "dkonlinekr.com": {
+   "notice": "의류브랜드 랄프로렌 사칭사이트 주의",
+   "notice_id": "6327"
+  },
+  "dmuse-m.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "dongnea.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "dstlzmahopkr.shop": {
+   "notice": "데상트 온라인스토어 사칭사이트 주의",
+   "notice_id": "6314"
+  },
+  "durimarket.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "dyna-shopping.com": {
+   "notice": "온라인쇼핑몰 다이나몰 주의",
+   "notice_id": "10454"
+  },
+  "easypay-market.com": {
+   "notice": "온라인 쇼핑몰  안심페이마켓 이용주의",
+   "notice_id": "7395"
+  },
+  "es-shopping.shop": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "esom-store.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (1)",
+   "notice_id": "8408"
+  },
+  "ever-shpping.shop": {
+   "notice": "온라인쇼핑몰 에버몰 주의",
+   "notice_id": "9445"
+  },
+  "ext-m.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "ezcomstore.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "ezmarketb2b.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "fable-sale-mall.com": {
+   "notice": "온라인쇼핑몰 페이블몰 주의",
+   "notice_id": "9451"
+  },
+  "fivemall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "flynntem24.com": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "footlockershopkr.com": {
+   "notice": "신발판매 전문 사이트 풋락커 사칭 사이트 주의",
+   "notice_id": "7379"
+  },
+  "full-days-mall.com": {
+   "notice": "온라인 사이트 풀데이즈몰 ((구)티그린스토어) 주의",
+   "notice_id": "8433"
+  },
+  "gametemcore.com": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "gauriclaw.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "gnmkt.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "gonaitem.com": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "gonggams.shop": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "goodpricestore.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "goodtemgo.com": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "goyumarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "grab-shops.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "gregoryper.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "6360"
+  },
+  "griteestore.com": {
+   "notice": "온라인 사이트 그리티(구_제널스(JS)/유다애슈) 주의",
+   "notice_id": "7407"
+  },
+  "groundche.com": {
+   "notice": "민생지원금 정보 허위 안내 사이트 주의",
+   "notice_id": "8413"
+  },
+  "h-mallstore.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (2)",
+   "notice_id": "6356"
+  },
+  "hanaroomarket.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "hanpreshee.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "happymartshop.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "happyour.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "happytraveltour.com": {
+   "notice": "여행사이트 행복여행투어 주의",
+   "notice_id": "7390"
+  },
+  "hazardmarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "homeandhomemarkets.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "homes-plans.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (2)",
+   "notice_id": "6356"
+  },
+  "horcadge.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "8419"
+  },
+  "hs-store.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "hubtem.net": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "humanma-jp.com": {
+   "notice": "마뗑킴 온라인스토어 사칭사이트 주의",
+   "notice_id": "6340"
+  },
+  "i-mallshop.com": {
+   "notice": "아이폰(애플 기기) 판매 사이트 아이몰 주의",
+   "notice_id": "7385"
+  },
+  "imtemsoul.com": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "in-themore.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "itemmax.net": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "itemnunbi.com": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "jennales.com": {
+   "notice": "온라인 사이트 그리티(구_제널스(JS)/유다애슈) 주의",
+   "notice_id": "7407"
+  },
+  "jingamarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "jj-cp.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "joa-shopping.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "joamoom.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "jonggojangte.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "jonggomaeul.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "jonggomarkt.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "jonggotlwkd.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "joonggolife.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "joongmile.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "joy-shops.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "judahash.com": {
+   "notice": "온라인 사이트 그리티(구_제널스(JS)/유다애슈) 주의",
+   "notice_id": "7407"
+  },
+  "judahash.shop": {
+   "notice": "온라인 사이트 그리티(구_제널스(JS)/유다애슈) 주의",
+   "notice_id": "7407"
+  },
+  "juju-pop.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (1)",
+   "notice_id": "8408"
+  },
+  "jungohi.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "jy-shopping.com": {
+   "notice": "온라인쇼핑몰 JY몰 주의",
+   "notice_id": "9448"
+  },
+  "jzzmallshop.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "kaejumall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "kelonsportookr.com": {
+   "notice": "코오롱스포츠 (코오롱몰) 사칭사이트 주의",
+   "notice_id": "6309"
+  },
+  "kglobal-mall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "kolonkrstore.shop": {
+   "notice": "코오롱스포츠 (코오롱몰) 사칭사이트 주의",
+   "notice_id": "6309"
+  },
+  "koloshopkr.com": {
+   "notice": "코오롱스포츠 (코오롱몰) 사칭사이트 주의",
+   "notice_id": "6309"
+  },
+  "koloshops-kr.com": {
+   "notice": "코오롱스포츠 (코오롱몰) 사칭사이트 주의",
+   "notice_id": "6309"
+  },
+  "kr-matinkim.shop": {
+   "notice": "마뗑킴 온라인스토어 사칭사이트 주의",
+   "notice_id": "6340"
+  },
+  "kstorimall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (1)",
+   "notice_id": "8408"
+  },
+  "kulaide.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "la-room.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "lacosteshoppingonlineslae-kor.shop": {
+   "notice": "패션브랜드 라코스테 사칭사이트 주의",
+   "notice_id": "7371"
+  },
+  "lalanabom.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "lalastore.net": {
+   "notice": "온라인쇼핑몰 라라스토어 주의",
+   "notice_id": "9440"
+  },
+  "land-stockmall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "leicamarker.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "leishonmall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "levenmarkets.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "lg-bestshop.com": {
+   "notice": "LG전자 직영몰 사칭사이트 주의",
+   "notice_id": "9442"
+  },
+  "limicoco.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "lolegold-mall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "loop-mall.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "lormant.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "8419"
+  },
+  "louie33.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (2)",
+   "notice_id": "6356"
+  },
+  "lulalomekr-store.shop": {
+   "notice": "요가복브랜드 룰루레몬 사칭사이트 주의",
+   "notice_id": "6326"
+  },
+  "luloamenkr-store.shop": {
+   "notice": "요가복브랜드 룰루레몬 사칭사이트 주의",
+   "notice_id": "6326"
+  },
+  "luluallshop-kr.shop": {
+   "notice": "요가복브랜드 룰루레몬 사칭사이트 주의",
+   "notice_id": "6326"
+  },
+  "lulukr-discount.shop": {
+   "notice": "요가복브랜드 룰루레몬 사칭사이트 주의",
+   "notice_id": "6326"
+  },
+  "lulukr-online.shop": {
+   "notice": "요가복브랜드 룰루레몬 사칭사이트 주의",
+   "notice_id": "6326"
+  },
+  "lululemankr-online.shop": {
+   "notice": "요가복브랜드 룰루레몬 사칭사이트 주의",
+   "notice_id": "6326"
+  },
+  "lululenmen-kr.shop": {
+   "notice": "요가복브랜드 룰루레몬 사칭사이트 주의",
+   "notice_id": "6326"
+  },
+  "lulumon.top": {
+   "notice": "요가복브랜드 룰루레몬 사칭사이트 주의",
+   "notice_id": "6326"
+  },
+  "luluyogashop.com": {
+   "notice": "요가복브랜드 룰루레몬 사칭사이트 주의",
+   "notice_id": "6326"
+  },
+  "lumiand.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "luxwizs.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "magdamzangte.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "maje-kr.shop": {
+   "notice": "의류브랜드 마쥬(maje) 사칭사이트 주의",
+   "notice_id": "6348"
+  },
+  "maliardo-mall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (1)",
+   "notice_id": "8408"
+  },
+  "mangomaket.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "marggiet.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "6360"
+  },
+  "mariefeels.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "marimekko-sale.shop": {
+   "notice": "생활잡화 브랜드 마리메꼬 사칭사이트 주의",
+   "notice_id": "6347"
+  },
+  "marinnobrshop.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "marithe-official.shop": {
+   "notice": "마리떼 프랑소와 저버 온라인스토어 사칭사이트 주의",
+   "notice_id": "6339"
+  },
+  "marithe-officialsales.shop": {
+   "notice": "마리떼 프랑소와 저버 온라인스토어 사칭사이트 주의",
+   "notice_id": "6339"
+  },
+  "marithe-officialvip.shop": {
+   "notice": "마리떼 프랑소와 저버 온라인스토어 사칭사이트 주의",
+   "notice_id": "6339"
+  },
+  "maritheofficial-kr.com": {
+   "notice": "마리떼 프랑소와 저버 온라인스토어 사칭사이트 주의",
+   "notice_id": "6339"
+  },
+  "maritheofficial.shop": {
+   "notice": "마리떼 프랑소와 저버 온라인스토어 사칭사이트 주의",
+   "notice_id": "6339"
+  },
+  "maritheofficialsale.com": {
+   "notice": "마리떼 프랑소와 저버 온라인스토어 사칭사이트 주의",
+   "notice_id": "6339"
+  },
+  "masterpiecemarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "matinkim-kr.shop": {
+   "notice": "마뗑킴 온라인스토어 사칭사이트 주의",
+   "notice_id": "6340"
+  },
+  "matinkimonline.shop": {
+   "notice": "마뗑킴 온라인스토어 사칭사이트 주의",
+   "notice_id": "6340"
+  },
+  "matinkimsell.shop": {
+   "notice": "마뗑킴 온라인스토어 사칭사이트 주의",
+   "notice_id": "6340"
+  },
+  "matinkimvip.shop": {
+   "notice": "마뗑킴 온라인스토어 사칭사이트 주의",
+   "notice_id": "6340"
+  },
+  "matonshop.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "mavismarket.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "mavyoos.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "meliamall.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "mirae-logics.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "mkazu.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "modemaison.kr": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "modernwbay.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "motd-motd.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "move-market.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "myzjangt.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "naemarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "nanurimarket.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "nathaniei.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "6360"
+  },
+  "ninemarket.shop": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "no-searchmall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (2)",
+   "notice_id": "6356"
+  },
+  "nolu-market.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "olive-mall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (1)",
+   "notice_id": "8408"
+  },
+  "omneight.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "oneclick-mall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "onedayall-mall.com": {
+   "notice": "온라인 사이트 풀데이즈몰 ((구)티그린스토어) 주의",
+   "notice_id": "8433"
+  },
+  "ort-mall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "oujob.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "outlets-bose.shop": {
+   "notice": "음향브랜드 보스(Bose) 사칭사이트 주의",
+   "notice_id": "6342"
+  },
+  "oywmall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "palgao.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "pannishoppingmall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "papamarket.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "peachvin.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "phlilipsmoll.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "playstorenig.com": {
+   "notice": "스마트폰 판매 사이트 플레이스토어 주의",
+   "notice_id": "7378"
+  },
+  "plusshop-mall.com": {
+   "notice": "오픈마켓 경유 세일몰(구 댄디마켓)  주의",
+   "notice_id": "6315"
+  },
+  "pourlavie-snap.com": {
+   "notice": "의류브랜드 마린세르 사칭사이트 주의",
+   "notice_id": "6346"
+  },
+  "poutlets.shop": {
+   "notice": "오픈마켓 경우 프리미엄아울렛 주의",
+   "notice_id": "7375"
+  },
+  "premiermall.shop": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "qocnmall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "rabbitjoonggo.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "ralphlauren-kr.shop": {
+   "notice": "의류브랜드 랄프로렌 사칭사이트 주의",
+   "notice_id": "6327"
+  },
+  "ralphlaurenvipsale.com": {
+   "notice": "의류브랜드 랄프로렌 사칭사이트 주의",
+   "notice_id": "6327"
+  },
+  "ralplnlaurenkr-online.com": {
+   "notice": "의류브랜드 랄프로렌 사칭사이트 주의",
+   "notice_id": "6327"
+  },
+  "ralplnlaurenkr.shop": {
+   "notice": "의류브랜드 랄프로렌 사칭사이트 주의",
+   "notice_id": "6327"
+  },
+  "ralplnlaurenkronline.com": {
+   "notice": "의류브랜드 랄프로렌 사칭사이트 주의",
+   "notice_id": "6327"
+  },
+  "redleafshop.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "resellmartket4989.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "retronewmarket.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "revenue-mall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "rewake-mall.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "rewears.co.kr": {
+   "notice": "EMS용품 쇼핑몰 리웨어스(REWEARS) 주의",
+   "notice_id": "8421"
+  },
+  "roadtour1.com": {
+   "notice": "온라인 여행사 리뷰 알바 사기사이트 주의",
+   "notice_id": "6343"
+  },
+  "roiaphlzmdas.shop": {
+   "notice": "의류브랜드 랄프로렌 사칭사이트 주의",
+   "notice_id": "6327"
+  },
+  "romeoplacemarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "roomimall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "royce-store.net": {
+   "notice": "온라인 쇼핑몰  로이스 스토어 주의",
+   "notice_id": "7380"
+  },
+  "ruilben.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "rumino.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "sale-mall.net": {
+   "notice": "오픈마켓 경유 세일몰(구 댄디마켓)  주의",
+   "notice_id": "6315"
+  },
+  "secondhands.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "secondsmall.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "seoulgiftmaket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "sera-shops.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "sh-m-market.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "shinhaemall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "shinheungmart.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "shinsegae-mall.com": {
+   "notice": "SSG.COM 사칭사이트 주의",
+   "notice_id": "9438"
+  },
+  "shopmoncler.com": {
+   "notice": "해외 명품 의류 브랜드 몽클레어 (Moncler) 사칭 해외사이트 주의",
+   "notice_id": "8416"
+  },
+  "shopmonclkr.com": {
+   "notice": "해외 명품 의류 브랜드 몽클레어 (Moncler) 사칭 해외사이트 주의",
+   "notice_id": "8416"
+  },
+  "shopping-kor.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "shoppingmna.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "shoppingstar-bm.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "shopteacher-m.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "shopugg-kr.com": {
+   "notice": "신발 브랜드 어그[UGG] 사칭사이트 주의",
+   "notice_id": "7400"
+  },
+  "signalshops.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "simple-j.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "sinclairenr.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "6360"
+  },
+  "sineenmarkets.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "sj-shopping.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "socir-market.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "soda-mall.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "sohemall.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (2)",
+   "notice_id": "6356"
+  },
+  "soultende.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "spditem.com": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "sportlife-outlet.shop": {
+   "notice": "의류브랜드 스투시 사칭사이트 주의",
+   "notice_id": "6311"
+  },
+  "ssg-mall.com": {
+   "notice": "SSG.COM 사칭사이트 주의",
+   "notice_id": "9438"
+  },
+  "ssg-mall.shop": {
+   "notice": "SSG.COM 사칭사이트 주의",
+   "notice_id": "9438"
+  },
+  "start-brige.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (1)",
+   "notice_id": "8408"
+  },
+  "steotssy.top": {
+   "notice": "의류브랜드 스투시 사칭사이트 주의",
+   "notice_id": "6311"
+  },
+  "storebiz24.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "strongseemarkets.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "stuniemka.top": {
+   "notice": "의류브랜드 스투시 사칭사이트 주의",
+   "notice_id": "6311"
+  },
+  "stussy-vip.com": {
+   "notice": "의류브랜드 스투시 사칭사이트 주의",
+   "notice_id": "6311"
+  },
+  "stussyonline.top": {
+   "notice": "의류브랜드 스투시 사칭사이트 주의",
+   "notice_id": "6311"
+  },
+  "stussysvip.shop": {
+   "notice": "의류브랜드 스투시 사칭사이트 주의",
+   "notice_id": "6311"
+  },
+  "stusysale.top": {
+   "notice": "의류브랜드 스투시 사칭사이트 주의",
+   "notice_id": "6311"
+  },
+  "stusyvip.top": {
+   "notice": "의류브랜드 스투시 사칭사이트 주의",
+   "notice_id": "6311"
+  },
+  "sunemarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "superstore-market.net": {
+   "notice": "오픈마켓 경유 세일몰(구 댄디마켓)  주의",
+   "notice_id": "6315"
+  },
+  "supia-shop.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "svip-matin-kim.shop": {
+   "notice": "마뗑킴 온라인스토어 사칭사이트 주의",
+   "notice_id": "6340"
+  },
+  "svip-matin-kr.shop": {
+   "notice": "마뗑킴 온라인스토어 사칭사이트 주의",
+   "notice_id": "6340"
+  },
+  "sw-jewelrysale.com": {
+   "notice": "쥬얼리브랜드 스와로브스키 사칭사이트 주의",
+   "notice_id": "8409"
+  },
+  "syndromemarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "tammymarkets.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "teeoutlet.top": {
+   "notice": "의류브랜드 스투시 사칭사이트 주의",
+   "notice_id": "6311"
+  },
+  "tellisojonggo.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "temjoa.com": {
+   "notice": "게임아이템 개인간거래 중개 사칭 사기 사이트 주의",
+   "notice_id": "8427"
+  },
+  "tgreen-store.com": {
+   "notice": "온라인 사이트 풀데이즈몰 ((구)티그린스토어) 주의",
+   "notice_id": "8433"
+  },
+  "thedandy-market.com": {
+   "notice": "오픈마켓 경유 세일몰(구 댄디마켓)  주의",
+   "notice_id": "6315"
+  },
+  "theinrionmarket.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "thenorthfaces-kr.com": {
+   "notice": "의류 및 신발 브랜드 노스페이스(The North face) 사칭사이트 주의",
+   "notice_id": "8414"
+  },
+  "thenorthxfaceskr.com": {
+   "notice": "의류 및 신발 브랜드 노스페이스(The North face) 사칭사이트 주의",
+   "notice_id": "8414"
+  },
+  "toktokmarket.shop": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "toronamarket.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "toryburchonlinekr.shop": {
+   "notice": "패션브랜드 토리버치 사칭사이트 주의",
+   "notice_id": "6361"
+  },
+  "town-shopping.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "tp-mall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "tubularmarket.net": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "twinsis-shop.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "uforu4.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "ujimarkets.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "ultra-mall.shop": {
+   "notice": "온라인쇼핑몰 울트라몰 주의",
+   "notice_id": "10456"
+  },
+  "umikro.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "up-shopping.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(4)",
+   "notice_id": "6357"
+  },
+  "urbane-mall.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "us.com": {
+   "notice": "온라인 사이트 가정수공일 주의",
+   "notice_id": "8411"
+  },
+  "velas-shop.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (2)",
+   "notice_id": "6356"
+  },
+  "ventimall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "vianomarket.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "vularion.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "8419"
+  },
+  "walpoleer.com": {
+   "notice": "코스트코 온라인몰 사칭 사이트 주의",
+   "notice_id": "6360"
+  },
+  "wavemarket.vip": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "8431"
+  },
+  "wayhi.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의",
+   "notice_id": "5308"
+  },
+  "wildpinekr.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "wipeclow.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "wippyshop.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "wmf-kr.shop": {
+   "notice": "주방도구 브랜드 WMF 사칭사이트 주의",
+   "notice_id": "6324"
+  },
+  "woolimaket.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "wooyoungmi-kr.com": {
+   "notice": "패션브랜드 우영미 사칭사이트 주의",
+   "notice_id": "6355"
+  },
+  "wooyoungmi-vip.shop": {
+   "notice": "패션브랜드 우영미 사칭사이트 주의",
+   "notice_id": "6355"
+  },
+  "wooyoungmisale.com": {
+   "notice": "패션브랜드 우영미 사칭사이트 주의",
+   "notice_id": "6355"
+  },
+  "wooyoungmisale.shop": {
+   "notice": "패션브랜드 우영미 사칭사이트 주의",
+   "notice_id": "6355"
+  },
+  "wooyoungmishop.com": {
+   "notice": "패션브랜드 우영미 사칭사이트 주의",
+   "notice_id": "6355"
+  },
+  "wooyoungmissale.com": {
+   "notice": "패션브랜드 우영미 사칭사이트 주의",
+   "notice_id": "6355"
+  },
+  "wooyoungmivip.shop": {
+   "notice": "패션브랜드 우영미 사칭사이트 주의",
+   "notice_id": "6355"
+  },
+  "wpm365.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "yeonpingmarkets.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "7408"
+  },
+  "yidyen.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(2)",
+   "notice_id": "6319"
+  },
+  "yuel-market.com": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (2)",
+   "notice_id": "6356"
+  },
+  "yunnyhome.com": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(3)",
+   "notice_id": "7370"
+  },
+  "yuriee.net": {
+   "notice": "온라인쇼핑몰 부업 사기사이트 주의 (3)",
+   "notice_id": "7369"
+  },
+  "znejmall.shop": {
+   "notice": "개인간거래/중고거래 사칭 사기사이트 주의(1)",
+   "notice_id": "5307"
+  },
+  "zoomzootour.net": {
+   "notice": "온라인 여행사 리뷰 알바 사기사이트 주의",
+   "notice_id": "6343"
+  }
+ }
+}

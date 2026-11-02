@@ -68,7 +68,7 @@ async function collectProductPage() {
       // Own malls print the seller only in the footer, so footers count; operator blocks are skipped below.
       // Naver and 11st show the number only after a check the user completes, but the trade name and representative
       // are open, so a 상호 label starts a block too.
-      if (!/사업자\s*(등록)?\s*번호|^\s*상호\s*(명)?\s*$/.test(node.textContent)
+      if (!/사업자\s*(등록\s*)?번호|사업자\s*등록\s*[:：]?\s*\d|^\s*상호\s*(명)?\s*$/.test(node.textContent)
           || node.parentElement?.closest('script,style,form')) continue;
       let block = node.parentElement;
       // Climb only while the parent stays small, so a label in a large container never pulls in the page header.
@@ -97,6 +97,9 @@ async function collectProductPage() {
   // never controls that buy, log in, open windows (11st puts the seller number behind a CAPTCHA popup), or navigate.
   const opener = /^(판매자\s*정보.{0,12}|(반품|교환|배송|환불)\s*[/·]?\s*(반품|교환|배송|환불)\s*(정보|안내|규정|정책)?.{0,6}|상품\s*정보\s*제공\s*고시|(상품\s*)?(상세\s*)?(정보|설명)\s*(더\s*보기|펼치기|펼쳐\s*보기)|펼쳐\s*보기)$/;
   const forbidden = /구매|장바구니|결제|주문|로그인|공유|찜|선물|쿠폰|리뷰|문의|확인|팝업/;
+  // The product Q&A list is read-only and is where sellers move buyers to KakaoTalk or bank transfers, so its tab is
+  // opened; the ask-a-question button (문의하기) still is not.
+  const qna = /^상품\s*문의(\s*\(?[\d,]+\)?)?$/;
   const samePage = element => {
     const href = element.tagName === 'A' ? element.getAttribute('href') : null;
     if (!href || /^(#|javascript:)/i.test(href)) return true;
@@ -109,7 +112,8 @@ async function collectProductPage() {
   for (const element of [...document.querySelectorAll('button, a, summary, [role="tab"], [role="button"]')]) {
     if (clicked.length >= 6) break;
     const label = (element.innerText || '').replace(/\s+/g, ' ').trim();
-    if (!label || label.length > 24 || !opener.test(label) || forbidden.test(label) || clicked.includes(label)) continue;
+    if (!label || label.length > 24 || clicked.includes(label)
+        || !qna.test(label) && (!opener.test(label) || forbidden.test(label))) continue;
     if (element.getAttribute('aria-expanded') === 'true' || element.getAttribute('aria-selected') === 'true'
         || element.target === '_blank' || /window\.open|location/.test(element.getAttribute('onclick') || '')
         || element.closest('form') || !samePage(element) || !element.isConnected || !element.getClientRects().length) continue;
@@ -130,6 +134,11 @@ async function collectProductPage() {
     }
   });
   const terms = termLines.length ? `배송·반품 안내:\n${termLines.join('\n')}\n\n` : '';
+  // Payment or contact moved off the platform often sits in a Q&A answer near the end, past the text cut; lift it out.
+  // The marketplace's own warnings ("현금거래를 요구하면 거부하시고") are left where they are.
+  const offPlatform = /카카오\s*톡|카톡|오픈\s*채팅|open\.kakao\.com|텔레그램|계좌\s*이체|무통장|현금\s*(결제|거래|입금)|개인\s*계좌|계좌로|입금\s*(부탁|해\s*주)/i;
+  const offLines = parts.filter(line => offPlatform.test(line) && !/거부하|신고하|주의하|요구하면|절대|사기\s*거래/.test(line)).slice(0, 8);
+  const contact = offLines.length ? `판매자 연락·결제 안내:\n${offLines.join('\n')}\n\n` : '';
   if (/시스템오류|접근.{0,12}제한|비정상적인 접근|access denied|captcha/i.test(document.title)
       || (visibleText.length < 1000 && /접근.{0,12}제한|비정상적인 접근|보안 확인|captcha/i.test(visibleText))) {
     return { error: '접근 제한 또는 보안 확인 화면입니다. 상품 페이지를 정상적으로 연 뒤 다시 시도해 주세요.' };
@@ -168,6 +177,6 @@ async function collectProductPage() {
       ? "판매자 사업자번호는 보안 문자 뒤에 있어요. '판매자정보' 탭의 '상세정보 확인'에서 보안 문자를 직접 풀고, 열린 창에서 이 버튼을 한 번 더 누르면 판매자 정보를 합쳐요."
       : "판매자 사업자번호는 인증 뒤에 있어요. '판매자 상세정보 확인'의 인증을 직접 마친 뒤 다시 가져오면 사업자 상태까지 확인할 수 있어요.";
   return { version: 1, expanded: clicked, hint, product_url: url.toString(), page_title: document.title.slice(0, 300),
-    provided_text: (seller + terms + structured + visibleText).slice(0, 12000),
+    provided_text: (seller + contact + terms + structured + visibleText).slice(0, 12000),
     captured_at: new Date().toISOString(), input_source: 'browser_extension' };
 }

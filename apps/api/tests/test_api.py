@@ -36,6 +36,13 @@ class ScraperTests(unittest.TestCase):
         self.assertIn("AirPods", text)
         self.assertNotIn("secret", text)
 
+    def test_long_pages_keep_the_footer_with_the_seller(self):
+        footer = "상호 테스트몰 사업자등록번호 123-45-67891"
+        _title, text = _extract_visible_text(f"<html><body><main>{'상품 설명 ' * 3000}</main><footer>{footer}</footer></body></html>")
+        self.assertLessEqual(len(text), 12000)
+        self.assertTrue(text.startswith("상품 설명"))
+        self.assertTrue(text.endswith(footer))
+
     def test_normalizes_korean_or_short_llm_keys(self):
         product = _normalize_product(
             {

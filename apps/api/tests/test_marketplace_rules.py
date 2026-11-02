@@ -72,6 +72,24 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(review_checks("\n".join([title] * 4 + ["판매자: 리샤무역 유한회사 상품을 구매했습니다."] * 3)), [])
 
 
+class OwnMallTests(unittest.TestCase):
+    def test_a_new_shop_without_business_information_is_a_signal(self):
+        missing = SellerVerification()
+        new = DomainCheck(status="new", label="신규 도메인", registered_on="2026-04-01")
+        result = assess_risk(listing(), None, missing, domain=new, today=TODAY)
+        self.assertEqual(result.level, "moderate")
+        self.assertIn("사업자 정보를 표시하지 않은 신규 쇼핑몰", result.reasons)
+        self.assertIn("사업자 정보가 보이지 않고", result.summary)
+        # An old mall may load its footer with scripts; that alone is not judged.
+        old = DomainCheck(status="established", label="오래된 도메인")
+        self.assertEqual(assess_risk(listing(), None, missing, domain=old, today=TODAY).level, "undetermined")
+
+    def test_aladin_writes_the_number_without_beon_ho(self):
+        from seller_verification import extract_seller_info
+        seller = extract_seller_info("(주)알라딘커뮤니케이션 대표이사 최우경 사업자등록 201-81-23094 통신판매업신고 2003-서울중구-01520")
+        self.assertEqual((seller.business_number, seller.mail_order_number), ("201-81-23094", "2003-서울중구-01520"))
+
+
 class PlatformNoticeTests(unittest.TestCase):
     def test_coupang_standard_return_text_is_not_the_sellers_ambiguous_condition(self):
         for boilerplate in ["ㆍ교환/반품에 관한 일반적인 사항은 판매자가 제시사항보다 관계법령이 우선합니다.",

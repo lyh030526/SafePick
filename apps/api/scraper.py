@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 
 MAX_HTML_BYTES = 2_000_000
 MAX_TEXT_LENGTH = 12_000
+FOOTER_LENGTH = 2_500
 REQUEST_HEADERS = {
     "User-Agent": "SafePickMVP/0.1 (+https://github.com/lyh030526/SafePick)",
     "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
@@ -87,7 +88,10 @@ def _extract_visible_text(html: str) -> tuple[str, str]:
 
     title = soup.title.get_text(" ", strip=True) if soup.title else "확인 불가"
     text = " ".join(soup.stripped_strings)
-    return title[:300], text[:MAX_TEXT_LENGTH]
+    # Own malls print the seller and return terms in the footer, which a plain cut drops on long pages.
+    if len(text) > MAX_TEXT_LENGTH:
+        text = f"{text[:MAX_TEXT_LENGTH - FOOTER_LENGTH - 3]} … {text[-FOOTER_LENGTH:]}"
+    return title[:300], text
 
 
 def fetch_product_page(url: str, allowed_domains: tuple[str, ...] | None = None) -> ProductPage:

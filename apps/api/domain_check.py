@@ -4,8 +4,11 @@ Shops the Seoul e-commerce center reported in 2026 were all registered months be
 and abandoned ones expire into a redemption period. An old domain says nothing about the seller (marketplace sellers
 all sit on naver.com, aged domains are bought and good sites get hacked), so it earns no credit.
 """
+import json
+import re
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
@@ -20,6 +23,49 @@ SHORT_TERM_DAYS = 366
 _DAY = 86400
 _bootstrap: dict[str, str] = {}
 _cache: dict[str, tuple[float, DomainCheck]] = {}
+# Domains the Seoul e-commerce center reported as scam sites (built from its notices; see reported_domains.json).
+REPORTED = json.loads(Path(__file__).with_name("reported_domains.json").read_text(encoding="utf-8"))["domains"]
+# Brands whose names scam shops borrow, with the domains that really are theirs. Most Seoul notices are of this kind
+# (lg-bestshop.com, ssg-mall.com, matinkim-kr.shop). A short name needs a word boundary so it does not match inside
+# another word; longer names match anywhere in the domain.
+BRANDS = {
+    "LG전자": (r"(?:^|-)lg(?:-|e-|best)", ("lge.co.kr", "lg.com", "lgcorp.com")),
+    "SSG·신세계": (r"(?:^|-)ssg(?:-|mall)|shinsegae", ("ssg.com", "shinsegae.com", "ssgdfs.com", "shinsegae-lnb.com")),
+    "삼성전자": (r"samsung", ("samsung.com", "samsungsvc.co.kr")),
+    "Apple": (r"(?:^|-)apple(?:-|store|shop)", ("apple.com",)),
+    "다이슨": (r"dyson", ("dyson.co.kr", "dyson.com")),
+    "소니": (r"(?:^|-)sony(?:-|store)", ("sony.co.kr", "sony.com")),
+    "코스트코": (r"costco", ("costco.co.kr", "costco.com")),
+    "쿠팡": (r"coupang", ("coupang.com", "coupangcorp.com")),
+    "올리브영": (r"oliveyoung", ("oliveyoung.co.kr",)),
+    "무신사": (r"musinsa", ("musinsa.com",)),
+    "코오롱": (r"kolon", ("kolonmall.com", "kolon.com", "kolonsport.com")),
+    "마뗑킴": (r"matin-?kim", ("matinkim.com",)),
+    "데상트": (r"descente|desant", ("descentekorea.co.kr", "descente.com")),
+    "아식스": (r"asics", ("asics.co.kr", "asics.com")),
+    "크록스": (r"crocs", ("crocs.co.kr", "crocs.com")),
+    "노스페이스": (r"north-?x?-?faces?", ("thenorthfacekorea.co.kr", "thenorthface.com")),
+    "몽클레르": (r"moncler", ("moncler.com",)),
+    "스와로브스키": (r"swarovski", ("swarovski.com",)),
+    "어그": (r"(?:^|shop)ugg(?:-|kr|$)", ("ugg.com", "uggkorea.co.kr")),
+    "알로 요가": (r"aloyoga", ("aloyoga.com",)),
+    "룰루레몬": (r"lulu(?:lemon|kr|allshop|yoga)|lululem", ("lululemon.co.kr", "lululemon.com")),
+    "우영미": (r"wooyoungmi", ("wooyoungmi.com",)),
+    "디젤": (r"(?:^|-)diesel", ("diesel.com",)),
+    "라코스테": (r"lacoste", ("lacoste.com",)),
+    "스투시": (r"stussy", ("stussy.com", "stussy.co.kr")),
+    "마리떼": (r"marithe", ("marithe-official.com", "marithefrancoisgirbaud.co.kr")),
+    "토리버치": (r"toryburch", ("toryburch.com",)),
+    "랄프로렌": (r"ralph-?lauren", ("ralphlauren.co.kr", "ralphlauren.com")),
+    "마리메꼬": (r"marimekko", ("marimekko.com",)),
+    "보스": (r"(?:^|-)bose(?:-|$)", ("bose.co.kr", "bose.com")),
+    "베이프": (r"(?:^|-)bape(?:-|store)", ("bape.com",)),
+    "칼하트": (r"carhartt", ("carhartt-wip.com", "carhartt.com", "carhartt-wip.co.kr")),
+    "나이키": (r"(?:^|-)nike(?:-|store|kr)", ("nike.com",)),
+    "아디다스": (r"adidas", ("adidas.co.kr", "adidas.com")),
+    "뉴발란스": (r"newbalance", ("nbkorea.com", "newbalance.com")),
+    "풋락커": (r"footlocker", ("footlocker.com", "footlocker.co.kr")),
+}
 
 
 def registrable_domain(host: str) -> str:
@@ -80,7 +126,27 @@ def _lookup(domain: str, now: datetime) -> DomainCheck:
                        "안전의 근거로 쓰지 않습니다.")
 
 
+def domain_flags(page_url: str, include_reported: bool = True) -> dict:
+    """Reported-scam and brand-lookalike marks for an address, without any network call."""
+    domain = registrable_domain((urlparse(page_url).hostname or "").lower())
+    flags = {}
+    if include_reported and domain in REPORTED:
+        flags["reported_notice"] = REPORTED[domain]["notice"]
+    label = domain.split(".")[0]
+    for brand, (pattern, official) in BRANDS.items():
+        if domain not in official and re.search(pattern, label):
+            flags["impersonates"] = brand
+            break
+    return flags
+
+
 def check_domain(page_url: str, now: datetime | None = None) -> DomainCheck:
+    result = _check_domain(page_url, now)
+    flags = domain_flags(page_url) if result.status != "marketplace" else {}
+    return result.model_copy(update=flags) if flags else result
+
+
+def _check_domain(page_url: str, now: datetime | None = None) -> DomainCheck:
     host = (urlparse(page_url).hostname or "").lower()
     if not host or is_marketplace(page_url):
         return DomainCheck(status="marketplace", label="오픈마켓", domain=registrable_domain(host) if host else None,

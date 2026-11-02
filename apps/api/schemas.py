@@ -161,7 +161,7 @@ class ListingConditions(BaseModel):
 class PurchaseCheck(BaseModel):
     id: str
     category: Literal["model_mismatch", "components_mismatch", "ambiguous_conditions", "discount_claim", "purchase_pressure",
-                      "review_pattern", "missing_information"]
+                      "review_pattern", "off_platform", "missing_information"]
     kind: Literal["attention", "needs_check"]
     title: str
     explanation: str
@@ -184,6 +184,9 @@ class DomainCheck(BaseModel):
     registered_on: str | None = None
     expires_on: str | None = None
     age_days: int | None = None
+    # A domain the Seoul e-commerce center reported as a scam site, and the brand a domain borrows without being its own.
+    reported_notice: str | None = None
+    impersonates: str | None = None
 
 
 class RiskAssessment(BaseModel):
