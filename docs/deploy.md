@@ -27,8 +27,8 @@
    | `SUPABASE_SECRET_KEY` | Supabase 비밀 키(`sb_secret_...`) |
    | `SAFEPICK_ALLOWED_ORIGINS` | 웹 앱 주소. 웹을 아직 안 올렸으면 비워 두고(로컬 주소만 허용), 웹을 올린 뒤 그 주소를 넣습니다 |
 
-5. **Apply**를 누르면 설치와 실행이 시작됩니다(몇 분). 끝나면 서비스 주소가 생깁니다. 예: `https://safepick-api.onrender.com`
-6. 브라우저로 `https://safepick-api.onrender.com/health`를 열어 `{"status":"ok"}`가 나오면 성공입니다.
+5. **Apply**를 누르면 설치와 실행이 시작됩니다(몇 분). 끝나면 서비스 주소가 생깁니다. 주소는 Render 서비스 화면 위쪽에 있고, `safepick-api.onrender.com`은 다른 사람이 이미 쓰고 있어 뒤에 글자가 붙습니다(예: `https://safepick-api-ab12.onrender.com`). 이 문서의 `<서비스 주소>`는 그 주소입니다.
+6. 브라우저로 `<서비스 주소>/health`를 열어 `{"status":"ok"}`가 나오면 성공입니다. 다른 응답이면 SafePick 서버가 아닙니다.
 
 `develop`에 새 커밋을 올리면 Render가 자동으로 다시 배포합니다(`autoDeploy: true`).
 
@@ -74,7 +74,7 @@
    `init`은 `app.json`에 프로젝트 ID(`extra.eas.projectId`)를 넣습니다.
 3. 앱이 쓸 값을 EAS에 넣습니다. `.env.local`은 빌드 서버로 올라가지 않기 때문입니다. 값은 `.env.local`과 같고, `preview` 환경에 넣습니다.
    ```bash
-   npx eas-cli@latest env:create --environment preview --name EXPO_PUBLIC_API_BASE_URL --value https://safepick-api.onrender.com --visibility plaintext
+   npx eas-cli@latest env:create --environment preview --name EXPO_PUBLIC_API_BASE_URL --value <서비스 주소> --visibility plaintext
    ```
    ```bash
    npx eas-cli@latest env:create --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value https://<프로젝트>.supabase.co --visibility plaintext

@@ -44,6 +44,12 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "safepick"
+    "scheme": "safepick",
+    "extra": {
+      "eas": {
+        "projectId": "b04115f5-b2ae-4621-9867-c8ec8b82c0d2"
+      }
+    },
+    "owner": "yeonho2003"
   }
 }
