@@ -1,4 +1,5 @@
 import re
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import FastAPI, HTTPException
@@ -6,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from accounts import delete_account
 from comparison import compare_product
 from group_comparison import compare_group
 from extractor import extract_product_details, generate_official_search_query, transcribe_images, unknown_product
@@ -42,9 +44,11 @@ app.add_middleware(AnalysisBodyLimit)
 app.add_middleware(AnalysisRateLimit)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8081", "http://localhost:8082"],
+    # The local app by default; a deployment lists its own web address(es), comma-separated.
+    allow_origins=[origin.strip() for origin in (os.getenv("SAFEPICK_ALLOWED_ORIGINS")
+                   or "http://localhost:8081,http://localhost:8082").split(",") if origin.strip()],
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -179,6 +183,9 @@ def with_return_policy(page: ProductPage) -> ProductPage:
         text = page.text if len(page.text) <= room else f"{page.text[:room - FOOTER_LENGTH - 3]} … {page.text[-FOOTER_LENGTH:]}"
         return ProductPage(final_url=page.final_url, title=page.title, text=head + text, policy_links=page.policy_links)
     return page
+
+
+app.delete("/account")(delete_account)
 
 
 @app.post("/group-analyses", response_model=GroupAnalysisResponse)

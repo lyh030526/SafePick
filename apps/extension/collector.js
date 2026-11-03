@@ -6,7 +6,8 @@ async function collectProductPage() {
     [/^(smartstore|brand)\.naver\.com$/, /^\/[^/]+\/products\/\d+\/?$/],
     [/^shopping\.naver\.com$/, /^\/window-products\/[^/]+\/\d+\/?$/],
     [/^(www|m)\.11st\.co\.kr$/, /^\/products\/(m\/)?\d+\/?$/],
-    [/^(www|m)\.coupang\.com$/, /^\/vp\/products\/\d+\/?$/],
+    // The phone site (m.coupang.com) serves product pages under /vm/ instead of /vp/.
+    [/^(www|m)\.coupang\.com$/, /^\/v[pm]\/products\/\d+\/?$/],
     [/^item\.(gmarket|auction)\.co\.kr$/, /^\/(Item|DetailView\/Item\.aspx)$/i],
   ];
   const market = marketplaces.find(([host]) => host.test(url.hostname));

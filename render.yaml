@@ -1,0 +1,38 @@
+# Render Blueprint for the SafePick analysis API (free plan). Render → New → Blueprint → this repository.
+# Secrets are marked `sync: false`: Render asks for them once in its dashboard; they never go in this file.
+# The free plan sleeps after 15 minutes without requests, so the first analysis after a pause waits ~30-60 s, and it has
+# no disk, so the FTC mail-order index (data/mail_order/index.sqlite) is absent and that lookup step is skipped.
+services:
+  - type: web
+    name: safepick-api
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: apps/api
+    buildCommand: pip install -r requirements.txt
+    # Render sits behind a proxy; trusting its forwarded headers gives the rate limit each visitor's own address.
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.7"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        value: https://api.openai.com/v1
+      - key: OPENAI_MODEL
+        value: gpt-5.4-mini
+      - key: SERPER_API_KEY
+        sync: false
+      - key: DATA_GO_KR_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      # The deployed web app's address, e.g. https://safepick.expo.app (comma-separated for several).
+      - key: SAFEPICK_ALLOWED_ORIGINS
+        sync: false
+      - key: SAFEPICK_RATE_LIMIT_PER_MINUTE
+        value: "30"

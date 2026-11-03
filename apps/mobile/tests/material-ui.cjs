@@ -88,7 +88,8 @@ async function mockApi(page, calls) {
     await mockApi(app, calls);
     await app.getByText('확장 프로그램에서 가져온 자료', { exact: true }).waitFor();
     assert.equal(new URL(app.url()).origin, appOrigin);
-    assert.equal(new URL(app.url()).hash, '');
+    // The imported material leaves the address bar right away (the router may write it back once; it is cleared again).
+    await app.waitForFunction(() => window.location.hash === '', null, { timeout: 5000 });
     assert.equal(await app.getByLabel('상품 링크', { exact: true }).inputValue(), productUrl);
     await app.getByText('분석 시작', { exact: true }).click();
     await app.getByText('상품 자료의 AI 분석 동의를 확인해 주세요.', { exact: true }).waitFor();
@@ -144,7 +145,7 @@ async function mockApi(page, calls) {
     const invalid = await context.newPage();
     await invalid.goto(appOrigin + '/#safepick-import=%invalid');
     await invalid.getByText(/확장 프로그램의 상품 정보를 읽지 못했습니다/).waitFor();
-    assert.equal(new URL(invalid.url()).hash, '');
+    await invalid.waitForFunction(() => window.location.hash === '', null, { timeout: 5000 });
     assert.deepEqual(errors, []);
     console.log(`PASS invalid import, URL cleanup, no browser errors. Screenshots: ${output}`);
   } finally { await context.close(); }

@@ -11,6 +11,8 @@ from statistics import median
 
 import httpx
 
+from lookup_cache import cached
+
 from comparison import currency_code, parse_price
 from schemas import UNKNOWN, MarketListing, MarketPrice, ProductDetails
 
@@ -77,11 +79,13 @@ def _name_pattern(name: str, brand: str = ""):
 
 
 def _search(key: str, query: str) -> list:
-    response = httpx.post(SHOPPING_URL, headers={"X-API-KEY": key}, json={"q": query, "gl": "kr", "hl": "ko", "num": 40},
-                          timeout=10.0)
-    response.raise_for_status()
-    items = response.json()["shopping"]
-    return items if isinstance(items, list) else []
+    def fetch():
+        response = httpx.post(SHOPPING_URL, headers={"X-API-KEY": key}, json={"q": query, "gl": "kr", "hl": "ko", "num": 40},
+                              timeout=10.0)
+        response.raise_for_status()
+        items = response.json()["shopping"]
+        return items if isinstance(items, list) else []
+    return cached("shopping", query, fetch)
 
 
 def _collect(items: list, matches_title, product: ProductDetails) -> list[MarketListing]:

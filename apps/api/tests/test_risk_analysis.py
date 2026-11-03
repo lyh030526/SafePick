@@ -11,7 +11,7 @@ from openai import InternalServerError
 import main
 from extractor import unknown_product
 from risk_analysis import (
-    REVIEW_RUNS, combine_analyses,
+    FIRST_RUNS, REVIEW_RUNS, combine_analyses,
     DETAIL_PATTERNS, DetailsDraft, RiskDraft, SignalDraft, analyze_listing_risks, signal_is_supported, validate_risk_draft,
 )
 from schemas import RiskAnalysis
@@ -250,12 +250,27 @@ class StabilityTests(unittest.TestCase):
                                           "returns": ["수령 후 7일 이내 반품 가능."], "warranty": []}, "signals": []})
         create = client.return_value.__enter__.return_value.chat.completions.create
         create.return_value = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+        # The two first runs agree, so no third run is made.
         first = analyze_listing_risks(unknown_product(), "상품", self.TEXT)
-        self.assertEqual(create.call_count, REVIEW_RUNS)
+        self.assertEqual(create.call_count, FIRST_RUNS)
         self.assertEqual(analyze_listing_risks(unknown_product(), "상품", self.TEXT), first)
-        self.assertEqual(create.call_count, REVIEW_RUNS)
+        self.assertEqual(create.call_count, FIRST_RUNS)
         analyze_listing_risks(unknown_product(), "상품", self.TEXT + " 추가 문장")
-        self.assertEqual(create.call_count, 2 * REVIEW_RUNS)
+        self.assertEqual(create.call_count, 2 * FIRST_RUNS)
+
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch("risk_analysis.OpenAI")
+    def test_a_disagreement_brings_in_the_third_run(self, client):
+        def reply(signals):
+            return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=json.dumps({"details": {
+                "description": [], "components": [], "options": [], "shipping": ["배송비 3,000원."],
+                "returns": ["수령 후 7일 이내 반품 가능."], "warranty": []}, "signals": signals})))])
+        vague = [{"category": "ambiguous_conditions", "quotes": ["반품은 상황에 따라 가능합니다."]}]
+        create = client.return_value.__enter__.return_value.chat.completions.create
+        create.side_effect = [reply(vague), reply([]), reply(vague)]
+        result = analyze_listing_risks(unknown_product(), "상품", self.TEXT + " 다른 자료")
+        self.assertEqual(create.call_count, REVIEW_RUNS)
+        self.assertEqual([check.id for check in result.checklist if check.kind == "attention"], ["ambiguous_conditions"])
 
 
 class RiskApiTests(unittest.TestCase):

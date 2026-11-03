@@ -9,6 +9,8 @@ from urllib.parse import unquote, urlparse
 
 import httpx
 
+from lookup_cache import cached
+
 from domain_check import registrable_domain as _site
 from mail_order_index import normalize_name as _name
 from schemas import UNKNOWN, MailOrderCheck, SellerVerification
@@ -40,12 +42,15 @@ def check_mail_order(verification: SellerVerification, page_url: str, text: str 
     if not key:
         return MailOrderCheck(message="공공데이터포털 키가 설정되지 않아 통신판매업 신고 정보를 확인하지 못했습니다.")
     try:
-        response = httpx.get(FTC_DETAIL_URL, params={"serviceKey": unquote(key), "pageNo": 1, "numOfRows": 20,
-                                                     "resultType": "json", "brno": digits}, timeout=8.0)
-        response.raise_for_status()
-        items = response.json().get("items") or []
-        if not isinstance(items, list):
-            raise ValueError
+        def fetch():
+            response = httpx.get(FTC_DETAIL_URL, params={"serviceKey": unquote(key), "pageNo": 1, "numOfRows": 20,
+                                                         "resultType": "json", "brno": digits}, timeout=8.0)
+            response.raise_for_status()
+            found = response.json().get("items") or []
+            if not isinstance(found, list):
+                raise ValueError
+            return found
+        items = cached("ftc", digits, fetch)
     except (httpx.HTTPError, ValueError, AttributeError):
         return MailOrderCheck(message="공정거래위원회 통신판매업 신고 조회에 실패했습니다. 잠시 후 다시 시도해 주세요.")
 

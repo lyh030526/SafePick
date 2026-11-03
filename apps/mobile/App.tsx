@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
+import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -15,7 +16,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { parseBrowserImport } from './browserImport';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { findLink, isCoupangLink, parseBrowserImport } from './browserImport';
+import { saveAnalysis, saveListing, summarize } from './lib/account';
+import { takePendingCapture, takePendingLink } from './lib/pendingCapture';
+import { useSession } from './lib/session';
 import { GroupComparisonScreen } from './GroupComparison';
 import { MarketPriceCard, type MarketPrice } from './MarketPrice';
 import { RiskChecklist, type RiskAnalysis } from './RiskChecklist';
@@ -105,7 +110,10 @@ const fieldLabels: { key: keyof Omit<ProductDetails, 'components'>; label: strin
 
 function initialBrowserImport() {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return { payload: null, error: '' };
-  try { return { payload: parseBrowserImport(window.location.hash), error: '' }; }
+  const hash = window.location.hash;
+  // The material is read once and taken out of the address before anything is drawn.
+  if (hash.startsWith('#safepick-import=')) window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+  try { return { payload: parseBrowserImport(hash), error: '' }; }
   catch (error) { return { payload: null, error: error instanceof Error ? error.message : '상품 정보를 불러오지 못했습니다.' }; }
 }
 
@@ -116,6 +124,7 @@ export default function App() {
 }
 
 function SingleAnalysis() {
+  const { session } = useSession();
   const [initialImport] = useState(initialBrowserImport);
   const [productUrl, setProductUrl] = useState(initialImport.payload?.product_url ?? '');
   const [error, setError] = useState(initialImport.error);
@@ -136,12 +145,36 @@ function SingleAnalysis() {
   const [consent, setConsent] = useState(false);
   const [source, setSource] = useState<SourceSummary | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const router = useRouter();
   useEffect(() => () => requestRef.current?.abort(), []);
+  // A page read in the in-app Coupang browser arrives like an extension import: shown for review, sent only on consent.
+  useFocusEffect(useCallback(() => {
+    const link = takePendingLink();
+    if (link) {
+      setProductUrl(link); setProvidedText(''); setImages([]); setInputSource('user_text'); setCapturedAt(undefined);
+      setPageTitle(''); setConsent(false); setError(''); setAnalysisState('input');
+    }
+    const capture = takePendingCapture();
+    if (!capture) return;
+    setProductUrl(capture.product_url); setProvidedText(capture.provided_text); setPageTitle(capture.page_title);
+    setInputSource('browser_extension'); setCapturedAt(capture.captured_at); setImages([]); setConsent(false);
+    setError(''); setAnalysisState('input');
+  }, []));
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    if (window.location.hash.startsWith('#safepick-import=')) {
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
+    // The address was cleared when the import was read; this keeps it clear while the router settles.
+    if (!initialImport.payload && !initialImport.error) return;
+    // Expo Router writes the address it started with back once it settles, and again when the stored sign-in has been
+    // read, so the imported material is cleared repeatedly for the first seconds rather than only on the first render.
+    const clear = () => {
+      if (window.location.hash.startsWith('#safepick-import=')) {
+        window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+      }
+    };
+    clear();
+    const timer = setInterval(clear, 100);
+    const stop = setTimeout(() => clearInterval(timer), 3000);
+    return () => { clearInterval(timer); clearTimeout(stop); };
   }, []);
 
   const chooseImage = async () => {
@@ -174,6 +207,15 @@ function SingleAnalysis() {
     } catch (error) { setError(error instanceof Error ? error.message : '이미지를 첨부하지 못했습니다.'); }
   };
 
+  // The clipboard is read only when the shopper taps the button, never in the background.
+  const pasteLink = async () => {
+    const link = findLink(await Clipboard.getStringAsync().catch(() => ''));
+    if (!link) { setError('복사한 링크가 없어요. 쿠팡 앱의 공유 → 링크 복사로 복사해 주세요.'); return; }
+    setProductUrl(link); setProvidedText(''); setImages([]); setInputSource('user_text'); setCapturedAt(undefined);
+    setPageTitle(''); setConsent(false); setError('');
+    if (isCoupangLink(link)) router.push({ pathname: '/browse', params: { url: link } });
+  };
+
   const startAnalysis = async () => {
     let parsedUrl: URL;
 
@@ -189,6 +231,12 @@ function SingleAnalysis() {
       return;
     }
     const hasProvidedData = !!providedText.trim() || images.length > 0;
+    // Coupang turns away the analysis server, so on the phone a Coupang link opens in the in-app browser and is read there.
+    if (Platform.OS !== 'web' && !hasProvidedData && isCoupangLink(parsedUrl.toString())) {
+      setError('');
+      router.push({ pathname: '/browse', params: { url: parsedUrl.toString() } });
+      return;
+    }
     if (hasProvidedData && !consent) { setError('상품 자료의 AI 분석 동의를 확인해 주세요.'); return; }
 
     setError('');
@@ -227,6 +275,8 @@ function SingleAnalysis() {
       setAnalysisText(payload.sale_text ?? providedText.trim());
       setSource(payload.source);
       setAnalysisState('correction');
+      // Signed-in shoppers find every analysis again under My Page; a failed save never blocks the result.
+      if (session) saveAnalysis(parsedUrl.toString(), payload).catch(() => undefined);
     } catch (requestError) {
       if (controller.signal.aborted && !timedOut) return;
       setError(
@@ -301,6 +351,10 @@ function SingleAnalysis() {
               style={[styles.input, error ? styles.inputError : undefined]}
               value={productUrl}
             />
+            {Platform.OS !== 'web' ? <Pressable accessibilityRole="button" onPress={pasteLink}
+              style={({ pressed }) => [styles.chipButton, pressed && styles.pressed]}>
+              <Text style={styles.chipButtonText}>복사한 링크 붙여넣기</Text>
+            </Pressable> : null}
             <Pressable
               accessibilityRole="button"
               onPress={() => { setProductUrl(sampleLink); setProvidedText(''); setImages([]); setInputSource('user_text'); setCapturedAt(undefined); setPageTitle(''); setConsent(false); }}
@@ -309,6 +363,15 @@ function SingleAnalysis() {
               <Text style={styles.chipButtonText}>예시 링크로 채우기</Text>
             </Pressable>
           </View>
+
+          {Platform.OS !== 'web' ? <View style={styles.card}>
+            <Text style={styles.cardTitle}>쿠팡에서 찾아 분석하기</Text>
+            <Text style={styles.cardBody}>쿠팡 앱에서 보던 상품은 공유 → 링크 복사 후 &apos;복사한 링크 붙여넣기&apos;를 누르면 그 페이지를 바로 열어 읽어요. 새로 찾을 때는 앱 안에서 쿠팡을 열고 상품 페이지에서 &apos;이 페이지 분석&apos;을 눌러 주세요.</Text>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/browse')}
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+              <Text style={styles.secondaryButtonText}>쿠팡 열기</Text>
+            </Pressable>
+          </View> : null}
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{inputSource === 'browser_extension' ? '확장 프로그램에서 가져온 자료' : '상품 설명·이미지 추가 (선택)'}</Text>
@@ -369,14 +432,42 @@ function SingleAnalysis() {
 }
 
 function BrandHeader() {
+  const { session, available } = useSession();
+  const router = useRouter();
   return (
     <View style={styles.brandRow}>
       <View style={styles.logoMark}>
         <Text style={styles.logoText}>S</Text>
       </View>
       <Text style={styles.appName}>SafePick</Text>
+      {available ? <Pressable accessibilityRole="button" onPress={() => router.push(session ? '/my' : '/sign-in')}
+        style={({ pressed }) => [styles.accountButton, pressed && styles.pressed]}>
+        <Text style={styles.accountButtonText}>{session ? '마이페이지' : '로그인'}</Text>
+      </Pressable> : null}
     </View>
   );
+}
+
+// Saves the listing under My Page with its current result; signed-out shoppers are sent to sign in first.
+function SaveListingButton({ productUrl, product, source, risk, seller }: {
+  productUrl: string; product: ProductDetails; source: SourceSummary | null; risk: RiskAnalysis | null;
+  seller: SellerVerification | null;
+}) {
+  const { session, available } = useSession();
+  const router = useRouter();
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const summary = source && risk ? summarize(productUrl, { product, source, risk_analysis: risk, seller_verification: seller }) : null;
+  if (!available || !summary) return null;
+  const save = async () => {
+    if (!session) { router.push('/sign-in'); return; }
+    setState('saving');
+    try { await saveListing(summary); setState('saved'); } catch { setState('error'); }
+  };
+  return <Pressable accessibilityRole="button" disabled={state === 'saving' || state === 'saved'} onPress={save}
+    style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+    <Text style={styles.secondaryButtonText}>{state === 'saved' ? '관심 판매처에 저장했어요' : state === 'error'
+      ? '저장하지 못했어요. 다시 눌러 주세요' : session ? '관심 판매처로 저장' : '로그인하고 관심 판매처로 저장'}</Text>
+  </Pressable>;
 }
 
 function AnalysisProgress({ onCancel }: { onCancel: () => void }) {
@@ -512,6 +603,10 @@ function CorrectionForm({
               자동 추출 결과를 확인하고, 비어 있거나 다른 항목은 직접 수정해 주세요.
             </Text>
           </View>
+          {/* The verdict comes first; where the material came from and the details follow it. */}
+          {!dirty && !comparing ? <RiskChecklist analysis={riskResult} sourceUrl={source?.final_url ?? productUrl} /> : null}
+          {!dirty && !comparing ? <SaveListingButton productUrl={productUrl} product={draft} source={source} risk={riskResult}
+            seller={seller} /> : null}
           {source ? <View style={styles.card}>
             <Text style={styles.cardTitle}>{source.kind && source.kind !== 'server_page' ? '사용자 제공 자료 기반 분석' : '판매 페이지 직접 수집'}</Text>
             <Text selectable numberOfLines={2} style={styles.urlText}>{source.final_url}</Text>
@@ -533,7 +628,6 @@ function CorrectionForm({
             </View>
           ) : null}
 
-          {!dirty && !comparing ? <RiskChecklist analysis={riskResult} sourceUrl={source?.final_url ?? productUrl} /> : null}
           {!dirty && !comparing ? <SellerCheck verification={seller} /> : null}
           {!dirty && !comparing ? <MarketPriceCard market={market} /> : null}
           <Text style={styles.sectionTitle}>공식 정보 비교 결과</Text>
@@ -726,6 +820,8 @@ const styles = StyleSheet.create({
   logoMark: { alignItems: 'center', backgroundColor: colors.blue, borderRadius: 9, height: 28, justifyContent: 'center', width: 28 },
   logoText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   appName: { color: colors.text, fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  accountButton: { marginLeft: 'auto', borderRadius: radius.pill, backgroundColor: colors.card, paddingHorizontal: 14, paddingVertical: 8 },
+  accountButtonText: { color: colors.blueText, fontSize: 14, fontWeight: '700' },
   hero: { paddingTop: 28, paddingBottom: 16, paddingHorizontal: 4 },
   resultHero: { paddingTop: 20, paddingBottom: 8, paddingHorizontal: 4 },
   eyebrow: { color: colors.blue, fontSize: 15, fontWeight: '700', marginBottom: 8 },

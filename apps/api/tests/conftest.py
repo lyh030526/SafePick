@@ -30,3 +30,11 @@ def fresh_review_cache():
     _CACHE.clear()
     yield
     _CACHE.clear()
+
+
+@pytest.fixture(autouse=True)
+def no_lookup_cache(monkeypatch):
+    # Tests reuse the same business numbers with different mocked answers.
+    import lookup_cache
+    lookup_cache._store.clear()
+    monkeypatch.setattr(lookup_cache, "ENABLED", False)

@@ -39,18 +39,26 @@ export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis 
   const domain = assessment?.domain && !['marketplace', 'unavailable'].includes(assessment.domain.status) ? assessment.domain : null;
   const levelLabel = level === 'undetermined' ? '판단 보류' : assessment?.label;
   const total = complete ? analysis.checklist.length : 0;
+  // The line under the level already states the first reason, so the list repeats only the rest.
+  const otherReasons = (assessment?.reasons ?? []).filter(reason => reason !== keyLine(assessment, level));
   return <View style={styles.section}>
     <Text style={styles.heading}>구매 전 주의 수준</Text>
     <View accessibilityLabel={`구매 전 주의 수준 ${levelLabel}`} style={styles.card}>
-      {complete || decisive ? <ScoreSummary assessment={assessment} level={level} /> : null}
+      {/* The level and the one reason behind it come first; the score only says how much evidence was found. */}
       <View style={[styles.levelBadge, levelSoftStyles[level]]}>
         <Text style={[styles.levelTitle, levelTextStyles[level]]}>{levelLabel}</Text>
       </View>
+      {keyLine(assessment, level) ? <Text style={styles.keyLine}>{keyLine(assessment, level)}</Text> : null}
       <Text style={styles.summaryText}>{assessment?.summary ?? '주의 수준을 확인하려면 상품 자료를 추가하거나 다시 분석해 주세요.'}</Text>
-      {assessment?.reasons.length ? <View style={styles.block}>
-        <Text style={styles.label}>판단 근거</Text>
-        {assessment.reasons.map((reason, index) => <Text key={index} style={styles.body}>• {reason}</Text>)}
+      {assessment?.missing_checks.length ? <View style={styles.todo}>
+        <Text style={styles.label}>구매 전에 확인할 것</Text>
+        {assessment.missing_checks.map(item => <Text key={item} style={styles.body}>☐ {item}</Text>)}
       </View> : null}
+      {otherReasons.length ? <View style={styles.block}>
+        <Text style={styles.label}>판단 근거</Text>
+        {otherReasons.map((reason, index) => <Text key={index} style={styles.body}>• {reason}</Text>)}
+      </View> : null}
+      {complete || decisive ? <ScoreSummary assessment={assessment} level={level} /> : null}
       {analysis?.review_complaints?.complaints ? <View accessibilityLabel="낮은 별점 리뷰 요약" style={styles.criteria}>
         <Text style={styles.label}>낮은 별점 리뷰 (참고)</Text>
         <Text style={styles.body}>1~2점 리뷰 {analysis.review_complaints.low_reviews}개 중 {analysis.review_complaints.complaints}개가
@@ -72,10 +80,6 @@ export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis 
         <Text style={styles.body}>{[domain.domain, domain.label, domain.registered_on && `등록 ${domain.registered_on}`,
           domain.expires_on && `만료 ${domain.expires_on}`].filter(Boolean).join(' · ')}</Text>
         <Text style={styles.meta}>{domain.message}</Text>
-      </View> : null}
-      {assessment?.missing_checks.length ? <View style={styles.block}>
-        <Text style={styles.label}>아직 확인할 정보</Text>
-        <Text style={styles.body}>{assessment.missing_checks.join(' · ')}</Text>
       </View> : null}
       <Text style={styles.meta}>신뢰 점수는 확인한 근거로 계산한 참고 점수이고, 주의 수준은 수집한 자료에서 확인한 신호입니다. 사기 확률이 아니며 판매자나 정품·안전을 인증하지 않습니다.</Text>
     </View>
@@ -128,13 +132,20 @@ export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis 
   </View>;
 }
 
+// The single line under the level: why it is high or moderate, what is still missing when it is held back.
+function keyLine(assessment: RiskAnalysis['assessment'], level: string) {
+  if (!assessment) return '';
+  if (level === 'undetermined' && assessment.missing_checks.length) return `더 확인할 것: ${assessment.missing_checks.slice(0, 2).join(', ')}`;
+  return assessment.reasons[0] ?? '';
+}
+
 function ScoreSummary({ assessment, level }: { assessment: RiskAnalysis['assessment']; level: keyof typeof levelTextStyles }) {
   if (!assessment || assessment.coverage_percent === undefined) return null;
   const coverage = assessment.coverage_percent;
   const total = assessment.criteria.length;
   const scored = assessment.score !== null && assessment.score !== undefined;
   return <View accessibilityLabel={scored ? `신뢰 점수 ${assessment.score}점 ${assessment.score_label}` : '신뢰 점수 보류'} style={styles.score}>
-    <Text style={styles.scoreCaption}>신뢰 점수</Text>
+    <Text style={styles.scoreCaption}>신뢰 점수 · 확인된 근거의 양 (참고)</Text>
     <View style={styles.scoreRow}>
       {scored ? <Text style={[styles.scoreNumber, levelTextStyles[level]]}>{assessment.score}<Text style={styles.scoreUnit}> / 100</Text></Text>
         : <Text style={styles.scoreWithheld}>점수 보류</Text>}
@@ -152,13 +163,15 @@ const styles = StyleSheet.create({
   section: { marginTop: 8, gap: 12 },
   heading: { color: colors.text, fontSize: 20, fontWeight: '700', lineHeight: 28, marginTop: 12, paddingHorizontal: 4, letterSpacing: -0.4 },
   card: { backgroundColor: colors.card, borderRadius: radius.card, padding: 20, gap: 10 },
-  score: { gap: 8, paddingBottom: 14, marginBottom: 2, borderBottomWidth: 1, borderBottomColor: colors.line },
+  score: { gap: 8, paddingTop: 14, marginTop: 4, borderTopWidth: 1, borderTopColor: colors.line },
+  keyLine: { color: colors.text, fontSize: 17, fontWeight: '700', lineHeight: 25 },
+  todo: { gap: 4, backgroundColor: colors.fill, borderRadius: 14, padding: 14 },
   scoreCaption: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
   scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  scoreNumber: { fontSize: 40, lineHeight: 48, fontWeight: '800', letterSpacing: -1 },
+  scoreNumber: { fontSize: 26, lineHeight: 32, fontWeight: '800', letterSpacing: -0.5 },
   scoreUnit: { color: colors.textFaint, fontSize: 18, fontWeight: '700', letterSpacing: 0 },
   scoreChip: { alignSelf: 'center' },
-  scoreWithheld: { color: colors.textSub, fontSize: 28, lineHeight: 36, fontWeight: '800', letterSpacing: -0.5 },
+  scoreWithheld: { color: colors.textSub, fontSize: 20, lineHeight: 28, fontWeight: '800', letterSpacing: -0.5 },
   levelBadge: { alignSelf: 'flex-start', borderRadius: radius.field, paddingHorizontal: 16, paddingVertical: 8 },
   levelTitle: { fontSize: 26, lineHeight: 34, fontWeight: '800', letterSpacing: -0.5 },
   summaryText: { color: colors.text, fontSize: 16, lineHeight: 24, fontWeight: '600', letterSpacing: -0.2 },

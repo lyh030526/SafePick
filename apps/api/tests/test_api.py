@@ -178,3 +178,18 @@ class ScreenshotTextTests(unittest.TestCase):
         self.assertTrue(text.startswith("화면 캡처에서 읽은 글자:\n판매자 정보"))
         self.assertIn("카톡 ID sale77", body["sale_text"])
         self.assertIn("AI가 옮겨 적은 것", body["warnings"][0])
+
+
+class AllowedOriginTests(unittest.TestCase):
+    def test_a_deployment_names_its_web_address_and_empty_keeps_the_local_default(self):
+        import importlib
+        import os
+        import main
+        for value, allowed, refused in [("https://safepick.expo.app", "https://safepick.expo.app", "http://localhost:8081"),
+                                        ("", "http://localhost:8081", "https://safepick.expo.app")]:
+            with self.subTest(value=value), patch.dict(os.environ, {"SAFEPICK_ALLOWED_ORIGINS": value}):
+                client = TestClient(importlib.reload(main).app)
+                ask = lambda origin: client.options("/analyses", headers={"Origin": origin, "Access-Control-Request-Method": "POST"})
+                self.assertEqual(ask(allowed).headers.get("access-control-allow-origin"), allowed)
+                self.assertIsNone(ask(refused).headers.get("access-control-allow-origin"))
+        importlib.reload(main)

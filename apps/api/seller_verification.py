@@ -10,6 +10,7 @@ from urllib.parse import unquote, urlparse
 
 import httpx
 
+from lookup_cache import cached
 from mail_order_index import find_number
 from schemas import UNKNOWN, SellerInfo, SellerVerification
 
@@ -186,10 +187,12 @@ def _check_number(seller: SellerInfo) -> SellerVerification:
         return SellerVerification(status="unavailable", label="조회 불가", seller=seller,
                                   message="국세청 사업자 상태조회 키가 설정되지 않아 등록 상태를 확인하지 못했습니다.")
     try:
-        response = httpx.post(NTS_STATUS_URL, params={"serviceKey": unquote(key), "returnType": "JSON"},
-                              json={"b_no": [digits]}, timeout=8.0)
-        response.raise_for_status()
-        record = response.json()["data"][0]
+        def fetch():
+            response = httpx.post(NTS_STATUS_URL, params={"serviceKey": unquote(key), "returnType": "JSON"},
+                                  json={"b_no": [digits]}, timeout=8.0)
+            response.raise_for_status()
+            return response.json()["data"][0]
+        record = cached("nts", digits, fetch)
         code = record.get("b_stt_cd") or ""
     except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError, AttributeError):
         return SellerVerification(status="unavailable", label="조회 불가", seller=seller,

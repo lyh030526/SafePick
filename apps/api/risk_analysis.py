@@ -352,9 +352,22 @@ def complete_analysis(conditions: ListingConditions, checks: list[PurchaseCheck]
 
 # The review runs several times and keeps what most runs agree on: a single run flags a borderline expression or
 # finds a thin description in some runs and not others, which moved the attention level between analyses.
+# Two runs go first; when they agree on every condition and signal a third cannot change the majority, so it runs only
+# when they disagree. Most listings then cost two model calls instead of three.
 REVIEW_RUNS = 3
+FIRST_RUNS = 2
 _CACHE: "OrderedDict[str, RiskAnalysis]" = OrderedDict()
 _CACHE_SIZE = 256
+
+
+def _verdict(analysis: RiskAnalysis) -> tuple:
+    return (tuple(getattr(analysis.conditions, field).status for field in ListingConditions.model_fields),
+            tuple(sorted(check.id for check in analysis.checklist if check.kind == "attention" and check.id in SIGNALS)))
+
+
+def runs_agree(analyses: list[RiskAnalysis]) -> bool:
+    """Every run completed and found the same conditions and signals, so more runs could not change the majority."""
+    return all(item.status == "completed" for item in analyses) and len({_verdict(item) for item in analyses}) == 1
 
 
 def combine_analyses(analyses: list[RiskAnalysis], text: str) -> RiskAnalysis:
@@ -426,8 +439,10 @@ def analyze_listing_risks(product: ProductDetails, page_title: str, page_text: s
     if key in _CACHE:
         _CACHE.move_to_end(key)
         return _CACHE[key].model_copy(deep=True)
-    with ThreadPoolExecutor(max_workers=REVIEW_RUNS) as pool:
-        runs = list(pool.map(lambda _: _review_once(product, page_title, page_text), range(REVIEW_RUNS)))
+    with ThreadPoolExecutor(max_workers=FIRST_RUNS) as pool:
+        runs = list(pool.map(lambda _: _review_once(product, page_title, page_text), range(FIRST_RUNS)))
+    if not runs_agree(runs):
+        runs += [_review_once(product, page_title, page_text) for _ in range(REVIEW_RUNS - FIRST_RUNS)]
     result = combine_analyses(runs, page_text[:12000])
     if result.status == "completed":
         _CACHE[key] = result.model_copy(deep=True)

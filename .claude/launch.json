@@ -4,16 +4,53 @@
     {
       "name": "api",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "uvicorn", "main:app", "--port", "8000"],
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "main:app",
+        "--port",
+        "8000"
+      ],
       "cwd": "apps/api",
       "port": 8000
     },
     {
       "name": "web",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["expo", "start", "--web", "--port", "8081"],
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8081",
+        "--clear"
+      ],
       "cwd": "apps/mobile",
       "port": 8081
+    },
+    {
+      "name": "web-fake-auth",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tests/serve-fake-supabase.cjs"
+      ],
+      "cwd": "apps/mobile",
+      "port": 8082
+    },
+    {
+      "name": "api-lan",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ],
+      "cwd": "apps/api",
+      "port": 8000
     }
   ]
 }

@@ -12,11 +12,24 @@ const productPages: [RegExp, RegExp][] = [
   [/^(smartstore|brand)\.naver\.com$/, /^\/[^/]+\/products\/\d+\/?$/],
   [/^shopping\.naver\.com$/, /^\/window-products\/[^/]+\/\d+\/?$/],
   [/^(www|m)\.11st\.co\.kr$/, /^\/products\/(m\/)?\d+\/?$/],
-  [/^(www|m)\.coupang\.com$/, /^\/vp\/products\/\d+\/?$/],
+  [/^(www|m)\.coupang\.com$/, /^\/v[pm]\/products\/\d+\/?$/],
   [/^item\.(gmarket|auction)\.co\.kr$/, /^\/(Item|DetailView\/Item\.aspx)$/i],
 ];
 
-function validCapture(value: unknown): BrowserImport {
+// Any https Coupang address, including the link.coupang.com short links the Coupang app shares.
+export function isCoupangLink(address: string) {
+  try {
+    const url = new URL(address);
+    return url.protocol === 'https:' && (url.hostname === 'coupang.com' || url.hostname.endsWith('.coupang.com'));
+  } catch { return false; }
+}
+
+// The Coupang app shares "상품명 https://link.coupang.com/a/…", so the link is picked out of whatever was copied.
+export function findLink(text: string) {
+  return text.match(/https?:\/\/[^\s<>"']+/)?.[0] ?? '';
+}
+
+export function validCapture(value: unknown): BrowserImport {
   const item = value as Record<string, unknown>;
   const url = new URL(String(item?.product_url));
   if (item.version !== 1 || item.input_source !== 'browser_extension'
