@@ -3,7 +3,8 @@ import { ShareIntentProvider, useShareIntentContext } from 'expo-share-intent';
 import { useEffect } from 'react';
 import { findLink, isCoupangLink } from '../browserImport';
 import { setPendingLink } from '../lib/pendingCapture';
-import { SessionProvider, useSession } from '../lib/session';
+import { SessionProvider } from '../lib/session';
+import { colors } from '../theme';
 
 // A link shared to SafePick from the Coupang app opens in the in-app browser, which reads the product page by itself;
 // any other shared link is filled into the analysis screen. In Expo Go and on the web the share module is absent and
@@ -24,28 +25,18 @@ function SharedLink() {
   return null;
 }
 
-// Analysis works signed out; My Page and its lists need a session, and the sign-in screen is only for signed-out users.
-// The router must render from the first frame or it loses the address it opened at, so while the stored session is
-// still being read neither guard closes: a reload of /my stays on /my, and is sent home only once it is known that
-// nobody is signed in. The sign-in screen sends a signed-in shopper home itself: a guard closing on it would land on
-// the bare (my) group, which has no screen of its own.
-function RootNavigator() {
-  const { session, loading } = useSession();
-  return (
-    <>
-      <SharedLink />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="browse" />
-        <Stack.Protected guard={loading || !!session}>
-          <Stack.Screen name="(my)" />
-        </Stack.Protected>
-        <Stack.Screen name="sign-in" />
-      </Stack>
-    </>
-  );
-}
-
+// The tabs (홈·기록·마이) sit underneath; the in-app Coupang browser, saved listings and sign-in open over them.
+// Analysis works signed out; the 기록 and 마이 tabs and saved listings ask for a sign-in in place, and the sign-in
+// screen sends a signed-in shopper home itself.
 export default function RootLayout() {
-  return <ShareIntentProvider><SessionProvider><RootNavigator /></SessionProvider></ShareIntentProvider>;
+  return <ShareIntentProvider><SessionProvider>
+    <SharedLink />
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas } }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="browse" />
+      <Stack.Screen name="saved" />
+      <Stack.Screen name="chat-check" />
+      <Stack.Screen name="sign-in" />
+    </Stack>
+  </SessionProvider></ShareIntentProvider>;
 }

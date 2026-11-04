@@ -10,6 +10,8 @@ BODY_LIMITS = {
     "/analyses": (12 * 1024 * 1024, "첨부 자료가 너무 큽니다. 이미지 크기나 개수를 줄여 주세요."),
     "/comparisons": (256 * 1024, "비교 요청이 너무 큽니다. 상품 설명을 줄여 주세요."),
     "/group-analyses": (1024 * 1024, "비교할 판매 페이지 내용이 너무 큽니다. 페이지 수를 줄여 주세요."),
+    "/conversation-checks": (12 * 1024 * 1024, "첨부한 대화 캡처가 너무 큽니다. 이미지 크기나 개수를 줄여 주세요."),
+    "/analysis-questions": (256 * 1024, "질문과 함께 보낸 분석 결과가 너무 큽니다."),
 }
 RATE_LIMITED_PATHS = set(BODY_LIMITS)
 RATE_WINDOW_SECONDS = 60.0

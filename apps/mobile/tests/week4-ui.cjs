@@ -68,6 +68,7 @@ const officialLookup = {
       await page.getByLabel('상품 링크', { exact: true }).fill('https://shop.example.com/p');
       await page.getByText('분석 시작', { exact: true }).click();
       await page.getByText('동일 상품 확인', { exact: true }).waitFor();
+      await page.getByText('공식 정보 비교 결과', { exact: true }).click();
       assert.match(await page.locator('body').innerText(), /-70,000 KRW/);
       await page.evaluate(() => {
         window.open = url => { window.__openedOfficialUrl = String(url); return null; };
@@ -75,6 +76,7 @@ const officialLookup = {
       await page.getByRole('link').first().click();
       assert.equal(await page.evaluate(() => window.__openedOfficialUrl), 'https://www.apple.com/kr/airpods-pro/');
       await page.screenshot({ path: path.join(output, `exact-${viewport.width}.png`), fullPage: true });
+      await page.getByText('추출한 상품 정보', { exact: true }).click();
       for (const status of ['similar', 'not_found', 'unknown']) {
         nextStatus = status;
         await page.getByLabel('모델명', { exact: true }).fill(`수정모델-${status}`);

@@ -75,6 +75,7 @@ function risk(status = 'completed', empty = false, level = empty ? 'undetermined
       await page.screenshot({ path: path.join(output, `checklist-${width}.png`), fullPage: true });
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       status = 'unavailable';
+      await page.getByText('추출한 상품 정보', { exact: true }).click();
       await page.getByLabel('모델명', { exact: true }).fill('SP-200');
       assert.equal(await page.getByText('구매 전 체크리스트', { exact: true }).count(), 0);
       await page.getByText('수정 정보로 다시 비교', { exact: true }).click();

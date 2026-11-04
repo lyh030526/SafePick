@@ -1,6 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
 import * as Clipboard from 'expo-clipboard';
-import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,15 +17,18 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { findLink, isCoupangLink, parseBrowserImport } from './browserImport';
-import { saveAnalysis, saveListing, summarize } from './lib/account';
+import { listAnalyses, saveAnalysis, saveListing, summarize, type HistoryItem } from './lib/account';
 import { takePendingCapture, takePendingLink } from './lib/pendingCapture';
+import { pickImage, type AttachedImage } from './lib/pickImage';
 import { useSession } from './lib/session';
 import { GroupComparisonScreen } from './GroupComparison';
+import { AskAnalysis } from './AskAnalysis';
+import { RecentRow } from './ListingRow';
 import { MarketPriceCard, type MarketPrice } from './MarketPrice';
-import { RiskChecklist, type RiskAnalysis } from './RiskChecklist';
+import { ClaimCard, Checklist, Verdict, type RiskAnalysis } from './RiskChecklist';
 import { SellerCheck, type SellerVerification } from './SellerCheck';
-import { colors, installWebFont, radius } from './theme';
-import { CheckCircle } from './ui';
+import { colors, installWebFont, radius, shadow, type } from './theme';
+import { Button, Card, CheckCircle, Disclosure, Divider, Icon, ListRow, Logo, Pill, SectionTitle, TopBar, text } from './ui';
 
 installWebFont();
 
@@ -40,6 +42,8 @@ type ProductDetails = {
   currency: string;
   seller_name: string;
   components: string[];
+  options?: { name: string; price: string; kind: 'main' | 'addon' }[];
+  condition?: 'new' | 'refurbished' | 'used' | 'display' | 'parallel_import' | 'unknown';
 };
 
 type AnalysisResponse = {
@@ -60,7 +64,6 @@ type SourceSummary = {
   kind?: 'server_page' | 'user_text' | 'browser_extension' | 'user_images' | 'mixed';
   image_count?: number; captured_at?: string | null;
 };
-type AttachedImage = { uri: string; base64_data: string; mime_type: 'image/jpeg' | 'image/png' | 'image/webp'; name: string };
 
 type ProductComparison = {
   status: 'exact' | 'similar' | 'not_found' | 'unknown';
@@ -99,7 +102,7 @@ const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:800
 const requestTimeoutMs = 150_000;
 const timeoutMessage = '분석 시간이 너무 오래 걸려 중단했어요. 잠시 후 다시 시도하거나 상품 설명을 직접 붙여넣어 주세요.';
 
-const fieldLabels: { key: keyof Omit<ProductDetails, 'components'>; label: string }[] = [
+const fieldLabels: { key: keyof Omit<ProductDetails, 'components' | 'options' | 'condition'>; label: string }[] = [
   { key: 'brand_name', label: '브랜드명' },
   { key: 'product_name', label: '상품명' },
   { key: 'model_number', label: '모델명' },
@@ -144,9 +147,17 @@ function SingleAnalysis() {
   const [capturedAt, setCapturedAt] = useState<string | undefined>(initialImport.payload?.captured_at);
   const [consent, setConsent] = useState(false);
   const [source, setSource] = useState<SourceSummary | null>(null);
+  // The description and images stay folded away until needed; imported material opens them for review.
+  const [materialOpen, setMaterialOpen] = useState(!!initialImport.payload);
+  const [recent, setRecent] = useState<HistoryItem[]>([]);
   const requestRef = useRef<AbortController | null>(null);
   const router = useRouter();
   useEffect(() => () => requestRef.current?.abort(), []);
+  // Signed-in shoppers see their last few analyses on the home screen.
+  useFocusEffect(useCallback(() => {
+    if (!session) { setRecent([]); return; }
+    listAnalyses().then(items => setRecent(items.slice(0, 3))).catch(() => undefined);
+  }, [session]));
   // A page read in the in-app Coupang browser arrives like an extension import: shown for review, sent only on consent.
   useFocusEffect(useCallback(() => {
     const link = takePendingLink();
@@ -158,7 +169,7 @@ function SingleAnalysis() {
     if (!capture) return;
     setProductUrl(capture.product_url); setProvidedText(capture.provided_text); setPageTitle(capture.page_title);
     setInputSource('browser_extension'); setCapturedAt(capture.captured_at); setImages([]); setConsent(false);
-    setError(''); setAnalysisState('input');
+    setError(''); setAnalysisState('input'); setMaterialOpen(true);
   }, []));
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -178,32 +189,11 @@ function SingleAnalysis() {
   }, []);
 
   const chooseImage = async () => {
-    if (images.length >= 3) { setError('이미지는 최대 3장까지 첨부할 수 있어요.'); return; }
     try {
-      const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], base64: true, quality: 0.85 });
-      if (picked.canceled) return;
-      const asset = picked.assets[0];
-      let data = asset.base64;
-      let mime = Platform.OS === 'web' ? asset.mimeType : 'image/jpeg';
-      if (Platform.OS === 'web' && asset.file) {
-        if (asset.file.size > 4 * 1024 * 1024) throw new Error('이미지는 한 장에 4MB 이하여야 해요. 필요한 부분을 잘라 주세요.');
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader(); reader.onload = () => resolve(String(reader.result));
-          reader.onerror = () => reject(new Error('이미지를 읽지 못했습니다.')); reader.readAsDataURL(asset.file!);
-        });
-        data = dataUrl.split(',')[1]; mime = asset.file.type;
-      }
-      if (!data) throw new Error('이미지를 읽지 못했습니다. 다른 파일을 선택해 주세요.');
-      mime = data.startsWith('/9j/') ? 'image/jpeg' : data.startsWith('iVBORw0KGgo') ? 'image/png'
-        : data.startsWith('UklGR') ? 'image/webp' : mime;
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime ?? '')) throw new Error('JPG, PNG, WebP 이미지를 첨부해 주세요.');
-      if (data.length > 5592408) throw new Error('이미지는 한 장에 4MB 이하여야 해요. 필요한 부분을 잘라 주세요.');
-      if (images.reduce((sum, image) => sum + image.base64_data.length, data.length) > 11184816) {
-        throw new Error('이미지는 합계 8MB 이내로 첨부해 주세요.');
-      }
-      const image: AttachedImage = { uri: `data:${mime};base64,${data}`, base64_data: data,
-        mime_type: mime as AttachedImage['mime_type'], name: asset.fileName || `상품 이미지 ${images.length + 1}` };
-      setImages(current => [...current, image].slice(0, 3)); setConsent(false); setError('');
+      const image = await pickImage(images, 3);
+      if (!image) return;
+      setImages(current => [...current, { ...image, name: image.name.replace(/^이미지/, '상품 이미지') }].slice(0, 3));
+      setConsent(false); setError('');
     } catch (error) { setError(error instanceof Error ? error.message : '이미지를 첨부하지 못했습니다.'); }
   };
 
@@ -307,7 +297,7 @@ function SingleAnalysis() {
         productUrl={productUrl.trim()}
         warnings={warnings}
         source={source}
-        onAddMaterial={() => { setConsent(false); setAnalysisState('input'); }}
+        onAddMaterial={() => { setConsent(false); setMaterialOpen(true); setAnalysisState('input'); }}
         onBack={() => {
           setProductUrl(''); setProvidedText(''); setImages([]); setPageTitle('');
           setInputSource('user_text'); setCapturedAt(undefined); setConsent(false);
@@ -317,115 +307,107 @@ function SingleAnalysis() {
     );
   }
 
+  const hasMaterial = !!providedText.trim() || images.length > 0;
+  const imported = inputSource === 'browser_extension';
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardContainer}
-      >
-        <ScrollView contentContainerStyle={styles.inputContent} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardContainer}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <BrandHeader />
           <View style={styles.hero}>
-            <Text style={styles.eyebrow}>구매 전 확인</Text>
-            <Text style={styles.title}>상품 링크로{'\n'}위험 요소를 확인하세요</Text>
-            <Text style={styles.description}>
-              판매 페이지 정보와 공식 사이트 정보를 비교해 구매 전 확인할 항목을 알려드려요.
-            </Text>
+            <Text style={text.display}>사기 전에,{'\n'}판매처부터 확인하세요</Text>
+            <Text style={text.body}>판매자 사업자 상태, 가격, 상품 설명의 위험 신호를 한 번에 살펴봐요.</Text>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.label}>상품 링크</Text>
-            <TextInput
-              accessibilityLabel="상품 링크"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              onChangeText={(value) => {
-                setProductUrl(value);
-                setInputSource('user_text'); setCapturedAt(undefined); setPageTitle(''); setConsent(false);
-                if (error) setError('');
-              }}
-              placeholder="https://shopping.example.com/product/..."
-              placeholderTextColor={colors.textFaint}
-              style={[styles.input, error ? styles.inputError : undefined]}
-              value={productUrl}
-            />
-            {Platform.OS !== 'web' ? <Pressable accessibilityRole="button" onPress={pasteLink}
-              style={({ pressed }) => [styles.chipButton, pressed && styles.pressed]}>
-              <Text style={styles.chipButtonText}>복사한 링크 붙여넣기</Text>
-            </Pressable> : null}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => { setProductUrl(sampleLink); setProvidedText(''); setImages([]); setInputSource('user_text'); setCapturedAt(undefined); setPageTitle(''); setConsent(false); }}
-              style={({ pressed }) => [styles.chipButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.chipButtonText}>예시 링크로 채우기</Text>
+          <Card style={styles.linkCard}>
+            <View style={[styles.linkField, error ? styles.linkFieldError : undefined]}>
+              <Icon name="link-outline" size={20} color={colors.textMuted} />
+              <TextInput
+                accessibilityLabel="상품 링크"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                onChangeText={(value) => {
+                  setProductUrl(value);
+                  setInputSource('user_text'); setCapturedAt(undefined); setPageTitle(''); setConsent(false);
+                  if (error) setError('');
+                }}
+                placeholder="판매 페이지 링크를 붙여넣어 주세요"
+                placeholderTextColor={colors.textFaint}
+                style={styles.linkInput}
+                value={productUrl}
+              />
+              {Platform.OS !== 'web' ? <Pressable accessibilityRole="button" accessibilityLabel="복사한 링크 붙여넣기" onPress={pasteLink}
+                style={({ pressed }) => [styles.pasteButton, pressed && styles.pressed]}>
+                <Text style={styles.pasteText}>붙여넣기</Text>
+              </Pressable> : null}
+            </View>
+            {error ? <Text accessibilityRole="alert" style={text.error}>{error}</Text> : null}
+            <Button label="분석 시작" icon="search" onPress={startAnalysis} />
+            <Pressable accessibilityRole="button"
+              onPress={() => { setProductUrl(sampleLink); setProvidedText(''); setImages([]); setInputSource('user_text'); setCapturedAt(undefined); setPageTitle(''); setConsent(false); setError(''); }}
+              style={({ pressed }) => [styles.sample, pressed && styles.pressed]}>
+              <Text style={text.small}>예시 링크로 채우기</Text>
             </Pressable>
-          </View>
+          </Card>
 
-          {Platform.OS !== 'web' ? <View style={styles.card}>
-            <Text style={styles.cardTitle}>쿠팡에서 찾아 분석하기</Text>
-            <Text style={styles.cardBody}>쿠팡 앱에서 보던 상품은 공유 → 링크 복사 후 &apos;복사한 링크 붙여넣기&apos;를 누르면 그 페이지를 바로 열어 읽어요. 새로 찾을 때는 앱 안에서 쿠팡을 열고 상품 페이지에서 &apos;이 페이지 분석&apos;을 눌러 주세요.</Text>
-            <Pressable accessibilityRole="button" onPress={() => router.push('/browse')}
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
-              <Text style={styles.secondaryButtonText}>쿠팡 열기</Text>
-            </Pressable>
-          </View> : null}
+          {Platform.OS !== 'web' ? <Card tight>
+            <ListRow icon="storefront-outline" title="쿠팡에서 찾아 분석하기" subtitle="앱 안에서 쿠팡을 열고 상품 페이지를 바로 가져와요"
+              onPress={() => router.push('/browse')} />
+            <Divider />
+            <ListRow icon="share-social-outline" title="쿠팡 앱에서 공유로 보내기" subtitle="상품 화면에서 공유 → SafePick을 누르면 바로 분석해요" />
+          </Card> : null}
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{inputSource === 'browser_extension' ? '확장 프로그램에서 가져온 자료' : '상품 설명·이미지 추가 (선택)'}</Text>
-            <Text style={styles.cardBody}>페이지를 읽지 못해도 설명이나 이미지를 제공하면 분석할 수 있어요. 첨부한 자료가 있으면 판매 페이지를 다시 요청하지 않습니다.</Text>
-            {pageTitle ? <Text style={styles.meta}>{pageTitle}</Text> : null}
+          <Card tight>
+            <ListRow icon="chatbubbles-outline" title="판매자와 나눈 대화 확인" subtitle="카톡·문자 캡처로 계좌 입금 유도, 가짜 결제 링크를 찾아요"
+              onPress={() => router.push('/chat-check')} />
+          </Card>
+
+          <Disclosure title={imported ? '확장 프로그램에서 가져온 자료' : '상품 설명·이미지 추가'} icon="document-attach-outline"
+            status={hasMaterial ? (imported ? '가져온 자료가 있어요' : `자료 ${providedText.trim() ? '설명' : ''}${providedText.trim() && images.length ? '·' : ''}${images.length ? `이미지 ${images.length}장` : ''}`) : undefined}
+            tone="brand" open={materialOpen} onToggle={setMaterialOpen}>
+            <Text style={text.small}>페이지를 읽지 못할 때 설명이나 캡처를 넣으면 그 자료로 분석해요. 첨부한 자료가 있으면 판매 페이지를 다시 요청하지 않아요.</Text>
+            {pageTitle ? <Text style={text.strong}>{pageTitle}</Text> : null}
             <TextInput accessibilityLabel="상품 설명" multiline maxLength={12000}
               onChangeText={value => { setProvidedText(value); setConsent(false); }}
-              placeholder="상품명, 가격, 판매자, 옵션, 구성품 등 필요한 설명을 붙여넣어 주세요."
+              placeholder="상품명, 가격, 판매자, 옵션, 구성품 등을 붙여넣어 주세요."
               placeholderTextColor={colors.textFaint} value={providedText} style={[styles.input, styles.textArea]} />
-            <Text style={[styles.meta, styles.counter]}>{providedText.length.toLocaleString()} / 12,000자</Text>
-            <Pressable accessibilityRole="button" onPress={chooseImage}
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
-              <Text style={styles.secondaryButtonText}>상품 이미지 첨부 ({images.length}/3)</Text>
-            </Pressable>
-            <Text style={styles.meta}>JPG·PNG·WebP · 한 장 4MB, 합계 8MB. 가격·모델명이 잘 보이는 캡처를 첨부해 주세요. 외형만으로 정품 여부를 판정하지 않아요.</Text>
+            <Text style={[text.small, styles.counter]}>{providedText.length.toLocaleString()} / 12,000자</Text>
+            <Button tone="secondary" icon="image-outline" label={`상품 이미지 첨부 (${images.length}/3)`} onPress={chooseImage} />
+            <Text style={text.small}>JPG·PNG·WebP · 한 장 4MB, 합계 8MB. 가격·모델명이 잘 보이는 캡처가 좋아요. 외형만으로 정품 여부를 판정하지 않아요.</Text>
             {images.map((image, index) => <View key={`${index}-${image.name}`} style={styles.imageRow}>
               <Image accessibilityLabel={`첨부 이미지 ${index + 1}`} source={{ uri: image.uri }} style={styles.imagePreview} resizeMode="contain" />
-              <View style={styles.imageInfo}><Text numberOfLines={2} style={styles.cardBody}>{image.name}</Text>
+              <View style={styles.imageInfo}><Text numberOfLines={2} style={text.body}>{image.name}</Text>
                 <Pressable accessibilityRole="button" accessibilityLabel={`이미지 ${index + 1} 삭제`}
                   onPress={() => { setImages(current => current.filter((_, i) => i !== index)); setConsent(false); }} style={styles.removeImage}>
                   <Text style={styles.removeImageText}>삭제</Text>
                 </Pressable></View>
             </View>)}
-            {(providedText.trim() || images.length > 0) ? <Pressable accessibilityRole="checkbox"
+            {hasMaterial ? <Pressable accessibilityRole="checkbox"
               accessibilityLabel="상품 자료 AI 분석 동의" accessibilityState={{ checked: consent }}
               onPress={() => setConsent(current => !current)} style={styles.consentRow}>
               <CheckCircle checked={consent} />
               <Text style={styles.consentText}>제공할 자료의 이용 권한을 확인했으며, 설명·이미지를 OpenAI에 보내 분석하는 데 동의합니다. 개인정보는 제외해 주세요.</Text>
             </Pressable> : null}
-          </View>
+          </Disclosure>
 
-          <View style={styles.noticeCard}>
-            <Text style={styles.noticeTitle}>지원 브랜드 기준 분석</Text>
-            <Text style={styles.noticeBody}>
-              초기 버전은 삼성전자, Apple, LG전자, 다이슨, 소니코리아의 공식 정보를 우선 비교합니다.
-            </Text>
-          </View>
+          {recent.length ? <>
+            <SectionTitle action={<Pressable accessibilityRole="button" onPress={() => router.push('/history')}>
+              <Text style={text.link}>전체 보기</Text></Pressable>}>최근 분석</SectionTitle>
+            <Card tight>
+              {recent.map((item, index) => <View key={item.id}>
+                {index ? <Divider /> : null}
+                <RecentRow item={item} onPress={() => router.push('/history')} />
+              </View>)}
+            </Card>
+          </> : null}
 
-          <Text style={styles.disclaimer}>
-            세이프픽은 사기 여부를 단정하지 않으며, 구매 전 확인이 필요한 근거를 제공합니다.
-          </Text>
+          <View style={styles.trust}>
+            <Icon name="information-circle-outline" size={16} color={colors.textMuted} />
+            <Text style={[text.small, styles.flex]}>SafePick은 사기 여부를 단정하지 않고, 구매 전에 확인할 근거를 보여 드려요. 공식 정보 비교는 삼성전자·Apple·LG전자·다이슨·소니 상품부터 지원해요.</Text>
+          </View>
         </ScrollView>
-        <View style={styles.footer}>
-          <View style={styles.footerInner}>
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            <Pressable
-              accessibilityRole="button"
-              onPress={startAnalysis}
-              style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryPressed]}
-            >
-              <Text style={styles.primaryButtonText}>분석 시작</Text>
-            </Pressable>
-          </View>
-        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -436,13 +418,15 @@ function BrandHeader() {
   const router = useRouter();
   return (
     <View style={styles.brandRow}>
-      <View style={styles.logoMark}>
-        <Text style={styles.logoText}>S</Text>
-      </View>
+      <Logo />
       <Text style={styles.appName}>SafePick</Text>
-      {available ? <Pressable accessibilityRole="button" onPress={() => router.push(session ? '/my' : '/sign-in')}
+      {available && !session ? <Pressable accessibilityRole="button" onPress={() => router.push('/sign-in')}
         style={({ pressed }) => [styles.accountButton, pressed && styles.pressed]}>
-        <Text style={styles.accountButtonText}>{session ? '마이페이지' : '로그인'}</Text>
+        <Text style={styles.accountButtonText}>로그인</Text>
+      </Pressable> : null}
+      {session ? <Pressable accessibilityRole="button" accessibilityLabel="마이페이지" onPress={() => router.push('/my')}
+        style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}>
+        <Icon name="person" size={18} color={colors.brandText} />
       </Pressable> : null}
     </View>
   );
@@ -463,36 +447,43 @@ function SaveListingButton({ productUrl, product, source, risk, seller }: {
     setState('saving');
     try { await saveListing(summary); setState('saved'); } catch { setState('error'); }
   };
-  return <Pressable accessibilityRole="button" disabled={state === 'saving' || state === 'saved'} onPress={save}
-    style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
-    <Text style={styles.secondaryButtonText}>{state === 'saved' ? '관심 판매처에 저장했어요' : state === 'error'
-      ? '저장하지 못했어요. 다시 눌러 주세요' : session ? '관심 판매처로 저장' : '로그인하고 관심 판매처로 저장'}</Text>
-  </Pressable>;
+  return <Button icon={state === 'saved' ? 'bookmark' : 'bookmark-outline'} busy={state === 'saving'} disabled={state === 'saved'} onPress={save}
+    label={state === 'saved' ? '관심 판매처에 저장했어요' : state === 'error' ? '저장하지 못했어요. 다시 눌러 주세요'
+      : session ? '관심 판매처로 저장' : '로그인하고 관심 판매처로 저장'} />;
 }
+
+// The one action that stays at the bottom of a result; nothing is shown when saving is not available.
+function SaveFooter(props: Parameters<typeof SaveListingButton>[0]) {
+  const { available } = useSession();
+  if (!available || !props.source || !props.risk) return null;
+  return <View style={styles.footer}>
+    <View style={styles.footerInner}><SaveListingButton {...props} /></View>
+  </View>;
+}
+
+const progressSteps = ['판매 페이지 정보 읽기', '판매자 사업자 상태 조회', '가격 시세 비교', '상품 설명의 위험 신호 분석'];
 
 function AnalysisProgress({ onCancel }: { onCancel: () => void }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <View style={styles.progressContent}>
-        <BrandHeader />
         <View style={styles.progressHero}>
-          <View style={styles.progressBadge}><ActivityIndicator color={colors.blue} size="large" /></View>
-          <Text style={styles.progressTitle}>상품을 분석하고 있어요</Text>
-          <Text style={styles.progressDescription}>
-            판매 정보와 공식 페이지를 읽고 비교 근거를 확인하고 있습니다.
-          </Text>
+          <View style={styles.progressBadge}><ActivityIndicator color={colors.brand} size="large" /></View>
+          <Text style={[text.title, styles.center]}>상품을 분석하고 있어요</Text>
+          <Text style={[text.body, styles.center]}>보통 10~20초 걸려요. 서버가 잠시 쉬고 있었다면 30초쯤 더 걸릴 수 있어요.</Text>
         </View>
-        <View style={styles.stepsCard}>
-          <AnalysisStep label="링크 형식 확인" active />
-          <AnalysisStep label="판매 페이지 정보 추출" active />
-          <AnalysisStep label="누락 정보 확인" />
-          <AnalysisStep label="공식 정보 비교" />
-          <AnalysisStep label="상품 설명·배송·반품 조건 분석" />
+        <Card style={styles.steps}>
+          {progressSteps.map((label, index) => <View key={label} style={styles.stepRow}>
+            <View style={[styles.stepDot, index === 0 && styles.stepDotActive]}>
+              <Text style={[styles.stepNumber, index === 0 && styles.stepNumberActive]}>{index + 1}</Text>
+            </View>
+            <Text style={[text.body, index === 0 && styles.stepActive]}>{label}</Text>
+          </View>)}
+        </Card>
+        <View style={styles.progressFooter}>
+          <Button tone="ghost" label="링크 입력으로 돌아가기" onPress={onCancel} />
         </View>
-        <Pressable onPress={onCancel} style={styles.cancelButton}>
-          <Text style={styles.cancelButtonText}>링크 입력으로 돌아가기</Text>
-        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -535,6 +526,7 @@ function CorrectionForm({
   const [comparing, setComparing] = useState(false);
   const [compareError, setCompareError] = useState('');
   const requestRef = useRef<AbortController | null>(null);
+  const router = useRouter();
   useEffect(() => () => requestRef.current?.abort(), []);
 
   const applyCorrections = async () => {
@@ -591,91 +583,91 @@ function CorrectionForm({
     setDraft({ ...draft, [key]: value });
   };
 
+  const fresh = !dirty && !comparing;
+  const price = /^\d+$/.test(draft.price) ? `${Number(draft.price).toLocaleString('ko-KR')}원` : draft.price;
+  const productLine = [draft.product_name, draft.seller_name, price].filter(value => value && value !== '확인 불가').join(' · ');
+  const comparisonTone = result?.status === 'exact' ? 'good' : result?.status === 'similar' ? 'warn' : 'neutral';
+  const provided = source?.kind && source.kind !== 'server_page';
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardContainer}>
-        <ScrollView contentContainerStyle={styles.inputContent} keyboardShouldPersistTaps="handled">
-          <BrandHeader />
-          <View style={styles.resultHero}>
-            <Text style={styles.correctionTitle}>상품 분석 결과</Text>
-            <Text style={styles.description}>
-              자동 추출 결과를 확인하고, 비어 있거나 다른 항목은 직접 수정해 주세요.
-            </Text>
-          </View>
-          {/* The verdict comes first; where the material came from and the details follow it. */}
-          {!dirty && !comparing ? <RiskChecklist analysis={riskResult} sourceUrl={source?.final_url ?? productUrl} /> : null}
-          {!dirty && !comparing ? <SaveListingButton productUrl={productUrl} product={draft} source={source} risk={riskResult}
-            seller={seller} /> : null}
-          {source ? <View style={styles.card}>
-            <Text style={styles.cardTitle}>{source.kind && source.kind !== 'server_page' ? '사용자 제공 자료 기반 분석' : '판매 페이지 직접 수집'}</Text>
-            <Text selectable numberOfLines={2} style={styles.urlText}>{source.final_url}</Text>
-            <Text style={styles.meta}>텍스트 {source.text_length.toLocaleString()}자 · 이미지 {source.image_count ?? 0}장</Text>
-            {source.captured_at ? <Text style={styles.meta}>사용자 기기의 수집 시각: {new Date(source.captured_at).toLocaleString('ko-KR')}</Text> : null}
-            {source.kind && source.kind !== 'server_page' ? <Text style={styles.cardBody}>제공 자료와 실제 판매 페이지의 일치 여부는 인증하지 않았습니다.</Text> : null}
-            <Pressable accessibilityRole="button" onPress={onAddMaterial}
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
-              <Text style={styles.secondaryButtonText}>상품 설명·이미지로 다시 분석</Text>
-            </Pressable>
-          </View> : null}
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <TopBar title="상품 분석 결과" onBack={onBack} />
+          {/* The verdict comes first; each check, the checklist and where the material came from follow it. */}
+          {fresh ? <Verdict analysis={riskResult} product={productLine} /> : null}
+          {comparing ? (
+            <Card style={styles.comparingRow} >
+              <ActivityIndicator color={colors.brand} />
+              <Text style={[text.body, styles.flex]}>수정한 정보로 다시 분석하고 있어요.</Text>
+            </Card>
+          ) : null}
+          {dirty ? <Card style={styles.dirtyNote}>
+            <Icon name="create-outline" size={18} color={colors.orangeText} />
+            <Text style={[text.body, styles.flex]}>상품 정보를 수정했어요. 아래 &apos;수정 정보로 다시 비교&apos;를 누르면 결과가 새로 나와요.</Text>
+          </Card> : null}
 
           {warnings.length > 0 ? (
             <View style={styles.warningCard}>
-              <Text style={styles.warningTitle}>직접 확인이 필요해요</Text>
-              {warnings.map((warning) => (
-                <Text key={warning} style={styles.warningText}>• {warning}</Text>
-              ))}
+              <Icon name="alert-circle-outline" size={18} color={colors.orangeText} />
+              <View style={styles.flex}>
+                <Text style={styles.warningTitle}>직접 확인이 필요해요</Text>
+                {warnings.map((warning) => <Text key={warning} style={text.body}>{warning}</Text>)}
+              </View>
             </View>
           ) : null}
 
-          {!dirty && !comparing ? <SellerCheck verification={seller} /> : null}
-          {!dirty && !comparing ? <MarketPriceCard market={market} /> : null}
-          <Text style={styles.sectionTitle}>공식 정보 비교 결과</Text>
-          {result && !dirty ? <ComparisonPanel comparison={result} /> : null}
-          {comparing ? (
-            <View style={[styles.card, styles.comparingRow]} accessibilityRole="progressbar">
-              <ActivityIndicator color={colors.blue} />
-              <Text style={styles.cardBody}>공식 정보와 상품 설명의 확인 항목을 다시 분석하고 있어요.</Text>
-            </View>
-          ) : null}
-          {lookup && !dirty ? <OfficialLookupCard lookup={lookup} /> : null}
+          {fresh ? <>
+            <SectionTitle>확인 결과</SectionTitle>
+            <SellerCheck verification={seller} />
+            <MarketPriceCard market={market} />
+            <ClaimCard check={riskResult?.claim_check} />
+          </> : null}
+          <Disclosure title="공식 정보 비교 결과" icon="ribbon-outline" status={result && !dirty ? result.label : undefined} tone={comparisonTone}>
+            {result && !dirty ? <ComparisonPanel comparison={result} /> : <Text style={text.body}>다시 비교하면 결과가 여기에 나와요.</Text>}
+            {lookup && !dirty ? <OfficialLookupCard lookup={lookup} /> : null}
+          </Disclosure>
 
-          <Text style={styles.sectionTitle}>추출한 상품 정보</Text>
-          <View style={[styles.card, styles.formCard]}>
+          {fresh ? <Checklist analysis={riskResult} sourceUrl={source?.final_url ?? productUrl} /> : null}
+          {fresh && riskResult ? <AskAnalysis analysis={{ product: draft, risk_analysis: riskResult, seller_verification: seller,
+            market_price: market, comparison: result }} /> : null}
+          {fresh ? <Card tight>
+            <ListRow icon="chatbubbles-outline" title="판매자가 카톡·문자로 연락했나요?" subtitle="대화 캡처로 사기 수법을 확인해 보세요"
+              onPress={() => router.push('/chat-check')} />
+          </Card> : null}
+
+          {source ? <>
+            <SectionTitle>분석한 자료</SectionTitle>
+            <Card>
+              <View style={styles.sourceHead}>
+                <Icon name={provided ? 'document-text-outline' : 'globe-outline'} size={18} color={colors.brandText} />
+                <Text style={[text.strong, styles.flex]}>{provided ? '사용자 제공 자료 기반 분석' : '판매 페이지 직접 수집'}</Text>
+              </View>
+              <Text selectable numberOfLines={2} style={text.small}>{source.final_url}</Text>
+              <View style={styles.sourceFacts}>
+                <Pill label={`텍스트 ${source.text_length.toLocaleString()}자`} />
+                <Pill label={`이미지 ${source.image_count ?? 0}장`} />
+                {source.captured_at ? <Pill label={`수집 ${new Date(source.captured_at).toLocaleString('ko-KR')}`} /> : null}
+              </View>
+              {provided ? <Text style={text.small}>제공 자료와 실제 판매 페이지의 일치 여부는 인증하지 않았어요.</Text> : null}
+              <Button tone="secondary" icon="add-circle-outline" label="상품 설명·이미지로 다시 분석" onPress={onAddMaterial} />
+            </Card>
+          </> : null}
+
+          <Disclosure title="추출한 상품 정보" icon="create-outline" status={dirty ? '수정함' : undefined} tone="warn">
+            <Text style={text.small}>자동으로 읽은 상품 정보예요. 틀린 항목을 고치고 다시 비교할 수 있어요.</Text>
             {fieldLabels.map(({ key, label }) => (
-              <EditableField
-                key={key}
-                label={label}
-                onChangeText={(value) => updateField(key, value)}
-                value={draft[key]}
-                editable={!comparing}
-              />
+              <EditableField key={key} label={label} onChangeText={(value) => updateField(key, value)} value={draft[key]} editable={!comparing} />
             ))}
-            <EditableField
-              label="구성품 (쉼표로 구분)"
-              onChangeText={(value) => updateField('components', value)}
-              value={draft.components.join(', ')}
-              editable={!comparing}
-            />
-          </View>
-          <Pressable onPress={onBack} style={styles.textButton}>
-            <Text style={styles.textButtonText}>다른 링크 분석하기</Text>
-          </Pressable>
+            <EditableField label="구성품 (쉼표로 구분)" onChangeText={(value) => updateField('components', value)}
+              value={draft.components.join(', ')} editable={!comparing} />
+            {compareError ? <Text accessibilityRole="alert" style={text.error}>{compareError}</Text> : null}
+            <Button tone={dirty ? 'primary' : 'secondary'} icon="refresh" busy={comparing}
+              label={comparing ? '공식 정보 비교 중' : '수정 정보로 다시 비교'} onPress={applyCorrections} />
+          </Disclosure>
+          <Button tone="ghost" icon="arrow-back" label="다른 링크 분석하기" onPress={onBack} />
         </ScrollView>
-        <View style={styles.footer}>
-          <View style={styles.footerInner}>
-            {dirty ? <Text style={styles.footerHint}>수정한 정보로 공식 정보를 다시 비교해 주세요.</Text> : null}
-            {compareError ? <Text accessibilityRole="alert" style={styles.errorText}>{compareError}</Text> : null}
-            <Pressable
-              accessibilityRole="button"
-              disabled={comparing}
-              onPress={applyCorrections}
-              style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryPressed, comparing && styles.primaryDisabled]}
-            >
-              <Text style={styles.primaryButtonText}>{comparing ? '공식 정보 비교 중' : '수정 정보로 다시 비교'}</Text>
-            </Pressable>
-          </View>
-        </View>
+        {fresh ? <SaveFooter productUrl={productUrl} product={draft} source={source} risk={riskResult} seller={seller} /> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -691,15 +683,9 @@ function ComparisonPanel({ comparison }: { comparison: ProductComparison }) {
     product_name: '공식 상품명', model_number: '공식 모델명', price: '공식 가격',
     currency: '통화', seller_guidance: '공식 구매처 안내',
   };
-  const tone = comparison.status === 'exact' ? 'exact' : comparison.status === 'similar' ? 'similar' : 'unknown';
   return (
-    <View style={styles.card}>
-      <View style={[styles.statusPill, statusPillStyles[tone]]}>
-        <View style={[styles.statusDot, statusDotStyles[tone]]} />
-        <Text style={[styles.statusPillText, statusTextStyles[tone]]}>공식 정보 비교</Text>
-      </View>
-      <Text style={styles.statusLabel}>{comparison.label}</Text>
-      <Text style={styles.cardBody}>{comparison.message}</Text>
+    <View style={styles.panel}>
+      <Text style={text.body}>{comparison.message}</Text>
       {facts ? (
         <View style={styles.factRows}>
           <InfoRow label="공식 상품명" value={facts.product_name} />
@@ -707,8 +693,7 @@ function ComparisonPanel({ comparison }: { comparison: ProductComparison }) {
           <InfoRow label="공식 가격" value={`${facts.price} ${facts.currency === '확인 불가' ? '' : facts.currency}`} />
         </View>
       ) : null}
-      <View style={styles.divider} />
-      <Text style={styles.subheading}>가격 비교</Text>
+      <Text style={text.strong}>가격 비교</Text>
       {price.status === 'available' ? (
         <View style={styles.factRows}>
           <InfoRow label="현재 판매가" value={formatAmount(price.sale_price)} />
@@ -716,20 +701,18 @@ function ComparisonPanel({ comparison }: { comparison: ProductComparison }) {
           <InfoRow label="판매가 - 공식가" value={`${formatAmount(price.difference)} (${price.difference_percent}%)`} />
         </View>
       ) : null}
-      <Text style={styles.cardBody}>{price.message}</Text>
-      <View style={styles.divider} />
-      <Text style={styles.subheading}>공식 판매처 확인</Text>
-      <Text style={styles.cardBody}>{comparison.seller_message}</Text>
-      <View style={styles.divider} />
-      <Text style={styles.subheading}>공식 페이지 근거</Text>
-      {comparison.pages.length === 0 ? <Text style={styles.cardBody}>읽을 수 있는 공식 페이지 근거가 없습니다.</Text> : null}
+      <Text style={text.body}>{price.message}</Text>
+      <Text style={text.strong}>공식 판매처 확인</Text>
+      <Text style={text.body}>{comparison.seller_message}</Text>
+      <Text style={text.strong}>공식 페이지 근거</Text>
+      {comparison.pages.length === 0 ? <Text style={text.body}>읽을 수 있는 공식 페이지 근거가 없어요.</Text> : null}
       {comparison.pages.map((page) => (
         <View key={page.url} style={styles.sourceSection}>
           <Pressable accessibilityRole="link" onPress={() => Linking.openURL(page.url)}>
             <Text style={styles.linkTitle}>{page.title}</Text>
             <Text numberOfLines={1} style={styles.linkUrl}>{page.url}</Text>
           </Pressable>
-          {page.facts.evidence.length === 0 ? <Text style={styles.meta}>확인 가능한 상품 정보 근거가 부족합니다.</Text> : null}
+          {page.facts.evidence.length === 0 ? <Text style={text.small}>확인 가능한 상품 정보 근거가 부족해요.</Text> : null}
           {page.facts.evidence.map((item, index) => (
             <View key={`${item.field}-${index}`} style={styles.quoteBox}>
               <Text style={styles.quoteLabel}>{evidenceLabels[item.field] ?? item.field}</Text>
@@ -749,15 +732,11 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 function OfficialLookupCard({ lookup }: { lookup: OfficialLookup }) {
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>공식 사이트 검색 결과</Text>
-      <Text style={styles.cardBody}>{lookup.message}</Text>
-      {lookup.brand ? (
-        <Text style={styles.meta}>
-          {lookup.brand.name} 공식 도메인: {lookup.brand.domains.join(', ')}
-        </Text>
-      ) : null}
-      {lookup.query ? <Text style={styles.meta}>검색어: {lookup.query}</Text> : null}
+    <View style={styles.panel}>
+      <Text style={text.strong}>공식 사이트 검색 결과</Text>
+      <Text style={text.body}>{lookup.message}</Text>
+      {lookup.brand ? <Text style={text.small}>{lookup.brand.name} 공식 도메인: {lookup.brand.domains.join(', ')}</Text> : null}
+      {lookup.query ? <Text style={text.small}>검색어: {lookup.query}</Text> : null}
       {lookup.results.map((result) => (
         <Pressable key={result.url} onPress={() => Linking.openURL(result.url)}
           style={({ pressed }) => [styles.searchResult, pressed && styles.pressed]}>
@@ -801,120 +780,75 @@ function EditableField({
   );
 }
 
-function AnalysisStep({ label, active = false }: { label: string; active?: boolean }) {
-  return (
-    <View style={styles.stepRow}>
-      <View style={[styles.stepDot, active && styles.stepDotActive]}>
-        {active ? <Text style={styles.stepDotMark}>✓</Text> : null}
-      </View>
-      <Text style={[styles.stepLabel, active && styles.stepLabelActive]}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.canvas },
   keyboardContainer: { flex: 1 },
-  inputContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32, maxWidth: 640, width: '100%', alignSelf: 'center', gap: 12 },
-  brandRow: { alignItems: 'center', flexDirection: 'row', gap: 8, height: 44 },
-  logoMark: { alignItems: 'center', backgroundColor: colors.blue, borderRadius: 9, height: 28, justifyContent: 'center', width: 28 },
-  logoText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
-  appName: { color: colors.text, fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
-  accountButton: { marginLeft: 'auto', borderRadius: radius.pill, backgroundColor: colors.card, paddingHorizontal: 14, paddingVertical: 8 },
-  accountButtonText: { color: colors.blueText, fontSize: 14, fontWeight: '700' },
-  hero: { paddingTop: 28, paddingBottom: 16, paddingHorizontal: 4 },
-  resultHero: { paddingTop: 20, paddingBottom: 8, paddingHorizontal: 4 },
-  eyebrow: { color: colors.blue, fontSize: 15, fontWeight: '700', marginBottom: 8 },
-  title: { color: colors.text, fontSize: 28, fontWeight: '800', lineHeight: 38, letterSpacing: -0.6 },
-  description: { color: colors.textSub, fontSize: 16, lineHeight: 25, marginTop: 12, letterSpacing: -0.2 },
-  card: { backgroundColor: colors.card, borderRadius: radius.card, padding: 20, gap: 8 },
-  cardTitle: { color: colors.text, fontSize: 18, fontWeight: '700', lineHeight: 26, letterSpacing: -0.3 },
-  cardBody: { color: colors.textSub, fontSize: 15, lineHeight: 23, letterSpacing: -0.2 },
-  meta: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+  content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, maxWidth: 640, width: '100%', alignSelf: 'center', gap: 12 },
+  flex: { flex: 1 },
+  center: { textAlign: 'center' },
+  brandRow: { alignItems: 'center', flexDirection: 'row', gap: 9, height: 48 },
+  appName: { color: colors.text, fontSize: 19, fontWeight: '800', letterSpacing: -0.4 },
+  accountButton: { marginLeft: 'auto', borderRadius: radius.pill, backgroundColor: colors.brandSoft, paddingHorizontal: 14, paddingVertical: 8 },
+  accountButtonText: { color: colors.brandText, fontSize: 14, fontWeight: '700' },
+  avatarButton: { marginLeft: 'auto', width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center' },
+  hero: { paddingTop: 18, paddingBottom: 8, paddingHorizontal: 2, gap: 10 },
+  linkCard: { gap: 12 },
+  linkField: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.fill, borderRadius: radius.field,
+    borderWidth: 1.5, borderColor: colors.fill, paddingLeft: 14, paddingRight: 6, minHeight: 56 },
+  linkFieldError: { borderColor: colors.red, backgroundColor: colors.redSoft },
+  linkInput: { flex: 1, minWidth: 0, color: colors.text, fontSize: 16, minHeight: 52 },
+  pasteButton: { backgroundColor: colors.card, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
+  pasteText: { color: colors.brandText, fontSize: 14, fontWeight: '700' },
+  sample: { alignSelf: 'center', paddingVertical: 2 },
   counter: { textAlign: 'right' },
-  urlText: { color: colors.textSub, fontSize: 14, lineHeight: 21 },
   label: { color: colors.textSub, fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  input: { backgroundColor: colors.fill, borderRadius: radius.field, borderWidth: 1.5, borderColor: colors.fill, color: colors.text, fontSize: 16, minHeight: 54, paddingHorizontal: 16 },
-  inputError: { borderColor: colors.red, backgroundColor: colors.redSoft },
+  input: { backgroundColor: colors.fill, borderRadius: radius.field, borderWidth: 1.5, borderColor: colors.fill, color: colors.text, fontSize: 16, minHeight: 52, paddingHorizontal: 14 },
   inputNeedsInput: { borderColor: colors.orange, backgroundColor: colors.orangeSoft },
-  textArea: { minHeight: 140, textAlignVertical: 'top', paddingVertical: 14, marginTop: 8, lineHeight: 23 },
-  chipButton: { alignSelf: 'flex-start', backgroundColor: colors.fill, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 8, marginTop: 4 },
-  chipButtonText: { color: colors.textSub, fontSize: 14, fontWeight: '600' },
-  secondaryButton: { backgroundColor: colors.blueSoft, borderRadius: radius.button, minHeight: 50, alignItems: 'center', justifyContent: 'center', marginTop: 8, paddingHorizontal: 16 },
-  secondaryButtonText: { color: colors.blueText, fontSize: 15, fontWeight: '700' },
-  imageRow: { flexDirection: 'row', gap: 12, marginTop: 8, alignItems: 'center', backgroundColor: colors.fill, borderRadius: radius.field, padding: 10 },
+  textArea: { minHeight: 140, textAlignVertical: 'top', paddingVertical: 14, lineHeight: 23 },
+  imageRow: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: colors.fill, borderRadius: radius.field, padding: 10 },
   imagePreview: { width: 72, height: 72, borderRadius: 10, backgroundColor: colors.card },
   imageInfo: { flex: 1, minWidth: 0 },
   removeImage: { alignSelf: 'flex-start', paddingVertical: 6 },
-  removeImageText: { color: colors.red, fontSize: 14, fontWeight: '600' },
-  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 8, padding: 14, borderRadius: radius.field, backgroundColor: colors.fill },
+  removeImageText: { color: colors.redText, fontSize: 14, fontWeight: '600' },
+  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14, borderRadius: radius.field, backgroundColor: colors.brandSoft },
   consentText: { flex: 1, color: colors.textSub, fontSize: 14, lineHeight: 21 },
-  noticeCard: { backgroundColor: colors.blueSoft, borderRadius: radius.card, padding: 18, gap: 4 },
-  noticeTitle: { color: colors.blueText, fontSize: 15, fontWeight: '700' },
-  noticeBody: { color: colors.textSub, fontSize: 14, lineHeight: 21 },
-  disclaimer: { color: colors.textMuted, fontSize: 13, lineHeight: 19, paddingHorizontal: 4, marginTop: 4 },
-  footer: { backgroundColor: colors.canvas, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16 },
-  footerInner: { maxWidth: 600, width: '100%', alignSelf: 'center', gap: 8 },
-  footerHint: { color: colors.textSub, fontSize: 14, textAlign: 'center' },
-  errorText: { color: colors.red, fontSize: 14, lineHeight: 20, textAlign: 'center' },
-  primaryButton: { alignItems: 'center', backgroundColor: colors.blue, borderRadius: radius.button, minHeight: 56, justifyContent: 'center' },
-  primaryPressed: { backgroundColor: colors.blueText },
-  primaryDisabled: { opacity: 0.5 },
-  primaryButtonText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
-  textButton: { alignItems: 'center', padding: 14 },
-  textButtonText: { color: colors.textMuted, fontSize: 15, fontWeight: '600', textDecorationLine: 'underline' },
+  trust: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', paddingHorizontal: 4, marginTop: 6 },
+  footer: { backgroundColor: colors.card, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line },
+  footerInner: { maxWidth: 600, width: '100%', alignSelf: 'center', gap: 4 },
   pressed: { opacity: 0.7 },
   progressContent: { flex: 1, paddingHorizontal: 20, paddingTop: 16, maxWidth: 640, width: '100%', alignSelf: 'center' },
-  progressHero: { alignItems: 'center', marginTop: 72 },
-  progressBadge: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.blueSoft, alignItems: 'center', justifyContent: 'center' },
-  progressTitle: { color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 24, letterSpacing: -0.5 },
-  progressDescription: { color: colors.textSub, fontSize: 16, lineHeight: 24, marginTop: 10, textAlign: 'center' },
-  stepsCard: { backgroundColor: colors.card, borderRadius: radius.card, marginTop: 40, padding: 22, rowGap: 18 },
+  progressHero: { alignItems: 'center', marginTop: 64, gap: 10, paddingHorizontal: 12 },
+  progressBadge: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  steps: { marginTop: 36, gap: 16, padding: 22 },
   stepRow: { alignItems: 'center', flexDirection: 'row', gap: 12 },
-  stepDot: { backgroundColor: colors.line, borderRadius: 11, height: 22, width: 22, alignItems: 'center', justifyContent: 'center' },
-  stepDotActive: { backgroundColor: colors.blue },
-  stepDotMark: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  stepLabel: { color: colors.textMuted, fontSize: 16, fontWeight: '500' },
-  stepLabelActive: { color: colors.text, fontWeight: '700' },
-  cancelButton: { alignItems: 'center', marginTop: 'auto', marginBottom: 16, padding: 14, borderRadius: radius.button, backgroundColor: colors.line },
-  cancelButtonText: { color: colors.textSub, fontSize: 16, fontWeight: '700' },
-  correctionTitle: { color: colors.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
-  sectionTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginTop: 20, paddingHorizontal: 4, letterSpacing: -0.4 },
-  subheading: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  warningCard: { backgroundColor: colors.orangeSoft, borderRadius: radius.card, padding: 18, gap: 4 },
-  warningTitle: { color: colors.orangeText, fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  warningText: { color: colors.textSub, fontSize: 14, lineHeight: 21 },
+  stepDot: { backgroundColor: colors.fill, borderRadius: 12, height: 24, width: 24, alignItems: 'center', justifyContent: 'center' },
+  stepDotActive: { backgroundColor: colors.brand },
+  stepNumber: { color: colors.textMuted, fontSize: 12, fontWeight: '800' },
+  stepNumberActive: { color: '#FFFFFF' },
+  stepActive: { color: colors.text, fontWeight: '700' },
+  progressFooter: { marginTop: 'auto', marginBottom: 12 },
+  comparingRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dirtyNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: colors.orangeSoft, shadowOpacity: 0, elevation: 0 },
+  warningCard: { flexDirection: 'row', gap: 10, backgroundColor: colors.orangeSoft, borderRadius: radius.card, padding: 16 },
+  warningTitle: { ...type.body, color: colors.orangeText, fontWeight: '700', marginBottom: 2 },
   warningInline: { color: colors.orangeText, fontSize: 13, lineHeight: 19 },
-  statusPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
-  statusDot: { width: 7, height: 7, borderRadius: 4 },
-  statusPillText: { fontSize: 13, fontWeight: '700' },
-  statusLabel: { fontSize: 24, fontWeight: '800', color: colors.text, lineHeight: 32, letterSpacing: -0.5, marginTop: 4 },
-  divider: { height: 1, backgroundColor: colors.line, marginVertical: 10 },
-  factRows: { marginTop: 4 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, paddingVertical: 9 },
-  infoLabel: { flexShrink: 0, color: colors.textMuted, fontSize: 15, lineHeight: 22 },
-  infoValue: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '600', lineHeight: 22, textAlign: 'right' },
-  sourceSection: { paddingVertical: 8, gap: 8 },
+  sourceHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sourceFacts: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  panel: { gap: 10 },
+  factRows: { backgroundColor: colors.fill, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 4 },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, paddingVertical: 8 },
+  infoLabel: { flexShrink: 0, color: colors.textMuted, fontSize: 14, lineHeight: 21 },
+  infoValue: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '600', lineHeight: 21, textAlign: 'right' },
+  sourceSection: { gap: 8 },
   linkTitle: { color: colors.text, fontSize: 15, fontWeight: '600', lineHeight: 22 },
-  linkUrl: { color: colors.blue, fontSize: 13, marginTop: 2 },
+  linkUrl: { color: colors.brandText, fontSize: 13, marginTop: 2 },
   quoteBox: { backgroundColor: colors.fill, borderRadius: 12, padding: 12, gap: 4 },
   quoteLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   quoteText: { color: colors.textSub, fontSize: 14, lineHeight: 21 },
-  comparingRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  searchResult: { backgroundColor: colors.fill, borderRadius: 14, marginTop: 6, padding: 14 },
+  searchResult: { backgroundColor: colors.fill, borderRadius: 14, padding: 14, ...shadow, shadowOpacity: 0, elevation: 0 },
   searchResultSnippet: { color: colors.textSub, fontSize: 13, lineHeight: 19, marginTop: 4 },
-  formCard: { gap: 18 },
   fieldGroup: { gap: 0 },
   fieldLabelRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   needsInput: { color: colors.orangeText, fontSize: 13, fontWeight: '700', marginBottom: 8 },
-});
-
-const statusPillStyles = StyleSheet.create({
-  exact: { backgroundColor: colors.greenSoft }, similar: { backgroundColor: colors.orangeSoft }, unknown: { backgroundColor: colors.fill },
-});
-const statusDotStyles = StyleSheet.create({
-  exact: { backgroundColor: colors.green }, similar: { backgroundColor: colors.orange }, unknown: { backgroundColor: colors.textFaint },
-});
-const statusTextStyles = StyleSheet.create({
-  exact: { color: colors.green }, similar: { color: colors.orangeText }, unknown: { color: colors.textSub },
 });

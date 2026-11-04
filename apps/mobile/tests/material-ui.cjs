@@ -111,6 +111,7 @@ async function mockApi(page, calls) {
       await mockApi(page, requests);
       await page.goto(appOrigin);
       await page.getByLabel('상품 링크', { exact: true }).fill(productUrl);
+      await page.getByText('상품 설명·이미지 추가', { exact: true }).click();
       await page.getByLabel('상품 설명', { exact: true }).fill('모델 SP-TEST-100 판매가 129000원');
       const chooserPromise = page.waitForEvent('filechooser');
       await page.getByRole('button', { name: '상품 이미지 첨부 (0/3)', exact: true }).click();

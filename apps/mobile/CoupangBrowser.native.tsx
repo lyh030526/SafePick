@@ -5,7 +5,8 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { isCoupangLink, validCapture } from './browserImport';
 import { collectorSource } from './lib/collectorSource';
 import { setPendingCapture } from './lib/pendingCapture';
-import { colors, radius } from './theme';
+import { colors } from './theme';
+import { Button, Icon } from './ui';
 
 // react-native-webview 14 defaults its extra-props parameter to undefined, which collapses the props type to never.
 const Web = WebView<object>;
@@ -82,12 +83,16 @@ export function CoupangBrowser({ initialUrl }: { initialUrl?: string }) {
 
   return <SafeAreaView style={styles.safe}>
     <View style={styles.bar}>
-      <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.barButton}>
-        <Text style={styles.barText}>닫기</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="닫기" onPress={() => router.back()} hitSlop={8} style={styles.barButton}>
+        <Icon name="close" size={24} color={colors.text} />
       </Pressable>
-      <Text numberOfLines={1} style={styles.title}>{title || '쿠팡'}</Text>
-      <Pressable accessibilityRole="button" disabled={!canGoBack} onPress={() => web.current?.goBack()} style={styles.barButton}>
-        <Text style={[styles.barText, !canGoBack && styles.dim]}>‹ 이전</Text>
+      <View style={styles.titleBox}>
+        <Text numberOfLines={1} style={styles.title}>{title || '쿠팡'}</Text>
+        <Text numberOfLines={1} style={styles.address}>{address.replace(/^https?:\/\//, '')}</Text>
+      </View>
+      <Pressable accessibilityRole="button" accessibilityLabel="이전 페이지" disabled={!canGoBack} onPress={() => web.current?.goBack()}
+        hitSlop={8} style={[styles.barButton, !canGoBack && styles.dim]}>
+        <Icon name="arrow-back" size={22} color={colors.text} />
       </Pressable>
     </View>
     <Web ref={web} source={{ uri: start }} style={styles.web} onMessage={receive}
@@ -95,16 +100,17 @@ export function CoupangBrowser({ initialUrl }: { initialUrl?: string }) {
       // Shared links can try to hand over to the Coupang app (coupang://, intent://); the page stays here instead.
       onShouldStartLoadWithRequest={request => /^https?:/.test(request.url)}
       onNavigationStateChange={state => { setAddress(state.url); setTitle(state.title ?? ''); setCanGoBack(state.canGoBack); setMessage(''); }}
-      startInLoadingState renderLoading={() => <ActivityIndicator style={styles.loading} color={colors.blue} />}
+      startInLoadingState renderLoading={() => <ActivityIndicator style={styles.loading} color={colors.brand} />}
       setSupportMultipleWindows={false} allowsBackForwardNavigationGestures />
     <View style={styles.footer}>
-      {message ? <Text accessibilityRole="alert" style={styles.error}>{message}</Text>
-        : <Text style={styles.hint}>{reading ? '상품 페이지를 읽고 있어요. 잠시만 기다려 주세요.'
-          : product ? '이 상품 페이지를 SafePick으로 가져올 수 있어요.' : '분석할 상품을 검색해 상품 페이지를 열어 주세요.'}</Text>}
-      <Pressable accessibilityRole="button" disabled={!product || reading} onPress={read}
-        style={({ pressed }) => [styles.primary, (!product || reading) && styles.dim, pressed && styles.pressed]}>
-        {reading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryText}>이 페이지 분석</Text>}
-      </Pressable>
+      <View style={styles.hintRow}>
+        <Icon name={message ? 'alert-circle' : product ? 'checkmark-circle' : 'search'} size={18}
+          color={message ? colors.red : product ? colors.brand : colors.textMuted} />
+        {message ? <Text accessibilityRole="alert" style={styles.error}>{message}</Text>
+          : <Text style={styles.hint}>{reading ? '상품 페이지를 읽고 있어요. 잠시만 기다려 주세요.'
+            : product ? '이 상품 페이지를 SafePick으로 가져올 수 있어요.' : '분석할 상품을 검색해 상품 페이지를 열어 주세요.'}</Text>}
+      </View>
+      <Button label="이 페이지 분석" icon="shield-checkmark" busy={reading} disabled={!product} onPress={read} />
       <Text style={styles.meta}>화면에 보이는 공개 정보만 읽고, 로그인·결제 정보는 읽지 않아요. 분석 전에 내용을 확인하고 동의할 수 있어요.</Text>
     </View>
   </SafeAreaView>;
@@ -114,16 +120,16 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.card },
   bar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1,
     borderBottomColor: colors.line },
-  barButton: { paddingHorizontal: 8, paddingVertical: 6 },
-  barText: { color: colors.blueText, fontSize: 15, fontWeight: '700' },
-  title: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '600', textAlign: 'center' },
+  barButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  titleBox: { flex: 1, minWidth: 0, alignItems: 'center' },
+  title: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  address: { color: colors.textMuted, fontSize: 12 },
   web: { flex: 1 },
   loading: { position: 'absolute', top: '45%', alignSelf: 'center' },
-  footer: { padding: 12, gap: 8, borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: colors.card },
-  hint: { color: colors.textSub, fontSize: 14, lineHeight: 20 },
-  error: { color: colors.red, fontSize: 14, lineHeight: 20 },
-  primary: { backgroundColor: colors.blue, borderRadius: radius.button, paddingVertical: 14, alignItems: 'center' },
-  primaryText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  footer: { padding: 14, gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, backgroundColor: colors.card },
+  hintRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  hint: { flex: 1, color: colors.textSub, fontSize: 14, lineHeight: 20 },
+  error: { flex: 1, color: colors.redText, fontSize: 14, lineHeight: 20 },
   meta: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
   dim: { opacity: 0.45 },
   pressed: { opacity: 0.7 },

@@ -6,10 +6,10 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 
-from schemas import DomainCheck, MarketPrice, ProductComparison, RiskAnalysis, RiskAssessment, RiskCriterion, SellerVerification
+from schemas import ClaimCheck, DomainCheck, MarketPrice, ProductComparison, RiskAnalysis, RiskAssessment, RiskCriterion, SellerVerification
 
 # Evidence score: confirmed criteria earn their weight, attention earns none, unchecked earns half.
-WEIGHTS = {"official": 25, "description": 20, "purchase_terms": 15, "seller": 25, "price": 15, "history": 25}
+WEIGHTS = {"official": 25, "description": 20, "purchase_terms": 15, "seller": 25, "price": 15, "history": 25, "claims": 15}
 # A marketplace-listed seller (trade name and representative shown, number behind verification) is partly checked.
 CREDIT = {"confirmed": 1.0, "partial": 0.75, "unknown": 0.5, "attention": 0.0}
 # The evidence share is placed proportionally inside its level's band, so the score never reads better or
@@ -60,7 +60,7 @@ def score_evidence(criteria: list[RiskCriterion], level: str, params: ScoreParam
 def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
                 seller: SellerVerification | None = None, market: MarketPrice | None = None,
                 params: ScoreParams = DEFAULT_PARAMS, domain: DomainCheck | None = None,
-                today: date | None = None) -> RiskAssessment:
+                today: date | None = None, claims: ClaimCheck | None = None) -> RiskAssessment:
     complete = analysis.status == "completed"
     today = today or date.today()
     # Marketplace detail pages are mostly images, so a component list missing from the text is shown but does not hold
@@ -119,6 +119,8 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         pending.append("통신판매업 신고 정보")
     # Far below the market is a signal; somewhat below needs a reason. No market data is not a risk.
     price_signal = market is not None and market.status == "far_below"
+    # A shown price far below every option of the product itself leads with something else's price.
+    bait = market is not None and market.option_bait
     if market is not None and market.status == "below":
         pending.append("가격 시세")
     # A missing or expired domain is decisive on its own; a very new one-year registration is a signal; a new one needs
@@ -185,12 +187,21 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
                f"(약 {years}년). 운영 기간이 짧은 편입니다." if years >= SHORT_RECORD_YEARS else
                ". 운영 이력이 거의 없어 확인이 더 필요합니다.") + " 운영 기간은 판매자의 신뢰도를 보증하지 않습니다."))
     if market is not None and market.status in {"typical", "below", "far_below"}:
+        # A discount from an inflated list price misleads about the price even when the price itself is ordinary.
         criteria.append(RiskCriterion(
             key="price", label="가격 시세",
-            status="confirmed" if market.status == "typical" else "attention" if market.status in {"far_below", "below"}
-            else "unknown",
-            detail=f"{market.label}: {market.message}"))
+            status="attention" if market.status in {"far_below", "below"} or market.list_inflated
+            else "confirmed" if market.status == "typical" else "unknown",
+            detail=f"{market.label}: {market.message}" + (f" {market.list_note}" if market.list_inflated else "")))
+    # A genuineness or official claim earns credit only when the seller is the brand's company; one the page contradicts
+    # is a finding; one nobody can check is shown and left unscored.
+    claim_conflict = claims is not None and claims.status == "contradicted"
+    if claims is not None and claims.status != "unverified":
+        criteria.append(RiskCriterion(key="claims", label="정품·공식 판매 표시",
+                                      status="confirmed" if claims.status == "confirmed" else "attention",
+                                      detail=f"{claims.label}: {claims.message}"))
     price_reason = f"가격 시세: {market.label} (중앙값의 {market.ratio_percent}%)" if price_signal else None
+    bait_reason = f"대표 가격과 실제 옵션 가격 차이 (옵션 최저가 {int(market.option_price):,}원)" if bait else None
     seller_reason = f"판매자 사업자 상태: {seller.label}" if seller_block or seller_warn else None
     rating_reason = f"판매자 평가: {seller.marketplace_rating}% ({seller.rating_count}명)" if rating_warn else None
     mail_reason = f"통신판매업 신고: {mail_order.label}" if mail_warn else None
@@ -219,9 +230,15 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         level, label = "undetermined", "판단 보류"
         summary = "설명 분석을 완료하지 못해 주의 수준을 정하지 않았습니다. 자료를 추가하거나 다시 분석해 주세요."
         reasons = [analysis.message]
-    elif signals or seller_warn or mail_warn or price_signal or domain_warn or rating_warn or lookalike_warn or off_warn:
+    elif (signals or seller_warn or mail_warn or price_signal or domain_warn or rating_warn or lookalike_warn or off_warn or bait
+          or claim_conflict):
         level, label = "moderate", "보통"
-        summary = ("현금이나 계좌이체로 결제하면 할인해 준다고 안내합니다. 정상 결제 수단(카드·에스크로)을 벗어나면 피해를 보상받기 "
+        summary = (f"{claims.message}" if claim_conflict and not (signals or seller_warn or mail_warn or price_signal or domain_warn
+                                                                 or rating_warn or lookalike_warn or off_warn or bait) else
+                   "대표 가격은 싸 보이지만 상품 자체의 옵션은 훨씬 비쌉니다. 싼 가격은 부속품·사은품 옵션의 가격일 수 있으니 실제로 고르는 "
+                   "옵션의 결제 금액을 확인해 주세요." if bait and not (signals or seller_warn or mail_warn or price_signal or domain_warn
+                                                       or rating_warn or lookalike_warn or off_warn) else
+                   "현금이나 계좌이체로 결제하면 할인해 준다고 안내합니다. 정상 결제 수단(카드·에스크로)을 벗어나면 피해를 보상받기 "
                    "어려우니 정상 결제로 구매해 주세요." if off_warn else
                    f"{domain.impersonates}의 이름을 썼지만 공식 도메인이 아닙니다. 공식 판매처인지 브랜드 공식 사이트에서 확인해 주세요."
                    if lookalike_warn and not (signals or seller_warn or mail_warn or price_signal or domain_warn) else "상품을 팔고 있지만 쇼핑몰이 반드시 표시해야 하는 사업자 정보가 보이지 않고, 도메인도 등록한 지 1년이 안 됐습니다. "
@@ -241,7 +258,9 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
                    + ([seller_reason] if seller_warn else [])
                    + ([rating_reason] if rating_warn else [])
                    + ([mail_reason] if mail_warn else [])
-                   + ([price_reason] if price_signal else []) + [item.title for item in signals]
+                   + ([price_reason] if price_signal else []) + ([bait_reason] if bait else [])
+                   + ([claims.label] if claim_conflict else [])
+                   + [item.title for item in signals]
                    + ([f"통신판매업 신고: {report_year.group(1)}년 신고 ({report})"] if new_seller else []))
     elif not pending:
         level, label = "low", "낮음"
@@ -272,7 +291,7 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         if new_seller:
             reasons.insert(0, f"통신판매업 신고: {report_year.group(1)}년 신고 ({report})")
     return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
-                          missing_checks=pending, criteria=criteria, rule_version="13", domain=domain,
+                          missing_checks=pending, criteria=criteria, rule_version="15", domain=domain,
                           **score_evidence(criteria, level, params,
                                            None if official or (market is not None and market.status == "typical")
                                            else UNCOMPARED_CEILING))

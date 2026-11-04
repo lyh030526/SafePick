@@ -95,14 +95,14 @@ const analysis = { status: 'completed', warnings: [], sale_text: '판매 페이�
     await page.getByText('카카오로 시작하기').waitFor();
     await page.screenshot({ path: path.join(output, 'sign-in.png'), fullPage: true });
     await page.goto(`${app}/my`);
-    await page.getByText('분석 시작', { exact: true }).waitFor();
+    await page.getByText('로그인하고 내 기록을 모아 보세요', { exact: true }).waitFor();
     assert.equal(await page.getByText('회원 탈퇴', { exact: true }).count(), 0);
-    await page.getByText('로그인', { exact: true }).click();
+    await page.getByText('로그인하기', { exact: true }).click();
     await page.getByText('카카오로 시작하기').waitFor();
 
     // Kakao sign-in comes back signed in, and the header offers My Page.
     await page.getByText('카카오로 시작하기').click();
-    await page.getByText('마이페이지', { exact: true }).waitFor();
+    await page.getByLabel('마이페이지', { exact: true }).waitFor();
     assert.ok(calls.includes('POST /auth/v1/token'), 'the returned code is exchanged for a session');
 
     // An analysis while signed in lands in history, without the collected page text.
@@ -136,6 +136,8 @@ const analysis = { status: 'completed', warnings: [], sale_text: '판매 페이�
     await page.getByText('리샤무역 유한회사 · 12,900원').waitFor();
     await page.screenshot({ path: path.join(output, 'saved.png'), fullPage: true });
     await page.goto(`${app}/my`);
+    // The stored nickname fills the field once it is read back; the new one replaces it after that.
+    await page.waitForFunction(() => document.querySelector('input[aria-label="닉네임"]')?.value === '테스터');
     await page.getByLabel('닉네임').fill('세이프픽');
     await page.getByText('닉네임 저장').click();
     await page.getByText('닉네임을 저장했어요.').waitFor();

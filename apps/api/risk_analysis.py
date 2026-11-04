@@ -5,6 +5,7 @@ import os
 import re
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date
 from typing import Literal
 
 from openai import APIConnectionError, APIStatusError, OpenAI
@@ -317,7 +318,65 @@ def review_checks(text: str) -> list[PurchaseCheck]:
             id="review_copied", category="review_pattern", kind="attention", title="같은 문장이 반복되는 리뷰",
             explanation="서로 다른 구매자의 후기에 같은 문장이 여러 번 나옵니다. 정해진 틀로 작성한 리뷰일 수 있습니다.",
             quotes=copied, how_to_check="문장이 겹치지 않는 후기, 사진·영상 후기, 낮은 별점 후기를 따로 확인해 주세요."))
+    # A reward for a five-star review buys the rating; a reward for any review is the platforms' own and is left alone.
+    rewards = list(dict.fromkeys(line for line in lines if _RATED_REWARD.search(line) and _REWARD.search(line)
+                                         and not _WARNING.search(line)))[:3]
+    if rewards:
+        checks.append(PurchaseCheck(
+            id="review_rated_reward", category="review_pattern", kind="attention", title="별점 조건 리뷰 보상",
+            explanation="별점 5점 리뷰를 남기면 적립금·사은품을 준다고 안내합니다. 보상을 조건으로 받은 리뷰라 평점이 실제보다 높을 수 "
+                        "있고, 보상을 대가로 한 리뷰 요청은 마켓 정책에도 어긋납니다.",
+            quotes=rewards, how_to_check="평점보다 낮은 별점 후기와 사진 후기의 내용을 확인해 주세요."))
+    # Disclosed sponsorship is honest, but a review section made mostly of it is not buyers' experience.
+    sponsored = list(dict.fromkeys(line for line in lines if _SPONSORED.search(line)))
+    if len(sponsored) >= 3:
+        checks.append(PurchaseCheck(
+            id="review_sponsored", category="review_pattern", kind="attention", title="협찬·체험단 리뷰가 많음",
+            explanation=f"'제품을 제공받아 작성' 같은 협찬·체험단 표기가 있는 리뷰가 {len(sponsored)}개 보입니다. 직접 산 구매자의 후기가 "
+                        "아니라 판매자가 제공한 상품으로 쓴 글입니다.",
+            quotes=sponsored[:3], how_to_check="협찬 표기가 없는 구매자 후기와 낮은 별점 후기를 따로 확인해 주세요."))
+    burst = review_burst(lines)
+    if burst:
+        checks.append(burst)
     return checks
+
+
+_RATED_REWARD = re.compile(r"(?:별점|평점)\s*5\s*점|5\s*점\s*(?:리뷰|후기|만점)|만점\s*(?:리뷰|후기)|포토\s*리뷰\s*5\s*점", re.I)
+_REWARD = re.compile(r"적립|증정|사은품|쿠폰|캐시백|환급|선물|추가\s*발송|현금")
+_SPONSORED = re.compile(r"(?:업체|판매자|브랜드|광고주)\s*(?:로부터|에게서|에서)\s*(?:제품|상품|체험\s*기회)?\s*(?:을|를)?\s*(?:무상\s*으?로?\s*)?"
+                        r"(?:제공|지원|협찬)\s*받|제품을\s*(?:무상\s*)?제공\s*받아|체험단|원고료|소정의\s*(?:원고료|수수료|대가)|협찬\s*(?:을|를)?\s*받")
+# Review dates on their own line (Coupang shows "2026.11.02" under each review).
+_REVIEW_DATE = re.compile(r"^(20\d{2})[.\-/]\s?(\d{1,2})[.\-/]\s?(\d{1,2})\.?$")
+# Most of the visible reviews within a few days of each other, when there are enough of them to tell.
+BURST_MIN_REVIEWS = 10
+BURST_SHARE = 0.8
+BURST_DAYS = 3
+
+
+def review_burst(lines: list[str]) -> PurchaseCheck | None:
+    dates = []
+    for line in lines:
+        match = _REVIEW_DATE.match(line.strip())
+        if match:
+            try:
+                dates.append(date(int(match.group(1)), int(match.group(2)), int(match.group(3))))
+            except ValueError:
+                continue
+    if len(dates) < BURST_MIN_REVIEWS:
+        return None
+    dates.sort()
+    best, start = 0, 0
+    for end in range(len(dates)):
+        while (dates[end] - dates[start]).days >= BURST_DAYS:
+            start += 1
+        best = max(best, end - start + 1)
+    if best < len(dates) * BURST_SHARE:
+        return None
+    return PurchaseCheck(
+        id="review_burst", category="review_pattern", kind="attention", title="짧은 기간에 몰린 리뷰",
+        explanation=f"보이는 리뷰 {len(dates)}개 중 {best}개가 {BURST_DAYS}일 안에 작성됐습니다. 한꺼번에 등록한 리뷰일 수 있습니다.",
+        quotes=[f"리뷰 작성일 {dates[0].isoformat()} ~ {dates[-1].isoformat()}"],
+        how_to_check="리뷰 정렬을 최신순으로 바꿔 날짜를 확인하고, 오래된 구매자의 후기와 낮은 별점 후기를 확인해 주세요.")
 
 
 def complete_analysis(conditions: ListingConditions, checks: list[PurchaseCheck], text: str, rejected: bool) -> RiskAnalysis:

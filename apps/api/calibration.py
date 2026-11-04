@@ -152,9 +152,9 @@ def evaluate(rows: list[tuple[dict, RiskAssessment]]) -> dict:
 def candidate_settings() -> list[Settings]:
     presets = {
         "현재 가중치": dict(WEIGHTS),
-        "판매자 중심": {"official": 20, "description": 15, "purchase_terms": 10, "seller": 35, "price": 20, "history": 30},
-        "가격 중심": {"official": 20, "description": 15, "purchase_terms": 15, "seller": 25, "price": 25, "history": 20},
-        "설명 중심": {"official": 20, "description": 30, "purchase_terms": 20, "seller": 20, "price": 10, "history": 15},
+        "판매자 중심": {"official": 20, "description": 15, "purchase_terms": 10, "seller": 35, "price": 20, "history": 30, "claims": 15},
+        "가격 중심": {"official": 20, "description": 15, "purchase_terms": 15, "seller": 25, "price": 25, "history": 20, "claims": 10},
+        "설명 중심": {"official": 20, "description": 30, "purchase_terms": 20, "seller": 20, "price": 10, "history": 15, "claims": 15},
         "균등": {key: 20 for key in WEIGHTS},
     }
     settings = []

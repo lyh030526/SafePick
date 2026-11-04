@@ -55,6 +55,38 @@ class AnalysisRequest(BaseModel):
         return self
 
 
+class ProductOption(BaseModel):
+    """One choice in the listing's option list, as the page prices it. `price` is the option's own price in won digits,
+    "+5000" when only a surcharge on the shown price is printed, or 확인 불가."""
+    name: str = Field(max_length=120)
+    price: str = Field(default=UNKNOWN, max_length=20)
+    # The product itself in some colour, size or capacity, or something else sold alongside it (a case, a cable, a gift).
+    kind: Literal["main", "addon"] = "main"
+
+
+class ListingClaim(BaseModel):
+    """A sentence where the page says the product is genuine or the seller is official, quoted from the page."""
+    kind: Literal["genuine", "official_seller", "official_import", "authorized"]
+    quote: str = Field(max_length=300)
+
+
+class ListingMark(BaseModel):
+    """An official or certification mark the page shows, in its text or (from attached screenshots) its images."""
+    name: str = Field(max_length=120)
+    source: Literal["text", "image"] = "text"
+
+
+class OfferDetails(BaseModel):
+    """How the page presents its price: the headline price before an option is chosen, a list price it is discounted from,
+    the discount it claims and until when, and the genuineness claims and marks it shows."""
+    display_price: str = Field(default=UNKNOWN, max_length=20)
+    list_price: str = Field(default=UNKNOWN, max_length=20)
+    discount_percent: int | None = Field(default=None, ge=0, le=100)
+    discount_ends: str = Field(default=UNKNOWN, max_length=20)
+    claims: list[ListingClaim] = Field(default_factory=list, max_length=8)
+    marks: list[ListingMark] = Field(default_factory=list, max_length=8)
+
+
 class ProductDetails(BaseModel):
     brand_name: str = Field(description="브랜드명. 근거가 없으면 확인 불가")
     product_name: str = Field(description="판매 중인 상품명. 근거가 없으면 확인 불가")
@@ -63,6 +95,10 @@ class ProductDetails(BaseModel):
     currency: str = Field(description="가격 통화. 근거가 없으면 확인 불가")
     seller_name: str = Field(description="판매자 또는 판매처명. 근거가 없으면 확인 불가")
     components: list[str] = Field(description="상품 구성품. 근거가 없으면 확인 불가 한 항목만 담는다")
+    options: list[ProductOption] = Field(default_factory=list, max_length=30)
+    # What the listing says it is selling: new, refurbished, used or display stock, or a parallel import.
+    condition: Literal["new", "refurbished", "used", "display", "parallel_import", "unknown"] = "unknown"
+    offer: OfferDetails = Field(default_factory=OfferDetails)
 
 
 class SourceSummary(BaseModel):
@@ -170,7 +206,7 @@ class PurchaseCheck(BaseModel):
 
 
 class RiskCriterion(BaseModel):
-    key: Literal["official", "description", "purchase_terms", "seller", "price", "history"]
+    key: Literal["official", "description", "purchase_terms", "seller", "price", "history", "claims"]
     label: str
     status: Literal["confirmed", "partial", "attention", "unknown"]
     detail: str
@@ -248,7 +284,7 @@ class MarketListing(BaseModel):
 
 
 class MarketPrice(BaseModel):
-    status: Literal["far_below", "below", "typical", "insufficient", "no_model", "no_price", "unavailable"] = "unavailable"
+    status: Literal["far_below", "below", "typical", "insufficient", "no_model", "no_price", "not_new", "unavailable"] = "unavailable"
     label: str = "시세 확인 불가"
     message: str = "같은 상품의 시세를 확인하지 못했습니다."
     query: str | None = None
@@ -259,6 +295,25 @@ class MarketPrice(BaseModel):
     ratio_percent: int | None = None
     match_count: int = 0
     listings: list[MarketListing] = Field(default_factory=list)
+    # The shown price is far below every option of the product itself: the price that is actually paid is an option's.
+    option_bait: bool = False
+    option_price: str | None = None
+    option_note: str | None = None
+    # A list price the discount is taken from that sits far above what the market charges, and a discount deadline that
+    # has already passed or is close; both are shown with the price, the first also counts against the price criterion.
+    list_inflated: bool = False
+    list_note: str | None = None
+    discount_note: str | None = None
+
+
+class ClaimCheck(BaseModel):
+    """The page's genuineness and official-seller claims and marks, held against who the seller actually is."""
+    status: Literal["confirmed", "contradicted", "unverified"] = "unverified"
+    label: str
+    message: str
+    claims: list[ListingClaim] = Field(default_factory=list)
+    marks: list[ListingMark] = Field(default_factory=list)
+    brand_owner: str | None = None
 
 
 class ReviewComplaints(BaseModel):
@@ -277,6 +332,7 @@ class RiskAnalysis(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     assessment: RiskAssessment = Field(default_factory=RiskAssessment)
     review_complaints: ReviewComplaints | None = None
+    claim_check: ClaimCheck | None = None
 
 
 class ComparisonResponse(BaseModel):
@@ -336,3 +392,68 @@ class GroupAnalysisResponse(BaseModel):
     model_number: str
     summary: str
     warnings: list[str] = Field(default_factory=list)
+
+
+class ConversationCheckRequest(BaseModel):
+    """A conversation with a seller, as screenshots or pasted text. Nothing of it is stored."""
+    images: list[AnalysisImage] = Field(default_factory=list, max_length=4)
+    text: str | None = Field(default=None, max_length=8000)
+    # Where the conversation took place: the marketplace's own inquiry or chat, or a messenger or text message outside it.
+    channel: Literal["marketplace", "messenger", "unknown"] = "unknown"
+
+    @model_validator(mode="after")
+    def material_required(self):
+        if not self.images and not (self.text or "").strip():
+            raise ValueError("대화 캡처를 첨부하거나 대화 내용을 붙여넣어 주세요.")
+        if sum(len(image.base64_data) for image in self.images) > 11_184_816:
+            raise ValueError("이미지는 합계 8MB 이내로 첨부해 주세요.")
+        return self
+
+
+class ConversationSignal(BaseModel):
+    kind: Literal["off_platform_payment", "fake_safe_payment", "payment_link", "off_platform_contact", "impersonation",
+                  "refund_lure", "personal_info", "urgency", "too_good"]
+    label: str
+    severity: Literal["high", "moderate", "info"]
+    quote: str
+    advice: str
+
+
+class ConversationLink(BaseModel):
+    url: str
+    domain: str | None = None
+    status: Literal["marketplace", "reported", "impersonates", "missing", "expired", "new_short", "new", "established",
+                    "unavailable"] = "unavailable"
+    label: str
+    message: str
+
+
+class ConversationCheck(BaseModel):
+    level: Literal["high", "moderate", "low", "undetermined"] = "undetermined"
+    label: str = "판단 보류"
+    summary: str
+    signals: list[ConversationSignal] = Field(default_factory=list)
+    links: list[ConversationLink] = Field(default_factory=list)
+    read_length: int = 0
+    warnings: list[str] = Field(default_factory=list)
+
+
+class AnalysisQuestion(BaseModel):
+    """A shopper's question about one analysis, answered only from that analysis' own findings."""
+    question: str = Field(min_length=2, max_length=300)
+    product: ProductDetails
+    risk_analysis: RiskAnalysis
+    seller_verification: SellerVerification | None = None
+    market_price: MarketPrice | None = None
+    comparison: ProductComparison | None = None
+
+
+class AnswerCitation(BaseModel):
+    id: str
+    text: str
+
+
+class AnalysisAnswer(BaseModel):
+    status: Literal["answered", "unavailable"] = "answered"
+    answer: str
+    citations: list[AnswerCitation] = Field(default_factory=list)

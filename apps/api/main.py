@@ -8,19 +8,22 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from accounts import delete_account
+from chat_check import check_conversation
+from claims_check import check_claims
 from comparison import compare_product
 from group_comparison import compare_group
 from extractor import extract_product_details, generate_official_search_query, transcribe_images, unknown_product
 from market_price import check_market_price
 from official_brands import OFFICIAL_BRANDS, find_official_brand
 from official_search import OfficialSearchError, search_official_pages
+from question_answer import answer_question
 from request_limits import AnalysisBodyLimit, AnalysisRateLimit
 from risk_analysis import analyze_listing_risks, review_complaints
 from domain_check import check_domain
 from risk_assessment import assess_risk
 from schemas import (
-    AnalysisRequest, AnalysisResponse, ComparisonRequest, ComparisonResponse, GroupAnalysisRequest, GroupAnalysisResponse,
-    OfficialLookup,
+    AnalysisAnswer, AnalysisQuestion, AnalysisRequest, AnalysisResponse, ComparisonRequest, ComparisonResponse,
+    ConversationCheck, ConversationCheckRequest, GroupAnalysisRequest, GroupAnalysisResponse, OfficialLookup,
     ProductDetails, RiskAnalysis, SourceSummary, SupportedBrand, UNKNOWN,
 )
 from scraper import FOOTER_LENGTH, RETURN_TERMS, ProductPage, ProductPageError, fetch_product_page
@@ -126,11 +129,13 @@ def analyze_product(product, url, title, text, entered_url=None):
         analysis = risk_future.result()
         seller = seller_future.result()
         market = market_future.result()
+    claims = check_claims(product, seller, text, market)
     # A brand without a supported official site has nothing to compare, so the criterion is left out of the score.
     assessment = assess_risk(analysis, None if lookup.status == "not_supported" else comparison, seller, market,
-                             domain=domain_future.result())
+                             domain=domain_future.result(), claims=claims)
     complaints = review_complaints(text, seller.seller.business_name)
-    return lookup, comparison, analysis.model_copy(update={"assessment": assessment, "review_complaints": complaints}), seller, market
+    return lookup, comparison, analysis.model_copy(update={"assessment": assessment, "review_complaints": complaints,
+                                                           "claim_check": claims}), seller, market
 
 
 def analyze_provided(request: AnalysisRequest) -> AnalysisResponse:
@@ -186,6 +191,16 @@ def with_return_policy(page: ProductPage) -> ProductPage:
 
 
 app.delete("/account")(delete_account)
+
+
+@app.post("/conversation-checks", response_model=ConversationCheck)
+def create_conversation_check(request: ConversationCheckRequest) -> ConversationCheck:
+    return check_conversation(request)
+
+
+@app.post("/analysis-questions", response_model=AnalysisAnswer)
+def create_analysis_answer(request: AnalysisQuestion) -> AnalysisAnswer:
+    return answer_question(request)
 
 
 @app.post("/group-analyses", response_model=GroupAnalysisResponse)

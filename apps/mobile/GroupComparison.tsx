@@ -63,7 +63,7 @@ export function GroupComparisonScreen({ apiBaseUrl }: { apiBaseUrl: string }) {
       <Text style={styles.title}>같은 상품 판매 페이지 비교</Text>
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
         : !result ? <View style={styles.card}>
-          <ActivityIndicator color={colors.blue} />
+          <ActivityIndicator color={colors.brand} />
           <Text style={styles.body}>{listings ? `판매 페이지 ${listings.length}곳을 하나씩 분석하고 있어요. 몇 분 걸릴 수 있어요.` : '확장 프로그램의 비교 목록을 기다리고 있어요.'}</Text>
         </View>
         : <GroupResultView result={result} />}
@@ -141,8 +141,8 @@ const styles = StyleSheet.create({
   body: { color: colors.textSub, fontSize: 15, lineHeight: 23 },
   meta: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
   actions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 },
-  secondary: { borderRadius: radius.button, backgroundColor: colors.blueSoft, paddingHorizontal: 14, paddingVertical: 9 },
-  secondaryText: { color: colors.blueText, fontSize: 14, fontWeight: '700' },
+  secondary: { borderRadius: radius.button, backgroundColor: colors.brandSoft, paddingHorizontal: 14, paddingVertical: 9 },
+  secondaryText: { color: colors.brandText, fontSize: 14, fontWeight: '700' },
   detail: { gap: 8, marginTop: 4 },
   error: { color: colors.red, fontSize: 15, lineHeight: 23, backgroundColor: colors.redSoft, borderRadius: radius.card, padding: 16 },
   disclaimer: { color: colors.textMuted, fontSize: 12, lineHeight: 18, paddingHorizontal: 4 },
