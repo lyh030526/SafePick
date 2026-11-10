@@ -296,7 +296,7 @@ class MarketListing(BaseModel):
 
 
 class MarketPrice(BaseModel):
-    status: Literal["far_below", "below", "typical", "insufficient", "no_model", "no_price", "not_new", "unavailable"] = "unavailable"
+    status: Literal["far_below", "below", "typical", "reference", "insufficient", "no_model", "no_price", "not_new", "unavailable"] = "unavailable"
     label: str = "시세 확인 불가"
     message: str = "같은 상품의 시세를 확인하지 못했습니다."
     query: str | None = None

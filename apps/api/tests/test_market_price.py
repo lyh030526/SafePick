@@ -84,11 +84,31 @@ class MarketPriceTests(unittest.TestCase):
 
     @patch("market_price.httpx.post")
     def test_too_few_matches_or_no_price_withhold_judgement(self, post):
-        post.return_value = shopping(*MARKET[:2])
+        post.return_value = shopping()
         self.assertEqual(check_market_price(product()).status, "insufficient")
         post.return_value = shopping(*MARKET)
         result = check_market_price(product(price="확인 불가"))
         self.assertEqual((result.status, result.median_price, result.ratio_percent), ("no_price", "405000", None))
+
+    @patch("market_price.httpx.post")
+    def test_one_or_two_shops_are_a_reference_that_is_not_judged(self, post):
+        post.return_value = shopping(*MARKET[:2])
+        result = check_market_price(product(price="150,000"))
+        self.assertEqual((result.status, result.label, result.match_count, result.ratio_percent), ("reference", "참고 가격", 2, None))
+        self.assertEqual(result.median_price, "410000")
+        self.assertIn("점수에는 넣지 않았습니다", result.message)
+
+    @patch("market_price.httpx.post")
+    def test_a_short_code_counts_only_with_the_brand_in_the_title(self, post):
+        post.return_value = shopping(("사운독스 Y-07 노이즈캔슬링 이어폰", "G마켓", "₩39,000"),
+                                     ("사운독스 Y07 블루투스 이어폰", "11번가", "₩41,000"),
+                                     ("SOUNDOX 사운독스 Y 07", "옥션", "₩40,000"),
+                                     ("Y-07 이어폰 무선", "어딘가몰", "₩9,000"))  # no brand: another maker's Y-07
+        item = ProductDetails(brand_name="사운독스", product_name="노이즈 캔슬링 이어폰", model_number="Y-07", price="38,000",
+                              currency="KRW", seller_name="사운독스", components=["이어폰"])
+        result = check_market_price(item)
+        self.assertEqual((result.status, result.match_count, result.median_price), ("typical", 3, "40000"))
+        self.assertEqual(check_market_price(item.model_copy(update={"brand_name": "확인 불가"})).status, "no_model")
 
     @patch("market_price.httpx.post", side_effect=httpx.ConnectTimeout("timeout"))
     def test_network_failure_is_unavailable(self, _post):
@@ -102,8 +122,8 @@ if __name__ == "__main__":
 class NameFallbackTests(unittest.TestCase):
     def test_a_named_product_is_found_when_shops_leave_the_model_code_out(self):
         from market_price import _name_pattern
-        matches, query = _name_pattern("레드미 버즈 6 플레이", "샤오미")
-        self.assertEqual(query, "레드미 버즈 6 플레이")
+        matches, query, numbered = _name_pattern("레드미 버즈 6 플레이", "샤오미")
+        self.assertEqual((query, numbered), ("레드미 버즈 6 플레이", True))
         self.assertTrue(matches("샤오미 레드미 버즈6 플레이 블루투스 이어폰"))
         self.assertFalse(matches("샤오미 레드미 버즈6 라이트 블루투스 이어폰"))  # another tier
         self.assertFalse(matches("샤오미 레드미 버즈 7 플레이"))  # another number
@@ -111,3 +131,34 @@ class NameFallbackTests(unittest.TestCase):
         # Generic or brandless names are not compared at all.
         self.assertIsNone(_name_pattern("무선 블루투스 이어폰", "TECNONEXO")[0])
         self.assertIsNone(_name_pattern("갤럭시 버즈3 프로", "")[0])
+
+    def test_a_name_without_numbers_needs_every_word_and_the_brand(self):
+        from market_price import _name_pattern
+        matches, query, numbered = _name_pattern("다이슨 에어랩 i.d 멀티 스타일러 앤 드라이어", "다이슨")
+        self.assertEqual((query, numbered), ("다이슨 에어랩 멀티 스타일러 드라이어", False))
+        self.assertTrue(matches("[국내정품] 다이슨 에어랩 i.d 멀티 스타일러 앤 드라이어 블루"))
+        self.assertFalse(matches("다이슨 에어랩 멀티 스타일러 블루"))  # a word missing
+        self.assertFalse(matches("에어랩 멀티 스타일러 드라이어 호환"))  # no brand
+        self.assertIsNone(_name_pattern("다이슨 에어랩", "다이슨")[0])  # too few words besides the brand
+
+
+@patch.dict(os.environ, {"SERPER_API_KEY": "test-key"})
+class NameOnlyMarketTests(unittest.TestCase):
+    def item(self, price):
+        return ProductDetails(brand_name="캘빈클라인", product_name="캘빈클라인 CK 이터너티 포 맨 EDT", model_number="확인 불가",
+                              price=price, currency="KRW", seller_name="향수가게", components=["향수"])
+
+    @patch("market_price.httpx.post")
+    def test_a_numberless_name_is_judged_when_prices_agree(self, post):
+        post.return_value = shopping(*[(f"캘빈클라인 CK 이터너티 포 맨 EDT {i}", "몰", price)
+                                       for i, price in enumerate(["₩52,000", "₩55,000", "₩58,000"])])
+        self.assertEqual(check_market_price(self.item("54,000")).status, "typical")
+
+    @patch("market_price.httpx.post")
+    def test_a_wide_spread_from_a_numberless_name_is_only_a_reference(self, post):
+        # 30ml and 100ml bottles under the same name: a cheap price against them is not a finding.
+        post.return_value = shopping(*[(f"캘빈클라인 CK 이터너티 포 맨 EDT {i}", "몰", price)
+                                       for i, price in enumerate(["₩35,000", "₩60,000", "₩89,000"])])
+        result = check_market_price(self.item("20,000"))
+        self.assertEqual(result.status, "reference")
+        self.assertIn("용량·구성이 다를 수 있어", result.message)

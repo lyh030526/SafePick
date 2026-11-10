@@ -109,7 +109,7 @@ def replay(response: dict, settings: Settings = Settings(), url: str | None = No
         comparison = None
     seller = SellerVerification.model_validate(response["seller_verification"]) if response.get("seller_verification") else None
     market = MarketPrice.model_validate(response["market_price"]) if response.get("market_price") else None
-    if market is not None and market.ratio_percent is not None:
+    if market is not None and market.ratio_percent is not None and market.status in {"typical", "below", "far_below"}:
         status, label, message = rate_ratio(market.ratio_percent, settings.far_below, settings.below)
         market = market.model_copy(update={"status": status, "label": label, "message": message})
     saved = (response["risk_analysis"].get("assessment") or {}).get("domain")

@@ -3,7 +3,7 @@ import { colors } from './theme';
 import { Disclosure, Icon, text } from './ui';
 
 export type MarketPrice = {
-  status: 'far_below' | 'below' | 'typical' | 'insufficient' | 'no_model' | 'no_price' | 'not_new' | 'unavailable';
+  status: 'far_below' | 'below' | 'typical' | 'reference' | 'insufficient' | 'no_model' | 'no_price' | 'not_new' | 'unavailable';
   label: string;
   message: string;
   query: string | null;
@@ -23,7 +23,7 @@ export type MarketPrice = {
 };
 
 const tones = {
-  typical: 'good', below: 'warn', far_below: 'bad', insufficient: 'neutral', no_model: 'neutral',
+  typical: 'good', below: 'warn', far_below: 'bad', reference: 'neutral', insufficient: 'neutral', no_model: 'neutral',
   no_price: 'neutral', not_new: 'neutral', unavailable: 'neutral',
 } as const;
 
@@ -34,14 +34,15 @@ export function MarketPriceCard({ market }: { market: MarketPrice | null }) {
   // A bait price is the finding that matters most here, whatever the market comparison found.
   const tone = market.option_bait || market.list_inflated ? 'warn' : tones[market.status];
   const notes = [market.option_note, market.list_note, market.discount_note].filter((note): note is string => !!note);
+  const reference = market.status === 'reference';
   const rows = [
     ['판매가', market.sale_price ? won(market.sale_price) : null],
-    ['시세 중앙값', market.median_price ? won(market.median_price) : null],
-    ['시세 범위', market.min_price && market.max_price ? `${won(market.min_price)} ~ ${won(market.max_price)}` : null],
+    [reference ? '참고 가격 중간값' : '시세 중앙값', market.median_price ? won(market.median_price) : null],
+    [reference ? '참고 가격 범위' : '시세 범위', market.min_price && market.max_price ? `${won(market.min_price)} ~ ${won(market.max_price)}` : null],
     ['비교한 판매처', market.match_count ? `${market.match_count}곳` : null],
   ].filter((row): row is [string, string] => Boolean(row[1]));
   return <Disclosure accessibilityLabel={`가격 시세 비교 ${market.label}`} title="가격 시세 비교" icon="pricetags-outline"
-    status={market.option_bait ? '대표 가격과 옵션 가격 차이' : market.list_inflated ? `${market.label} · 부풀린 정가 의심` : market.ratio_percent !== null ? `${market.label} · 시세의 ${market.ratio_percent}%` : market.label} tone={tone}>
+    status={market.option_bait ? '대표 가격과 옵션 가격 차이' : market.list_inflated ? `${market.label} · 부풀린 정가 의심` : market.ratio_percent !== null ? `${market.label} · ${reference ? '참고 가격' : '시세'}의 ${market.ratio_percent}%` : market.label} tone={tone}>
       {notes.map(note => <View key={note} style={styles.bait}>
         <Icon name="pricetag-outline" size={17} color={colors.orangeText} />
         <Text style={[text.body, styles.flex]}>{note}</Text>
@@ -66,7 +67,7 @@ export function MarketPriceCard({ market }: { market: MarketPrice | null }) {
         </Pressable>)}
       </View> : null}
       <Text style={text.small}>
-        {market.query ? `'${market.query}'로 검색한 ` : ''}Google 쇼핑 결과 중 같은 모델명의 새 상품만 비교했어요. 옵션·구성·배송비 차이는 반영하지 않으며, 시세 범위라도 정품이나 판매자를 보증하지 않아요.
+        {market.query ? `'${market.query}'로 검색한 ` : ''}Google 쇼핑 결과 중 같은 모델명이나 같은 브랜드·상품명의 새 상품만 비교했어요. 옵션·구성·배송비 차이는 반영하지 않으며, 시세 범위라도 정품이나 판매자를 보증하지 않아요.
       </Text>
   </Disclosure>;
 }

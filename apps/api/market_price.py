@@ -1,7 +1,8 @@
 """Market price check: the sale price against other shops selling the same model.
 
-Uses Google Shopping results through Serper (Korean market). Only listings whose title carries the same model number are
-compared, so products without a model number are left undetermined rather than guessed.
+Uses Google Shopping results through Serper (Korean market). Only listings of the same product are compared: the same
+model code, or the same brand and name. A product found at only one or two other shops, as small makers' products often
+are, gets those prices as a reference that does not count toward the verdict.
 """
 import html
 import os
@@ -19,6 +20,9 @@ from schemas import UNKNOWN, MarketListing, MarketPrice, ProductDetails
 
 SHOPPING_URL = "https://google.serper.dev/shopping"
 MIN_MATCHES = 3
+# A product matched by name alone, with no number in it, may be a different size or edition at another shop; the same
+# product's prices sit close together, so a spread wider than this makes the comparison a reference only.
+NAME_ONLY_SPREAD = 2
 FAR_BELOW_PERCENT = 50
 BELOW_PERCENT = 70
 # Used, refurbished, rental, accessory, and bundle listings are not the same offer.
@@ -28,12 +32,16 @@ _EXCLUDED = ["중고", "리퍼", "전시", "반품", "렌탈", "대여", "케이
 _USED_SOURCES = re.compile(r"번개장터|중고나라|당근|후루츠|헬로마켓|세컨웨어|렌탈|bunjang|joongna|fruitsfamily", re.I)
 
 
-def _model_pattern(model: str) -> re.Pattern | None:
+def _model_pattern(model: str, brand: str = "") -> re.Pattern | None:
     chars = re.findall(r"[0-9A-Za-z]", model)
-    if len(chars) < 4 or not any(char.isdigit() for char in chars):
+    # Small makers use short codes (Y-07); three characters are too common to match alone, so the brand must be known
+    # and appear in the title too.
+    short = len(chars) == 3 and any(char.isalpha() for char in chars)
+    if len(chars) < 4 and not (short and brand) or not any(char.isdigit() for char in chars):
         return None
     # Separators may differ between shops (WH-1000XM5, WH 1000XM5) but XM5 must not match XM50.
-    return re.compile(r"(?<![0-9A-Za-z])" + r"[\s\-_/.]*".join(map(re.escape, chars)) + r"(?![0-9A-Za-z])", re.I)
+    code = r"(?<![0-9A-Za-z])" + r"[\s\-_/.]*".join(map(re.escape, chars)) + r"(?![0-9A-Za-z])"
+    return re.compile(rf"(?=.*{re.escape(brand)}).*{code}" if short else code, re.I)
 
 
 def rate_ratio(ratio: int, far_below: int = FAR_BELOW_PERCENT, below: int = BELOW_PERCENT) -> tuple[str, str, str]:
@@ -57,26 +65,37 @@ _TIERS = {"프로", "플러스", "울트라", "맥스", "미니", "라이트", "
           "pro", "plus", "ultra", "max", "mini", "lite", "play", "active", "air", "edge", "fold", "flip", "slim", "se", "fe"}
 
 
+# Words that say what kind of product it is, not which one: a name made only of them ("무선 블루투스 이어폰") is not one product.
+_GENERIC = {"무선", "유선", "블루투스", "이어폰", "헤드폰", "헤드셋", "이어버드", "노이즈", "캔슬링", "스피커", "충전", "고속", "휴대용",
+            "운동화", "신발", "스니커즈", "런닝화", "슬리퍼", "샌들", "남성", "여성", "남성용", "여성용", "남녀공용", "아동", "키즈",
+            "향수", "지갑", "반지갑", "장지갑", "카드지갑", "가방", "백팩", "정품", "국내", "국내정품", "신상", "신형", "최신",
+            "공식", "선물", "선물포장", "가정용", "업소용", "대용량", "미니", "블랙", "화이트", "그레이", "네이비", "베이지", "멀티",
+            "스타일러", "드라이어", "청소기", "가습기", "선풍기", "전기", "자동", "스마트", "프리미엄", "데일리", "세트", "케이스"}
+
+
 def _name_pattern(name: str, brand: str = ""):
     """A matcher for listings of the same named product when its model code is not in shop titles ("레드미 버즈 6
-    플레이" for M2420E1): every number and nearly every word of the name must appear. A name without a number
-    ("무선 블루투스 이어폰") is too generic to compare, and so is one without a brand, which every title must also carry
-    so that another company's look-alike is not taken for the same product."""
+    플레이" for M2420E1), the matcher's query, and whether the name has a number. With a number, every number and
+    nearly every word must appear; without one ("다이슨 에어랩 멀티 스타일러"), every word must, and at least three
+    besides the brand, one of them more than a kind of product. Every title must carry the brand, so another company's look-alike is not taken for the same
+    product; a name without a brand, or too few words ("무선 블루투스 이어폰"), is too generic to compare."""
     # Shops write "버즈6" and "버즈 6" alike, so letters and numbers are split apart on both sides.
     split = lambda text: re.sub(r"(?<=[가-힣a-z])(?=\d)|(?<=\d)(?=[가-힣a-z])", " ", text.lower())
     name = split(re.sub(r"\([^)]*\)|\[[^\]]*\]|,.*$", " ", name or ""))
     words = [word.lower() for word in re.findall(r"[0-9A-Za-z가-힣]+", name) if len(word) >= 2 or word.isdigit()][:7]
     numbers = [word for word in words if any(char.isdigit() for char in word)]
-    if len(words) < 2 or not numbers or not brand:
-        return None, ""
+    own = [word for word in words if word not in brand.lower() and brand.lower() not in word]
+    if not brand or len(words) < 2 or not numbers and (len(own) < 3 or not set(own) - _GENERIC):
+        return None, "", False
+    share = 0.8 if numbers else 1
 
     def matches(title: str) -> bool:
         title = split(title)
         tokens = set(re.findall(r"[0-9a-z가-힣]+", title))
         return (brand.lower() in title and all(number in tokens for number in numbers)
                 and tokens & _TIERS == set(words) & _TIERS
-                and sum(word in title for word in words) >= len(words) * 0.8)
-    return matches, " ".join(words)
+                and sum(word in title for word in words) >= len(words) * share)
+    return matches, " ".join(words), bool(numbers)
 
 
 def _search(key: str, query: str) -> list:
@@ -158,7 +177,7 @@ def discount_notes(product: ProductDetails, market: MarketPrice, today: date) ->
     """What the page's list price and discount deadline say, against the market and today's date."""
     offer, update = product.offer, {}
     listed = parse_price(offer.list_price) if offer.list_price != UNKNOWN else None
-    if listed is not None and market.median_price and listed >= Decimal(market.median_price) * INFLATED_LIST_MULTIPLE:
+    if listed is not None and market.status in {"typical", "below", "far_below"} and market.median_price and listed >= Decimal(market.median_price) * INFLATED_LIST_MULTIPLE:
         update.update(list_inflated=True, list_note=(
             f"할인 전 가격으로 표시한 {_won(listed)}원은 같은 모델 시세 중앙값({market.median_price}원)의 "
             f"{int(listed * 100 / Decimal(market.median_price))}%입니다. 부풀린 정가에서 깎아 준 것처럼 보이게 하는 할인일 수 있으니 "
@@ -195,9 +214,9 @@ def _check_market_price(product: ProductDetails) -> MarketPrice:
         return MarketPrice(status="not_new", label="새 상품 시세와 비교하지 않음",
                            message=f"{kind} 상품이라 새 상품 시세와 비교하지 않았습니다. 상태 등급과 보증 기간을 확인해 주세요.")
     model = product.model_number.strip()
-    pattern = _model_pattern(model) if model != UNKNOWN else None
     brand_name = product.brand_name.strip() if product.brand_name.strip() != UNKNOWN else ""
-    by_name, name_query = _name_pattern(product.product_name if product.product_name != UNKNOWN else "", brand_name)
+    pattern = _model_pattern(model, brand_name) if model != UNKNOWN else None
+    by_name, name_query, numbered = _name_pattern(product.product_name if product.product_name != UNKNOWN else "", brand_name)
     if pattern is None and by_name is None:
         return MarketPrice(status="no_model", label="시세 판단 보류",
                            message="모델명이 확인되지 않아 같은 상품의 시세를 찾지 않았습니다. 모델명을 입력하면 비교할 수 있어요.")
@@ -206,23 +225,24 @@ def _check_market_price(product: ProductDetails) -> MarketPrice:
         return MarketPrice(message="원화 가격만 국내 쇼핑 시세와 비교합니다.")
     key = os.getenv("SERPER_API_KEY", "").strip()
     brand = product.brand_name.strip() if product.brand_name.strip() != UNKNOWN else ""
-    query = f"{brand} {model}".strip() if pattern else f"{brand} {name_query}".strip()
+    # The name often starts with the brand already; the search does not need it twice.
+    named_query = name_query if brand.lower() in name_query else f"{brand} {name_query}".strip()
+    query = f"{brand} {model}".strip() if pattern else named_query
     if not key:
         return MarketPrice(query=query, message="쇼핑 검색 키가 설정되지 않아 시세를 확인하지 못했습니다.")
     try:
         matches = _collect(_search(key, query), pattern.search, product) if pattern else []
+        loose = False
         # Shops often leave the model code out of titles, so the product name is the second way to find the same item.
         if len(matches) < MIN_MATCHES and by_name is not None:
-            named_query = f"{brand} {name_query}".strip()
             named = _collect(_search(key, named_query), by_name, product)
             if len(named) > len(matches):
-                matches, query = named, named_query
+                matches, query, loose = named, named_query, not numbered
     except (httpx.HTTPError, ValueError, KeyError, TypeError):
         return MarketPrice(query=query, message="쇼핑 시세 조회에 실패했습니다. 잠시 후 다시 시도해 주세요.")
-    if len(matches) < MIN_MATCHES:
-        return MarketPrice(status="insufficient", label="시세 판단 보류", query=query, match_count=len(matches),
-                           listings=matches[:3],
-                           message=f"같은 모델의 새 상품 판매처를 {len(matches)}곳만 찾아 시세를 계산하지 않았습니다.")
+    if not matches:
+        return MarketPrice(status="insufficient", label="시세 판단 보류", query=query,
+                           message="같은 상품을 파는 다른 판매처를 찾지 못했습니다. 브랜드 자사몰이나 다른 쇼핑몰의 가격을 직접 비교해 주세요.")
 
     prices = sorted(Decimal(item.price) for item in matches)
     middle = Decimal(median(prices))
@@ -238,6 +258,13 @@ def _check_market_price(product: ProductDetails) -> MarketPrice:
                            message="같은 모델의 시세는 찾았지만 판매 가격이 확인되지 않아 비교하지 않았습니다.")
     # Truncated, so the shown percent never sits on the other side of a threshold.
     ratio = int(sale * 100 / middle)
+    if len(matches) < MIN_MATCHES or loose and prices[-1] > prices[0] * NAME_ONLY_SPREAD:
+        reason = (f"같은 상품 판매처를 {len(matches)}곳만 찾아" if len(matches) < MIN_MATCHES
+                  else "이름으로 찾은 판매처끼리 가격 차이가 커서 용량·구성이 다를 수 있어")
+        # Too few or too mixed to call a price cheap, so no percentage is shown that would read as a verdict.
+        return MarketPrice(status="reference", label="참고 가격", sale_price=_won(sale), **market,
+                           message=f"{reason} 참고 가격으로만 보여 드려요. 구성·용량이 같은지 확인하고 비교해 주세요. "
+                                   "판정 점수에는 넣지 않았습니다.")
     status, label, message = rate_ratio(ratio)
     if product.condition == "parallel_import":
         message += " 병행수입 상품이라 국내 정식 수입품보다 싸거나 공식 AS가 다를 수 있습니다."
