@@ -14,6 +14,8 @@ export type SellerVerification = {
   number_source?: 'page' | 'registry';
   marketplace_rating?: number | null;
   rating_count?: number | null;
+  history?: { status: 'reopened' | 'renamed' | 'reopened_once' | 'other_numbers'; label: string; message: string;
+    closed_numbers: number; other_names: string[] } | null;
   mail_order?: {
     status: 'matched' | 'name_absent' | 'domain_differs' | 'mismatch' | 'closed' | 'not_found' | 'unavailable';
     label: string;
@@ -35,7 +37,8 @@ const mailTones = {
 
 export function SellerCheck({ verification }: { verification: SellerVerification | null }) {
   if (!verification) return null;
-  const tone = tones[verification.status];
+  // Closing and registering again outweighs an active registration on the row.
+  const tone = verification.history?.status === 'reopened' ? 'warn' : tones[verification.status];
   const { seller } = verification;
   const rows = [
     ['상호', seller.business_name], ['대표자', seller.representative], [verification.number_source === 'registry' ? '사업자등록번호 (상호·대표자로 찾음)' : '사업자등록번호', seller.business_number],
@@ -54,6 +57,11 @@ export function SellerCheck({ verification }: { verification: SellerVerification
         </View>)}
       </View> : null}
       {verification.mail_order ? <MailOrder check={verification.mail_order} /> : null}
+      {verification.history ? <View accessibilityLabel={`판매자 이력 ${verification.history.label}`} style={styles.mailOrder}>
+        <Text style={text.small}>공정위 통신판매업 신고 이력</Text>
+        <Pill label={verification.history.label} tone={verification.history.status === 'reopened' ? 'warn' : 'neutral'} dot />
+        <Text style={text.body}>{verification.history.message}</Text>
+      </View> : null}
       <Text style={text.small}>판매 페이지에 표시된 사업자 정보를 국세청 등록 상태와 공정위 통신판매업 신고와 대조한 결과예요. 표시된 정보가 실제 판매자의 것인지, 판매자를 믿을 수 있는지는 보증하지 않아요.</Text>
   </Disclosure>;
 }

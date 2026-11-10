@@ -8,7 +8,7 @@ a finding. No model calls: the claims and marks come from the product extraction
 import re
 
 from official_brands import find_official_brand
-from schemas import ClaimCheck, MarketPrice, ProductDetails, SellerVerification
+from schemas import ClaimCheck, MarketPrice, PhotoCheck, ProductDetails, SellerVerification
 
 # The companies that sell each supported brand in Korea under their own name.
 BRAND_OWNERS = {
@@ -25,7 +25,7 @@ def _flat(text: str) -> str:
 
 
 def check_claims(product: ProductDetails, seller: SellerVerification | None, text: str,
-                 market: MarketPrice | None = None) -> ClaimCheck | None:
+                 market: MarketPrice | None = None, photo: PhotoCheck | None = None) -> ClaimCheck | None:
     flat = _flat(text)
     # A claim must be on the page word for word; a reworded one is dropped.
     claims = [claim for claim in product.offer.claims if _flat(claim.quote) and _flat(claim.quote) in flat]
@@ -50,6 +50,8 @@ def check_claims(product: ProductDetails, seller: SellerVerification | None, tex
         contradictions.append(f"{brand.name} 공식 판매라고 하지만 판매자 사업자번호가 정상 사업자로 조회되지 않습니다.")
     if (kinds & {"genuine", "official_seller", "authorized"} or marks) and market is not None and market.status == "far_below":
         contradictions.append(f"정품·공식 판매라고 하지만 가격이 같은 모델 시세 중앙값의 {market.ratio_percent}%입니다.")
+    if (kinds & {"genuine", "official_seller", "authorized"} or marks) and photo is not None and photo.status == "overseas_cheap":
+        contradictions.append(f"정품·공식 판매라고 하지만 같은 상품 사진이 해외 저가 마켓 {photo.overseas_count}곳에서 쓰입니다.")
     if contradictions:
         return ClaimCheck(status="contradicted", label="정품·공식 주장과 맞지 않는 정보",
                           message=" ".join(contradictions) + " 공식 판매처 여부를 브랜드 공식 사이트에서 직접 확인해 주세요.", **base)

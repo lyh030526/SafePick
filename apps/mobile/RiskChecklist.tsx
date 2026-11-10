@@ -13,6 +13,7 @@ export type RiskAnalysis = {
   warnings: string[];
   review_complaints?: { low_reviews: number; complaints: number; same_seller: number; quotes: string[] } | null;
   claim_check?: ClaimCheck | null;
+  photo_check?: PhotoCheck | null;
   assessment?: {
     level: 'high' | 'moderate' | 'low' | 'undetermined'; label: string; summary: string;
     reasons: string[]; missing_checks: string[];
@@ -27,6 +28,28 @@ type Level = keyof typeof levels;
 export type ClaimCheck = { status: 'confirmed' | 'contradicted' | 'unverified'; label: string; message: string;
   claims: { kind: string; quote: string }[]; marks: { name: string; source: 'text' | 'image' }[]; brand_owner: string | null };
 const claimTones = { confirmed: 'good', contradicted: 'warn', unverified: 'neutral' } as const;
+export type PhotoCheck = { status: 'overseas_cheap' | 'reported' | 'official' | 'elsewhere' | 'none' | 'unavailable'; label: string;
+  message: string; match_count: number; overseas_count: number;
+  matches: { title: string; source: string; link: string; kind: 'reported' | 'overseas_cheap' | 'second_hand' | 'official' | 'other' }[] };
+const photoTones = { overseas_cheap: 'warn', reported: 'warn', official: 'neutral', elsewhere: 'neutral', none: 'neutral', unavailable: 'neutral' } as const;
+const matchLabels = { reported: '사기 의심 사이트', overseas_cheap: '해외 저가 마켓', second_hand: '중고 거래', official: '공식 사이트', other: '' };
+
+// Other pages using the listing's main photo; shown for reference, it counts only against a genuineness claim.
+export function PhotoCard({ check }: { check: PhotoCheck | null | undefined }) {
+  if (!check || check.status === 'unavailable') return null;
+  return <Disclosure accessibilityLabel={`같은 사진 ${check.label}`} title="같은 사진이 쓰인 곳" icon="images-outline"
+    status={check.label} tone={photoTones[check.status]}>
+    <Text style={text.body}>{check.message}</Text>
+    {check.matches.map(match => <Pressable key={match.link} accessibilityRole="link" onPress={() => Linking.openURL(match.link)}
+      style={styles.photoMatch}>
+      <View style={styles.flex}>
+        <Text numberOfLines={1} style={text.strong}>{match.title || match.source}</Text>
+        <Text numberOfLines={1} style={text.small}>{[matchLabels[match.kind], match.source].filter(Boolean).join(' · ')}</Text>
+      </View>
+      <Icon name="open-outline" size={16} color={colors.textMuted} />
+    </Pressable>)}
+  </Disclosure>;
+}
 
 // The page's genuineness and official claims and marks, against who the seller is; a mark alone earns nothing.
 export function ClaimCard({ check }: { check: ClaimCheck | null | undefined }) {
@@ -263,6 +286,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   condition: { paddingVertical: 4, gap: 6 },
   conditionDivider: { borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 14 },
+  photoMatch: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line },
   sourceLink: { flexDirection: 'row', gap: 6, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
   warning: { paddingHorizontal: 4 },
 });

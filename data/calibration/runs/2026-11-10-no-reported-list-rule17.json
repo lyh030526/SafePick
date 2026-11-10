@@ -1,0 +1,1474 @@
+{
+ "measured_at": "2026-11-10T03:36:59.363132+00:00",
+ "rule_version": "17",
+ "reported_list": "excluded",
+ "cases": {
+  "trusted": 25,
+  "risky": 67
+ },
+ "A_replay_saved_evidence": {
+  "trusted": {
+   "undetermined": 19,
+   "low": 6
+  },
+  "risky": {
+   "moderate": 31,
+   "undetermined": 25,
+   "high": 11
+  },
+  "trusted_total": 25,
+  "risky_total": 67,
+  "false_alarm_percent": 0.0,
+  "trusted_low_percent": 24.0,
+  "risky_flagged_percent": 62.7,
+  "risky_missed_low": 0
+ },
+ "B_fresh_analysis": {
+  "trusted": {
+   "undetermined": 17,
+   "low": 8
+  },
+  "risky": {
+   "moderate": 32,
+   "undetermined": 23,
+   "high": 12
+  },
+  "trusted_total": 25,
+  "risky_total": 67,
+  "false_alarm_percent": 0.0,
+  "trusted_low_percent": 32.0,
+  "risky_flagged_percent": 65.7,
+  "risky_missed_low": 0
+ },
+ "B_errors": [],
+ "B_seconds": {
+  "median": 6.3,
+  "mean": 10.7,
+  "max": 44.9,
+  "wall_total": 248.5
+ },
+ "B_openai_calls": {
+  "total": 149,
+  "per_case": 1.62
+ },
+ "B_new_features": {
+  "claim_checks": {
+   "null": 87,
+   "confirmed": 1,
+   "unverified": 4
+  },
+  "history": {
+   "null": 92
+  },
+  "bait": 0
+ },
+ "B_cases": [
+  {
+   "level": "undetermined",
+   "score": 68,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "marketplace",
+   "id": "snack",
+   "label": "trusted",
+   "fetch": false,
+   "seconds": 6.6
+  },
+  {
+   "level": "undetermined",
+   "score": 68,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "marketplace",
+   "id": "blueberries",
+   "label": "trusted",
+   "fetch": false,
+   "seconds": 5.3
+  },
+  {
+   "level": "undetermined",
+   "score": 68,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "marketplace",
+   "id": "eggs",
+   "label": "trusted",
+   "fetch": false,
+   "seconds": 6.6
+  },
+  {
+   "level": "undetermined",
+   "score": 68,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "marketplace",
+   "id": "milk",
+   "label": "trusted",
+   "fetch": false,
+   "seconds": 5.7
+  },
+  {
+   "level": "undetermined",
+   "score": 68,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "marketplace",
+   "id": "bulgogi",
+   "label": "trusted",
+   "fetch": false,
+   "seconds": 4.8
+  },
+  {
+   "level": "undetermined",
+   "score": 68,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "marketplace",
+   "id": "jjamppong-options",
+   "label": "trusted",
+   "fetch": false,
+   "seconds": 6.3
+  },
+  {
+   "level": "undetermined",
+   "score": 68,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "marketplace",
+   "id": "dumplings",
+   "label": "trusted",
+   "fetch": false,
+   "seconds": 8.3
+  },
+  {
+   "level": "undetermined",
+   "score": 71,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": "confirmed",
+   "history": null,
+   "bait": false,
+   "domain": "marketplace",
+   "id": "sony-headphones",
+   "label": "trusted",
+   "fetch": false,
+   "seconds": 7.9
+  },
+  {
+   "level": "moderate",
+   "score": 49,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 최근 1년 단기 등록 (등록 2026-10-20)"
+   ],
+   "claims": "unverified",
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-ultra-mall-shop",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 6.1
+  },
+  {
+   "level": "moderate",
+   "score": 49,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 최근 1년 단기 등록 (등록 2026-10-14)"
+   ],
+   "claims": "unverified",
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-dyna-shopping-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 5.8
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-18)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-aurora-market-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.9
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-07-07)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-ceramimarket-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.1
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-08-30)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-damonpick-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.1
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-07-06)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-modernwbay-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 1.3
+  },
+  {
+   "level": "moderate",
+   "score": 49,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-16)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-retronewmarket-net",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 7.0
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-11)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-bittem-net",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 2.1
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-09-11)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-flynntem24-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 1.7
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (521)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-imtemsoul-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 1.9
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-08-07)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-spditem-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 2.7
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-09-07)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-temjoa-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 5.2
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-07-19)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-www-itemnunbi-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 2.3
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-09-22)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-fable-sale-mall-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 2.3
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-09-08)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-jy-shopping-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 6.0
+  },
+  {
+   "level": "moderate",
+   "score": 49,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-28)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-esom-store-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.6
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (523)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-juju-pop-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 6.8
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-08-14)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-maliardo-mall-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 1.4
+  },
+  {
+   "level": "moderate",
+   "score": 49,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2025-12-26)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-olive-mall-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.4
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (520)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-start-brige-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 2.4
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-08-05)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-ever-shpping-shop",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 1.8
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "LG전자의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-lg-bestshop-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 1.9
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "SSG·신세계의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-shinsegae-mall-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 2.3
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "SSG·신세계의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "unavailable",
+   "id": "ecc-ssg-mall-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 13.3
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-07-01)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-full-days-mall-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 1.7
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-05-19)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-griteestore-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 13.9
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-jennales-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 13.4
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-judahash-shop",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 1.7
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-22)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-connectra-shop",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 13.7
+  },
+  {
+   "level": "moderate",
+   "score": 49,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2026-04-24)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-secondhands-net",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 5.1
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-theinrionmarket-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 13.8
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-tubularmarket-net",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.1
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (521)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-www-jzzmallshop-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 1.7
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "마뗑킴의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-matinkim-kr-shop",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 14.6
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "마뗑킴의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-matinkimonline-shop",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 20.4
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "마뗑킴의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-matinkimsell-shop",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 20.1
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "마뗑킴의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-www-kr-matinkim-shop",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 1.3
+  },
+  {
+   "level": "moderate",
+   "score": 52,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2026-01-26)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-www-blakiey-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 20.5
+  },
+  {
+   "level": "moderate",
+   "score": 52,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2026-04-01)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-www-horcadge-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 24.5
+  },
+  {
+   "level": "moderate",
+   "score": 49,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2026-02-09)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-www-lormant-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 15.3
+  },
+  {
+   "level": "moderate",
+   "score": 49,
+   "reasons": [
+    "사업자 정보를 표시하지 않은 신규 쇼핑몰",
+    "도메인: 신규 도메인 (등록 2026-04-01)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-www-vularion-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 26.6
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "ecc-www-rewears-co-kr",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 10.0
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-crocbandclog-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 5.3
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "노스페이스의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-thenorthfaces-kr-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 5.2
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "노스페이스의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-thenorthxfaceskr-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.5
+  },
+  {
+   "level": "moderate",
+   "score": 49,
+   "reasons": [
+    "몽클레르의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": "unverified",
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "ecc-www-shopmoncler-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 11.9
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-www-shopmonclkr-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.7
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-cbcmall-net",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 16.5
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-sw-jewelrysale-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.8
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "ecc-limicoco-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 16.5
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-ruilben-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 16.1
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "ecc-secondsmall-net",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 3.2
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "도메인: 만료된 도메인 (등록 2025-09-28)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "expired",
+   "id": "ecc-storebiz24-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 3.1
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에서 읽을 수 있는 상품 정보를 찾지 못했습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "ecc-www-buyselllife-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 5.1
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에서 읽을 수 있는 상품 정보를 찾지 못했습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-www-goodpricestore-net",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 5.1
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "알로 요가의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-aloyogashop-us-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.6
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "ecc-land-stockmall-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 5.2
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-10-22)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-wpm365-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 6.8
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지 응답 시간이 초과되었습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "ecc-www-bigbytal-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 16.6
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-06-17)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-a-ark-mall-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.4
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "도메인: 만료된 도메인 (등록 2025-09-30)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "expired",
+   "id": "ecc-a-sale-mall-net",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.2
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 상품 페이지를 가져오지 못했습니다. (403)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new",
+   "id": "ecc-redleafshop-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 4.4
+  },
+  {
+   "level": "high",
+   "score": 14,
+   "reasons": [
+    "마리메꼬의 이름을 쓴 공식이 아닌 도메인"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-marimekko-sale-shop",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 5.0
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "판매 페이지를 읽지 못했습니다: 판매 페이지에 연결하지 못했습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "ecc-dabinshop-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 7.1
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-10-26)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-move-market-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 5.0
+  },
+  {
+   "level": "moderate",
+   "score": 44,
+   "reasons": [
+    "도메인: 최근 1년 단기 등록 (등록 2026-08-28)"
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "new_short",
+   "id": "ecc-www-happymartshop-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 8.1
+  },
+  {
+   "level": "undetermined",
+   "score": null,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "ecc-oujob-com",
+   "label": "risky",
+   "fetch": true,
+   "seconds": 15.3
+  },
+  {
+   "level": "low",
+   "score": 98,
+   "reasons": [
+    "공식 상품 일치, 상세 설명, 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-lge-1",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 27.1
+  },
+  {
+   "level": "undetermined",
+   "score": 72,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-lge-2",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 41.5
+  },
+  {
+   "level": "undetermined",
+   "score": 73,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-lge-3",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 44.9
+  },
+  {
+   "level": "undetermined",
+   "score": 72,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-lge-4",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 42.7
+  },
+  {
+   "level": "undetermined",
+   "score": 74,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-innisfree-1",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 28.5
+  },
+  {
+   "level": "undetermined",
+   "score": 74,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-innisfree-2",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 27.9
+  },
+  {
+   "level": "undetermined",
+   "score": 74,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-innisfree-3",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 24.1
+  },
+  {
+   "level": "undetermined",
+   "score": 68,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-amoremall-1",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 14.6
+  },
+  {
+   "level": "undetermined",
+   "score": 70,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-amoremall-2",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 15.0
+  },
+  {
+   "level": "undetermined",
+   "score": 68,
+   "reasons": [
+    "주의 표현이 발견되지 않은 것과 필요한 정보가 확인된 것은 다릅니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-amoremall-3",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 18.7
+  },
+  {
+   "level": "low",
+   "score": 95,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-aladin-1",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 26.2
+  },
+  {
+   "level": "low",
+   "score": 95,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ],
+   "claims": "unverified",
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-aladin-2",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 23.3
+  },
+  {
+   "level": "low",
+   "score": 95,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-aladin-3",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 24.9
+  },
+  {
+   "level": "low",
+   "score": 92,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-mixxo-1",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 17.6
+  },
+  {
+   "level": "low",
+   "score": 97,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다.",
+    "판매가가 같은 모델의 시세 범위 안에 있습니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-mixxo-2",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 17.6
+  },
+  {
+   "level": "low",
+   "score": 92,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "판매자가 국세청에 정상 등록된 사업자로 조회됩니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "established",
+   "id": "official-mixxo-3",
+   "label": "trusted",
+   "fetch": true,
+   "seconds": 14.3
+  },
+  {
+   "level": "low",
+   "score": 95,
+   "reasons": [
+    "상세 설명과 배송·반품 원문을 확인했습니다.",
+    "쿠팡이 직접 판매하는 상품입니다.",
+    "페이지의 판매자 정보가 공정위 통신판매업 신고와 일치합니다."
+   ],
+   "claims": null,
+   "history": null,
+   "bait": false,
+   "domain": "marketplace",
+   "id": "coupang-rocket-redmi",
+   "label": "trusted",
+   "fetch": false,
+   "seconds": 15.5
+  }
+ ]
+}

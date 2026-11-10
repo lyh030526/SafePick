@@ -5,6 +5,8 @@ export type BrowserImport = {
   provided_text: string;
   captured_at: string;
   input_source: 'browser_extension';
+  // The page's main product photo, used only to find where else it appears.
+  image_url?: string;
 };
 
 // Product detail pages the extension reads: Naver stores, 11st, Coupang, and Gmarket/Auction.
@@ -40,8 +42,10 @@ export function validCapture(value: unknown): BrowserImport {
       || item.provided_text.length > 12000
       || typeof item.captured_at !== 'string' || !/Z$|[+-]\d{2}:\d{2}$/.test(item.captured_at)
       || !Number.isFinite(Date.parse(item.captured_at))) throw new Error('invalid import');
+  const photo = typeof item.image_url === 'string' && /^https:\/\/\S{1,490}$/.test(item.image_url) ? item.image_url : undefined;
   return { version: 1, product_url: url.toString(), page_title: item.page_title,
-    provided_text: item.provided_text, captured_at: item.captured_at, input_source: 'browser_extension' };
+    provided_text: item.provided_text, captured_at: item.captured_at, input_source: 'browser_extension',
+    ...(photo ? { image_url: photo } : {}) };
 }
 
 export function parseBrowserImport(fragment: string): BrowserImport | null {

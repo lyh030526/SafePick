@@ -10,7 +10,20 @@
    "rating": 97,
    "rating_count": 4771
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "(주)유니씨앤씨",
+     "number": "106-86-09832",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 97,
+     "rating_count": 4771
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-8312899762": {
   "url": "https://www.coupang.com/vp/products/8312899762?itemId=23988294980",
@@ -23,7 +36,20 @@
    "rating": 100,
    "rating_count": 2138
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "에이팔란스(Appalance)",
+     "number": "677-19-01970",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 100,
+     "rating_count": 2138
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9785334091": {
   "url": "https://www.coupang.com/vp/products/9785334091?itemId=29296945848",
@@ -36,7 +62,20 @@
    "rating": null,
    "rating_count": null
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "샥즈코리아 주식회사",
+     "number": "354-88-02918",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": null,
+     "rating_count": null
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9744215861": {
   "url": "https://www.coupang.com/vp/products/9744215861?itemId=29168617047",
@@ -49,7 +88,20 @@
    "rating": 97,
    "rating_count": 4771
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "(주)유니씨앤씨",
+     "number": "106-86-09832",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 97,
+     "rating_count": 4771
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9559726019": {
   "url": "https://www.coupang.com/vp/products/9559726019?itemId=28527390013",
@@ -62,7 +114,20 @@
    "rating": 91,
    "rating_count": 521
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "에스앤엠컴퍼니",
+     "number": "756-47-00597",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 91,
+     "rating_count": 521
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9751913175": {
   "url": "https://www.coupang.com/vp/products/9751913175?itemId=29200649963",
@@ -75,7 +140,20 @@
    "rating": 88,
    "rating_count": 143
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "헤븐스토어",
+     "number": "875-07-00102",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 88,
+     "rating_count": 143
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9618202784": {
   "url": "https://www.coupang.com/vp/products/9618202784?itemId=28719885669",
@@ -88,7 +166,20 @@
    "rating": 93,
    "rating_count": 744
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "주식회사 디지털이디마트",
+     "number": "384-81-00853",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 93,
+     "rating_count": 744
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-8882805356": {
   "url": "https://www.coupang.com/vp/products/8882805356?itemId=26965178659",
@@ -101,7 +192,20 @@
    "rating": 94,
    "rating_count": 260
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "주식회사 리안",
+     "number": "390-88-01948",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 94,
+     "rating_count": 260
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9798781150": {
   "url": "https://www.coupang.com/vp/products/9798781150?itemId=29340928868",
@@ -114,7 +218,20 @@
    "rating": 91,
    "rating_count": 87054
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "㈜엔에스쇼핑",
+     "number": "117-81-33642",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 91,
+     "rating_count": 87054
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9581491015": {
   "url": "https://www.coupang.com/vp/products/9581491015?itemId=28600908232",
@@ -127,7 +244,20 @@
    "rating": 88,
    "rating_count": 143
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "헤븐스토어",
+     "number": "875-07-00102",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 88,
+     "rating_count": 143
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-8769461046": {
   "url": "https://www.coupang.com/vp/products/8769461046?itemId=25506428175",
@@ -140,7 +270,20 @@
    "rating": 97,
    "rating_count": 2411
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "제이비컴퍼니",
+     "number": "126-26-36402",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 97,
+     "rating_count": 2411
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9642156160": {
   "url": "https://www.coupang.com/vp/products/9642156160?itemId=28811693905",
@@ -153,7 +296,20 @@
    "rating": null,
    "rating_count": null
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "Coupang Japan G.K.",
+     "number": "확인 불가",
+     "nts": "overseas",
+     "mail_order": null,
+     "rating": null,
+     "rating_count": null
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-6731679053": {
   "url": "https://www.coupang.com/vp/products/6731679053?itemId=15687126585",
@@ -166,7 +322,20 @@
    "rating": 94,
    "rating_count": 86
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "조조",
+     "number": "864-44-00918",
+     "nts": "active",
+     "mail_order": "mismatch",
+     "rating": 94,
+     "rating_count": 86
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9397981017": {
   "url": "https://www.coupang.com/vp/products/9397981017?itemId=27913126398",
@@ -179,7 +348,20 @@
    "rating": 95,
    "rating_count": 228
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "어썸토리",
+     "number": "677-13-01319",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 95,
+     "rating_count": 228
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-8778353687": {
   "url": "https://www.coupang.com/vp/products/8778353687?itemId=25539882620",
@@ -192,7 +374,20 @@
    "rating": 97,
    "rating_count": 2411
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "제이비컴퍼니",
+     "number": "126-26-36402",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 97,
+     "rating_count": 2411
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9303941581": {
   "url": "https://www.coupang.com/vp/products/9303941581?itemId=2554390540",
@@ -205,7 +400,20 @@
    "rating": 94,
    "rating_count": 187915
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "(주)씨제이이엔엠 (CJ온스타일)",
+     "number": "106-81-51510",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 94,
+     "rating_count": 187915
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-8597223207": {
   "url": "https://www.coupang.com/vp/products/8597223207?itemId=21271059774",
@@ -218,7 +426,20 @@
    "rating": 88,
    "rating_count": 17
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "오라",
+     "number": "722-69-00524",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 88,
+     "rating_count": 17
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-197512": {
   "url": "https://www.coupang.com/vp/products/197512?itemId=5076335",
@@ -231,7 +452,20 @@
    "rating": 93,
    "rating_count": 257
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "백퍼센츠(100perscents)",
+     "number": "512-09-93965",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 93,
+     "rating_count": 257
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9574615408": {
   "url": "https://www.coupang.com/vp/products/9574615408?itemId=28558859663",
@@ -244,7 +478,20 @@
    "rating": 83,
    "rating_count": 101
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "에스씨코리아",
+     "number": "280-49-01074",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 83,
+     "rating_count": 101
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-7699834343": {
   "url": "https://www.coupang.com/vp/products/7699834343?itemId=19001594227",
@@ -257,7 +504,20 @@
    "rating": 93,
    "rating_count": 257
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "백퍼센츠(100perscents)",
+     "number": "512-09-93965",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 93,
+     "rating_count": 257
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-8628538279": {
   "url": "https://www.coupang.com/vp/products/8628538279?itemId=25035329748",
@@ -270,7 +530,20 @@
    "rating": null,
    "rating_count": null
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "꼬꼬바니3",
+     "number": "835-05-03451",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": null,
+     "rating_count": null
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-7432619553": {
   "url": "https://www.coupang.com/vp/products/7432619553?itemId=19307582546",
@@ -283,7 +556,20 @@
    "rating": 97,
    "rating_count": 1592
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "유이마루",
+     "number": "420-37-00840",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 97,
+     "rating_count": 1592
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-8366758850": {
   "url": "https://www.coupang.com/vp/products/8366758850?itemId=24174373235",
@@ -296,7 +582,20 @@
    "rating": 90,
    "rating_count": 80
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "자유시공간",
+     "number": "897-01-03505",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 90,
+     "rating_count": 80
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-7966721356": {
   "url": "https://www.coupang.com/vp/products/7966721356?itemId=22048978991",
@@ -309,7 +608,20 @@
    "rating": 90,
    "rating_count": 80
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "자유시공간",
+     "number": "897-01-03505",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 90,
+     "rating_count": 80
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9024400950": {
   "url": "https://www.coupang.com/vp/products/9024400950?itemId=26463567716",
@@ -322,7 +634,20 @@
    "rating": 94,
    "rating_count": 187915
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "(주)씨제이이엔엠 (CJ온스타일)",
+     "number": "106-81-51510",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 94,
+     "rating_count": 187915
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9743259266": {
   "url": "https://www.coupang.com/vp/products/9743259266?itemId=29164542170",
@@ -335,7 +660,20 @@
    "rating": null,
    "rating_count": null
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "디에이컴퍼니",
+     "number": "240-47-01126",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": null,
+     "rating_count": null
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-8335537986": {
   "url": "https://www.coupang.com/vp/products/8335537986?itemId=24068690398",
@@ -348,7 +686,20 @@
    "rating": 69,
    "rating_count": 35
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "알파소프트",
+     "number": "108-11-41238",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 69,
+     "rating_count": 35
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9753909362": {
   "url": "https://www.coupang.com/vp/products/9753909362?itemId=29205770828",
@@ -361,7 +712,20 @@
    "rating": 85,
    "rating_count": 55
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "이어 전자",
+     "number": "615-48-01176",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 85,
+     "rating_count": 55
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9783075384": {
   "url": "https://www.coupang.com/vp/products/9783075384?itemId=29289156290",
@@ -374,7 +738,20 @@
    "rating": null,
    "rating_count": null
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "리콜렉터",
+     "number": "490-20-02378",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": null,
+     "rating_count": null
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9767820593": {
   "url": "https://www.coupang.com/vp/products/9767820593?itemId=29236289925",
@@ -387,7 +764,20 @@
    "rating": 85,
    "rating_count": 55
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "이어 전자",
+     "number": "615-48-01176",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 85,
+     "rating_count": 55
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9320710690": {
   "url": "https://www.coupang.com/vp/products/9320710690?itemId=27625510037",
@@ -400,7 +790,20 @@
    "rating": 96,
    "rating_count": 284
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "주식회사 해피플러스",
+     "number": "178-88-01294",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 96,
+     "rating_count": 284
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9636652264": {
   "url": "https://www.coupang.com/vp/products/9636652264?itemId=28790498779",
@@ -413,7 +816,20 @@
    "rating": 91,
    "rating_count": 16543
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "(주)컴퓨존",
+     "number": "106-81-83458",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 91,
+     "rating_count": 16543
+    },
+    "page_removed": false
+   }
+  ]
  },
  "watch-coupang-9737645882": {
   "url": "https://www.coupang.com/vp/products/9737645882?itemId=29142949659",
@@ -426,6 +842,19 @@
    "rating": 94,
    "rating_count": 357
   },
-  "checks": []
+  "checks": [
+   {
+    "checked_at": "2026-11-10T03:16:31.937891+00:00",
+    "state": {
+     "seller": "(주)나유타",
+     "number": "497-86-00358",
+     "nts": "active",
+     "mail_order": "matched",
+     "rating": 94,
+     "rating_count": 357
+    },
+    "page_removed": false
+   }
+  ]
  }
 }

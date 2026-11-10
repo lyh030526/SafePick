@@ -200,7 +200,10 @@ async function collectProductPage() {
     : /11st/.test(url.hostname)
       ? "판매자 사업자번호는 보안 문자 뒤에 있어요. '판매자정보' 탭의 '상세정보 확인'에서 보안 문자를 직접 풀고, 열린 창에서 이 버튼을 한 번 더 누르면 판매자 정보를 합쳐요."
       : "판매자 사업자번호는 인증 뒤에 있어요. '판매자 상세정보 확인'의 인증을 직접 마친 뒤 다시 가져오면 사업자 상태까지 확인할 수 있어요.";
+  // The main product photo, for finding where else it is used; only an https address is sent.
+  const photo = document.querySelector('meta[property="og:image"]')?.content || '';
   return { version: 1, expanded: clicked, hint, product_url: url.toString(), page_title: document.title.slice(0, 300),
     provided_text: (seller + contact + terms + reviews + structured + visibleText).slice(0, 12000),
-    captured_at: new Date().toISOString(), input_source: 'browser_extension' };
+    captured_at: new Date().toISOString(), input_source: 'browser_extension',
+    ...(/^https:\/\/\S{1,490}$/.test(photo) ? { image_url: photo } : {}) };
 }

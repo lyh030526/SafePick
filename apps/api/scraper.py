@@ -30,6 +30,17 @@ class ProductPage:
     text: str
     # Same-site guide pages (반품·교환·이용안내) that may hold the return terms the product page itself leaves out.
     policy_links: list[str] = field(default_factory=list)
+    # The page's main product photo (og:image), when it names an https address.
+    image_url: str | None = None
+
+
+_OG_IMAGE = re.compile(r"""<meta[^>]+property=["']og:image["'][^>]+content=["'](https://[^"']+)["']"""
+                       r"""|<meta[^>]+content=["'](https://[^"']+)["'][^>]+property=["']og:image["']""", re.I)
+
+
+def _og_image(html: str) -> str | None:
+    match = _OG_IMAGE.search(html)
+    return (match.group(1) or match.group(2))[:500] if match else None
 
 
 _POLICY_LINK = re.compile(r"반품|교환|환불|이용\s*안내|쇼핑\s*가이드|배송\s*안내|이용\s*약관|return|refund|guide|policy", re.I)
@@ -141,7 +152,8 @@ def fetch_product_page(url: str, allowed_domains: tuple[str, ...] | None = None)
                 title, text = _extract_visible_text(html)
                 if not text:
                     raise ProductPageError("판매 페이지에서 읽을 수 있는 상품 정보를 찾지 못했습니다.")
-                return ProductPage(final_url=current_url, title=title, text=text, policy_links=_policy_links(html, current_url))
+                return ProductPage(final_url=current_url, title=title, text=text, policy_links=_policy_links(html, current_url),
+                                   image_url=_og_image(html))
             except httpx.TimeoutException as error:
                 raise ProductPageError("판매 페이지 응답 시간이 초과되었습니다.") from error
             except httpx.HTTPError as error:

@@ -23,10 +23,15 @@ const analysis = {
     claim_check: { status: 'unverified', label: '확인되지 않은 정품·공식 표시', brand_owner: '소니',
       message: '이미지의 인증 마크가 있지만 판매자가 브랜드 회사가 아니어서 SafePick이 확인할 수 없습니다. 마크와 문구는 쉽게 복사할 수 있어 점수에 넣지 않았습니다.',
       claims: [{ kind: 'genuine', quote: '100% 정품 보장' }], marks: [{ name: '소니 공식 인증 마크', source: 'image' }] },
+    photo_check: { status: 'overseas_cheap', label: '해외 저가 마켓에서도 쓰는 사진', match_count: 4, overseas_count: 3,
+      message: '같은 사진이 알리익스프레스·테무 같은 해외 저가 마켓 3곳에서 쓰입니다.',
+      matches: [{ title: '무선 헤드폰 노이즈캔슬링', source: 'AliExpress', link: 'https://ko.aliexpress.com/item/1.html', kind: 'overseas_cheap' }] },
     conditions: { description: { status: 'found', text: '헤드폰', quotes: [] }, components: none, options: none, shipping: none,
       returns: { status: 'found', text: '수령 후 7일 이내 반품', quotes: [] }, warranty: none } },
   seller_verification: { status: 'active', label: '계속사업자', message: '정상', tax_type: null, closed_on: null,
-    seller: { business_name: '테스트스토어', representative: '-', business_number: '123-45-67891', mail_order_number: '-', address: '-', quote: '-' } },
+    seller: { business_name: '테스트스토어', representative: '-', business_number: '123-45-67891', mail_order_number: '-', address: '-', quote: '-' },
+    history: { status: 'reopened', label: '폐업 후 다시 등록한 이력', closed_numbers: 2, other_names: [],
+      message: '같은 상호·대표자로 등록했다가 폐업·말소된 사업자번호가 2개 있고, 지금은 새 번호로 영업합니다.' } },
   market_price: { status: 'no_model', label: '시세 판단 보류', message: '시세를 찾지 않았습니다.', match_count: 0, listings: [],
     option_bait: true, option_price: '389000', list_inflated: true,
     list_note: '할인 전 가격으로 표시한 599000원은 같은 모델 시세 중앙값(400000원)의 149%입니다.',
@@ -38,6 +43,7 @@ const conversation = { level: 'high', label: '높음', read_length: 80,
     quote: '상대: 국민은행 123456-****-****** 로 입금해주시면 바로 발송해요', advice: '마켓의 정상 결제 말고는 입금하지 마세요.' }],
   links: [{ url: 'coupang-safepay.shop/pay', domain: 'coupang-safepay.shop', status: 'impersonates', label: '쿠팡 사칭 의심 주소',
     message: '쿠팡의 이름을 썼지만 공식 도메인이 아닙니다. 결제하지 마세요.' }],
+  lookup_numbers: [{ kind: 'account', masked: '123456-****-******', bank: '국민' }],
   warnings: ['대화는 저장하지 않습니다. 결과의 계좌·전화번호는 일부를 가렸습니다.'] };
 
 (async () => {
@@ -76,6 +82,7 @@ const conversation = { level: 'high', label: '높음', read_length: 80,
     await page.getByText('대화 확인하기', { exact: true }).click();
     await page.getByLabel('대화 주의 수준 높음', { exact: true }).waitFor();
     await page.getByText('쿠팡 사칭 의심 주소', { exact: true }).waitFor();
+    await page.getByText('국민 계좌 123456-****-******', { exact: true }).waitFor();
     assert.equal(calls[0].path, '/conversation-checks');
     assert.equal(calls[0].body.channel, 'messenger');
     assert.match(calls[0].body.text, /국민은행/);
@@ -94,6 +101,10 @@ const conversation = { level: 'high', label: '높음', read_length: 80,
     await page.getByText('정품·공식 판매 표시', { exact: true }).click();
     await page.getByText(/점수에 넣지 않았습니다/).waitFor();
     await page.getByText('소니 공식 인증 마크 (이미지)', { exact: true }).waitFor();
+    await page.getByText('같은 사진이 쓰인 곳', { exact: true }).click();
+    await page.getByText('AliExpress', { exact: false }).first().waitFor();
+    await page.getByText('판매자 사업자 확인', { exact: true }).click();
+    await page.getByText(/폐업·말소된 사업자번호가 2개/).waitFor();
     await page.getByText('이 판매자 믿어도 될까?', { exact: true }).click();
     await page.getByText(/정상 사업자로 조회돼요/).waitFor();
     const asked = calls.find(call => call.path === '/analysis-questions');

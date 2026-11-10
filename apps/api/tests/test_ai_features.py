@@ -132,7 +132,7 @@ class OptionPriceTests(unittest.TestCase):
         result = assess_risk(analyzed(), None, active, market)
         self.assertEqual(result.level, "moderate")
         self.assertIn("대표 가격과 실제 옵션 가격 차이 (옵션 최저가 389,000원)", result.reasons)
-        self.assertEqual(result.rule_version, "15")
+        self.assertEqual(result.rule_version, "17")
 
     def test_extraction_reads_options_and_condition(self):
         parsed = _normalize_product({"brand_name": "소니", "options": [
@@ -273,6 +273,10 @@ class ReviewRuleTests(unittest.TestCase):
         ids = {check.id for check in review_checks("포토 리뷰 작성 시 네이버페이 포인트 최대 500원 적립\n별점 5점 리뷰 남겨주시면 사은품 증정!")}
         self.assertIn("review_rated_reward", ids)
         self.assertNotIn("review_rated_reward", {check.id for check in review_checks("리뷰 작성 시 포인트 적립")})
+        # LG's own shop: a rating display, and a coupon far along the same line.
+        lg = ("LG ThinQ ON AI 평점 5점 만점 중 4.6 리뷰 수 제품 리뷰 170 옵션 선택 할인 전 판매가 341,000원 할인율 7% "
+              "315,000 원 회원할인가 상세 내용 열기 혜택은 적용하는 쿠폰, 카드사에 따라 다르게 계산되어")
+        self.assertNotIn("review_rated_reward", {check.id for check in review_checks(lg)})
 
     def test_many_sponsored_reviews(self):
         text = "\n".join(f"업체로부터 제품을 무상으로 제공받아 작성한 후기입니다 {index}" for index in range(3))
@@ -284,3 +288,114 @@ class ReviewRuleTests(unittest.TestCase):
         self.assertIn("review_burst", {check.id for check in review_checks(burst)})
         spread = "\n".join(f"2026.{month:02d}.15" for month in range(1, 13))
         self.assertNotIn("review_burst", {check.id for check in review_checks(spread)})
+
+
+import sqlite3  # noqa: E402
+from contextlib import closing  # noqa: E402
+from unittest.mock import MagicMock  # noqa: E402
+
+import seller_history  # noqa: E402
+from chat_check import lookup_numbers  # noqa: E402
+from photo_check import check_photo  # noqa: E402
+from risk_analysis import shipping_checks  # noqa: E402
+from schemas import PhotoCheck  # noqa: E402
+
+
+class SellerHistoryTests(unittest.TestCase):
+    def build(self, rows):
+        import tempfile
+        from pathlib import Path
+        folder = Path(tempfile.mkdtemp())
+        index = folder / "index.sqlite"
+        with closing(sqlite3.connect(index)) as db, db:
+            db.execute("CREATE TABLE sellers (name TEXT, representative TEXT, number TEXT, report TEXT, state TEXT, domain TEXT)")
+            db.executemany("INSERT INTO sellers VALUES (?, ?, ?, ?, ?, '')", rows)
+        seller_history.build(index, folder / "history.sqlite")
+        return folder / "history.sqlite"
+
+    def test_closing_twice_and_opening_again(self):
+        path = self.build([("리샤무역", "홍길동", "1111111111", "2023-서울-1", "폐업처리"),
+                           ("리샤무역", "홍길동", "2222222222", "2024-서울-2", "직권말소"),
+                           ("리샤무역", "홍길동", "3333333333", "2026-서울-3", "정상영업")])
+        history = seller_history.seller_history("333-33-33333", "리샤무역 유한회사", "홍길동", path)
+        self.assertEqual((history.status, history.closed_numbers), ("reopened", 2))
+        verdict = assess_risk(analyzed(), None, SellerVerification(status="active", label="계속사업자", message="정상",
+                                                                   history=history), MarketPrice(status="no_model"))
+        self.assertEqual(verdict.level, "moderate")
+        self.assertIn("판매자 이력: 폐업 후 다시 등록한 이력 (폐업한 번호 2개)", verdict.reasons)
+        # The file keeps no representative names.
+        with closing(sqlite3.connect(path)) as db:
+            self.assertNotIn("홍길동", str(db.execute("SELECT * FROM history").fetchall()))
+
+    def test_a_renamed_number_is_shown_but_not_a_finding(self):
+        path = self.build([("옛상호", "김철수", "4444444444", "2020-부산-1", "폐업처리"),
+                           ("새상호", "김철수", "4444444444", "2024-부산-2", "정상영업")])
+        history = seller_history.seller_history("4444444444", "새상호", "김철수", path)
+        self.assertEqual(history.status, "renamed")
+        self.assertEqual(history.other_names, ["옛상호"])
+        verdict = assess_risk(analyzed(), None, SellerVerification(status="active", label="계속사업자", message="정상",
+                                                                   history=history), MarketPrice(status="typical"))
+        self.assertNotEqual(verdict.level, "moderate")
+
+    def test_nothing_on_record(self):
+        path = self.build([("가게", "이영희", "5555555555", "2020-1", "정상영업")])
+        self.assertIsNone(seller_history.seller_history("5555555555", "가게", "이영희", path))
+
+
+class PhotoTests(unittest.TestCase):
+    def lens(self, links):
+        response = MagicMock()
+        response.json.return_value = {"organic": [{"title": f"상품 {index}", "source": "shop", "link": link}
+                                                  for index, link in enumerate(links)]}
+        return response
+
+    @patch.dict(os.environ, {"SERPER_API_KEY": "test-key"})
+    @patch("photo_check.httpx.post")
+    def test_a_photo_mostly_on_cheap_overseas_markets(self, post):
+        post.return_value = self.lens(["https://ko.aliexpress.com/item/1.html", "https://www.temu.com/kr/a.html",
+                                       "https://www.aliexpress.com/item/2.html", "https://shop.example.kr/p/3",
+                                       "https://www.coupang.com/vp/products/9"])
+        photo = check_photo("https://img.example.com/p.jpg", "https://www.coupang.com/vp/products/9")
+        self.assertEqual(photo.status, "overseas_cheap")
+        self.assertEqual(photo.match_count, 4)  # the listing's own site is left out
+        offer = OfferDetails(claims=[ListingClaim(kind="genuine", quote="100% 정품 보장")])
+        self.assertEqual(check_claims(samsung(offer), seller("버즈마트"), PAGE, photo=photo).status, "contradicted")
+
+    @patch.dict(os.environ, {"SERPER_API_KEY": "test-key"})
+    @patch("photo_check.httpx.post")
+    def test_official_photos_are_not_proof(self, post):
+        post.return_value = self.lens(["https://www.samsung.com/sec/buds3-pro/"])
+        photo = check_photo("https://img.example.com/p.jpg")
+        self.assertEqual(photo.status, "official")
+        offer = OfferDetails(claims=[ListingClaim(kind="genuine", quote="100% 정품 보장")])
+        self.assertEqual(check_claims(samsung(offer), seller("버즈마트"), PAGE, photo=photo).status, "unverified")
+
+    def test_no_photo_no_search(self):
+        self.assertIsNone(check_photo(None))
+        self.assertEqual(check_photo("https://img.example.com/p.jpg").status, "unavailable")  # no key in tests
+
+
+class ShippingTests(unittest.TestCase):
+    def test_same_day_dispatch_and_overseas_delivery(self):
+        checks = shipping_checks("오늘 출발 · 당일 발송\n배송 기간 약 10~15일 소요 (해외 배송)")
+        self.assertEqual([check.id for check in checks], ["shipping_mismatch"])
+        verdict = assess_risk(analyzed(), None, SellerVerification(status="active", label="계속사업자", message="정상"),
+                              MarketPrice(status="no_model"))
+        self.assertIsInstance(verdict.level, str)
+
+    def test_purchasing_agents_and_plain_listings_are_left_alone(self):
+        self.assertEqual(shipping_checks("해외구매대행 상품입니다\n당일 발송\n통관 후 배송"), [])
+        self.assertEqual(shipping_checks("로켓직구\n내일(목) 도착\n해외 배송"), [])
+        self.assertEqual(shipping_checks("당일 발송\n배송비 3,000원"), [])
+
+
+class LookupNumberTests(unittest.TestCase):
+    def test_accounts_and_phones_are_masked_and_the_buyers_own_are_skipped(self):
+        numbers = lookup_numbers("상대: 신한은행 110-123-456789 로 보내주세요\n상대: 연락은 010-1234-5678\n나: 제 번호는 010-9999-8888")
+        self.assertEqual([(item.kind, item.masked, item.bank) for item in numbers],
+                         [("account", "110-****-******", "신한"), ("phone", "010-****-****", None)])
+
+    @patch.dict(os.environ, {"OPENAI_API_KEY": ""})
+    def test_the_check_returns_them(self):
+        result = check_conversation(ConversationCheckRequest(text="상대: 국민은행 123456-12-345678 로 입금해 주세요"))
+        self.assertEqual(result.lookup_numbers[0].bank, "국민")

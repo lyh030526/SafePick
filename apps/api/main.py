@@ -16,6 +16,7 @@ from extractor import extract_product_details, generate_official_search_query, t
 from market_price import check_market_price
 from official_brands import OFFICIAL_BRANDS, find_official_brand
 from official_search import OfficialSearchError, search_official_pages
+from photo_check import check_photo
 from question_answer import answer_question
 from request_limits import AnalysisBodyLimit, AnalysisRateLimit
 from risk_analysis import analyze_listing_risks, review_complaints
@@ -28,6 +29,7 @@ from schemas import (
 )
 from scraper import FOOTER_LENGTH, RETURN_TERMS, ProductPage, ProductPageError, fetch_product_page
 from mail_order import with_mail_order
+from seller_history import with_history
 from seller_verification import verify_seller
 
 
@@ -116,26 +118,28 @@ def create_comparison(request: ComparisonRequest) -> ComparisonResponse:
                               seller_verification=seller, market_price=market)
 
 
-def analyze_product(product, url, title, text, entered_url=None):
+def analyze_product(product, url, title, text, entered_url=None, image_url=None):
     # The listing review, seller check, and market search do not depend on the official lookup, so run them at once.
     with ThreadPoolExecutor(max_workers=4) as executor:
         # The address the shopper entered is the one to judge; a parked domain redirects to an old broker site.
         domain_future = executor.submit(check_domain, entered_url or url)
         risk_future = executor.submit(analyze_listing_risks, product, title, text)
-        seller_future = executor.submit(lambda: with_mail_order(verify_seller(text, url), url, text))
+        seller_future = executor.submit(lambda: with_history(with_mail_order(verify_seller(text, url), url, text)))
         market_future = executor.submit(check_market_price, product)
+        photo_future = executor.submit(check_photo, image_url, url)
         lookup = create_official_lookup(product)
         comparison = compare_product(product, url, lookup)
         analysis = risk_future.result()
         seller = seller_future.result()
         market = market_future.result()
-    claims = check_claims(product, seller, text, market)
+    photo = photo_future.result()
+    claims = check_claims(product, seller, text, market, photo)
     # A brand without a supported official site has nothing to compare, so the criterion is left out of the score.
     assessment = assess_risk(analysis, None if lookup.status == "not_supported" else comparison, seller, market,
                              domain=domain_future.result(), claims=claims)
     complaints = review_complaints(text, seller.seller.business_name)
     return lookup, comparison, analysis.model_copy(update={"assessment": assessment, "review_complaints": complaints,
-                                                           "claim_check": claims}), seller, market
+                                                           "claim_check": claims, "photo_check": photo}), seller, market
 
 
 def analyze_provided(request: AnalysisRequest) -> AnalysisResponse:
@@ -147,7 +151,9 @@ def analyze_provided(request: AnalysisRequest) -> AnalysisResponse:
     if screen:
         text = f"{text}\n\n화면 캡처에서 읽은 글자:\n{screen}".strip()[:12000]
     product, warnings = extract_product_details(request.page_title, text, images=request.images)
-    lookup, comparison, risk, seller, market = analyze_product(product, str(request.product_url), request.page_title, text)
+    lookup, comparison, risk, seller, market = analyze_product(
+        product, str(request.product_url), request.page_title, text,
+        image_url=str(request.image_url) if request.image_url else None)
     kind = ("mixed" if text and request.images else "user_images" if request.images
             else request.input_source)
     notice = "사용자가 제공한 자료를 분석했습니다. 판매 페이지의 현재 내용과 일치하는지는 별도 확인이 필요합니다."
@@ -186,7 +192,8 @@ def with_return_policy(page: ProductPage) -> ProductPage:
         head = f"반품·교환 안내(같은 쇼핑몰 안내 페이지 {link}):\n{excerpt}\n\n"
         room = 12000 - len(head)
         text = page.text if len(page.text) <= room else f"{page.text[:room - FOOTER_LENGTH - 3]} … {page.text[-FOOTER_LENGTH:]}"
-        return ProductPage(final_url=page.final_url, title=page.title, text=head + text, policy_links=page.policy_links)
+        return ProductPage(final_url=page.final_url, title=page.title, text=head + text, policy_links=page.policy_links,
+                           image_url=page.image_url)
     return page
 
 
@@ -245,7 +252,7 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
     product, warnings = extract_product_details(page.title, page.text)
     status = "completed" if not warnings else "manual_input_required"
     lookup, comparison, risk, seller, market = analyze_product(product, page.final_url, page.title, page.text,
-                                                               str(request.product_url))
+                                                               str(request.product_url), page.image_url)
     return AnalysisResponse(
         status=status,
         product=product,

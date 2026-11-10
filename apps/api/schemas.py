@@ -40,6 +40,8 @@ class AnalysisRequest(BaseModel):
     input_source: Literal["user_text", "browser_extension"] = "user_text"
     captured_at: AwareDatetime | None = None
     images: list[AnalysisImage] = Field(default_factory=list, max_length=3)
+    # The page's main product photo (its og:image), for finding where else the photo appears.
+    image_url: HttpUrl | None = None
 
     @field_validator("provided_text")
     @classmethod
@@ -197,7 +199,7 @@ class ListingConditions(BaseModel):
 class PurchaseCheck(BaseModel):
     id: str
     category: Literal["model_mismatch", "components_mismatch", "ambiguous_conditions", "discount_claim", "purchase_pressure",
-                      "review_pattern", "off_platform", "missing_information"]
+                      "review_pattern", "off_platform", "shipping_mismatch", "missing_information"]
     kind: Literal["attention", "needs_check"]
     title: str
     explanation: str
@@ -259,6 +261,15 @@ class MailOrderCheck(BaseModel):
     registered_domains: list[str] = Field(default_factory=list)
 
 
+class SellerHistory(BaseModel):
+    """The seller's past in the FTC file: other trade names on the number, closed numbers of the same name and owner."""
+    status: Literal["reopened", "renamed", "reopened_once", "other_numbers"]
+    label: str
+    message: str
+    closed_numbers: int = 0
+    other_names: list[str] = Field(default_factory=list)
+
+
 class SellerVerification(BaseModel):
     status: Literal["active", "suspended", "closed", "unregistered", "invalid_number", "marketplace_listed", "platform_direct",
                     "overseas", "not_found",
@@ -274,6 +285,7 @@ class SellerVerification(BaseModel):
     # The marketplace's own buyer rating of the seller (Coupang: "판매자 평가 93% (70)").
     marketplace_rating: int | None = None
     rating_count: int | None = None
+    history: SellerHistory | None = None
 
 
 class MarketListing(BaseModel):
@@ -306,6 +318,23 @@ class MarketPrice(BaseModel):
     discount_note: str | None = None
 
 
+class PhotoMatch(BaseModel):
+    title: str
+    source: str
+    link: str
+    kind: Literal["reported", "overseas_cheap", "second_hand", "official", "other"]
+
+
+class PhotoCheck(BaseModel):
+    """Other pages that use the listing's main product photo."""
+    status: Literal["overseas_cheap", "reported", "official", "elsewhere", "none", "unavailable"]
+    label: str
+    message: str
+    matches: list[PhotoMatch] = Field(default_factory=list)
+    match_count: int = 0
+    overseas_count: int = 0
+
+
 class ClaimCheck(BaseModel):
     """The page's genuineness and official-seller claims and marks, held against who the seller actually is."""
     status: Literal["confirmed", "contradicted", "unverified"] = "unverified"
@@ -333,6 +362,7 @@ class RiskAnalysis(BaseModel):
     assessment: RiskAssessment = Field(default_factory=RiskAssessment)
     review_complaints: ReviewComplaints | None = None
     claim_check: ClaimCheck | None = None
+    photo_check: PhotoCheck | None = None
 
 
 class ComparisonResponse(BaseModel):
@@ -428,12 +458,20 @@ class ConversationLink(BaseModel):
     message: str
 
 
+class LookupNumber(BaseModel):
+    """An account or phone number in the conversation, masked, for the shopper to look up in the police's own service."""
+    kind: Literal["account", "phone"]
+    masked: str
+    bank: str | None = None
+
+
 class ConversationCheck(BaseModel):
     level: Literal["high", "moderate", "low", "undetermined"] = "undetermined"
     label: str = "판단 보류"
     summary: str
     signals: list[ConversationSignal] = Field(default_factory=list)
     links: list[ConversationLink] = Field(default_factory=list)
+    lookup_numbers: list[LookupNumber] = Field(default_factory=list)
     read_length: int = 0
     warnings: list[str] = Field(default_factory=list)
 

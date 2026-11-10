@@ -341,7 +341,34 @@ def review_checks(text: str) -> list[PurchaseCheck]:
     return checks
 
 
-_RATED_REWARD = re.compile(r"(?:별점|평점)\s*5\s*점|5\s*점\s*(?:리뷰|후기|만점)|만점\s*(?:리뷰|후기)|포토\s*리뷰\s*5\s*점", re.I)
+# Shipped from Korea today, and also from abroad in two weeks: one of the two is not true. Coupang's own delivery estimate
+# comes from the seller's stated lead time, so "내일 도착" beside a seller's overseas notice is the same contradiction.
+_DOMESTIC = re.compile(r"당일\s*(?:발송|출고|배송)|오늘\s*(?:출발|발송|출고)|국내\s*(?:재고|창고|발송|배송\s*(?:상품|제품))|"
+                       r"내일\s*(?:\([월화수목금토일]\)\s*)?도착|빠른\s*배송\s*보장")
+_OVERSEAS = re.compile(r"해외\s*(?:배송|발송|직배송|직구|에서\s*발송)|개인\s*통관\s*고유\s*부호|관부가세|통관\s*(?:절차|기간|후)|"
+                       r"중국\s*(?:발송|배송|현지)|(?:배송|도착)\s*(?:기간|소요)?\s*(?:약\s*)?(?:1\d|[2-9]\d)\s*[~-]\s*\d{1,2}\s*일")
+# A purchasing agent (구매대행, Coupang's 로켓직구) says openly that it ships from abroad.
+_PROXY = re.compile(r"구매\s*대행|직구\s*대행|로켓\s*직구|해외\s*구매")
+
+
+def shipping_checks(text: str) -> list[PurchaseCheck]:
+    lines = [normalize(line) for line in (text or "").splitlines() if line.strip()]
+    if any(_PROXY.search(line) for line in lines):
+        return []
+    domestic = list(dict.fromkeys(line[:200] for line in lines if _DOMESTIC.search(line)))
+    overseas = list(dict.fromkeys(line[:200] for line in lines if _OVERSEAS.search(line) and not _WARNING.search(line)))
+    if not domestic or not overseas:
+        return []
+    return [PurchaseCheck(
+        id="shipping_mismatch", category="shipping_mismatch", kind="attention", title="국내 발송과 해외 배송 안내가 함께 있음",
+        explanation="당일 발송·국내 재고라고 하면서 해외 배송·통관 안내도 있습니다. 국내 판매자처럼 보이게 하고 해외에서 보내는 경우 "
+                    "배송이 늦고 반품 비용이 커지며, 가품이 섞이는 일도 있습니다.",
+        quotes=[domestic[0], overseas[0]], how_to_check="판매자에게 출고지와 실제 배송 기간을 상품 문의로 물어보고, 해외 발송이면 반품 비용을 확인해 주세요.")]
+
+
+# The reward has to follow the five-star condition closely; a rating shown as "평점 5점 만점 중 4.6" is not a condition.
+_RATED_REWARD = re.compile(r"(?:(?:별점|평점)\s*5\s*점|5\s*점\s*(?:리뷰|후기)|만점\s*(?:리뷰|후기)|포토\s*리뷰\s*5\s*점)(?!\s*만점\s*중)"
+                           r".{0,40}?(?:적립|증정|사은품|쿠폰|캐시백|환급|선물|추가\s*발송|현금)", re.I)
 _REWARD = re.compile(r"적립|증정|사은품|쿠폰|캐시백|환급|선물|추가\s*발송|현금")
 _SPONSORED = re.compile(r"(?:업체|판매자|브랜드|광고주)\s*(?:로부터|에게서|에서)\s*(?:제품|상품|체험\s*기회)?\s*(?:을|를)?\s*(?:무상\s*으?로?\s*)?"
                         r"(?:제공|지원|협찬)\s*받|제품을\s*(?:무상\s*)?제공\s*받아|체험단|원고료|소정의\s*(?:원고료|수수료|대가)|협찬\s*(?:을|를)?\s*받")
@@ -383,7 +410,7 @@ def complete_analysis(conditions: ListingConditions, checks: list[PurchaseCheck]
     """Add the missing-information checks and the summary to validated conditions and attention checks."""
     # Buyers' low-star reviews quote what sellers did; they are summarized separately, not read as the seller's own text.
     own = re.sub(r"낮은 별점 리뷰:\n.*?(?:\n\n|$)", "", text, flags=re.S)
-    checks = list(checks) + review_checks(own) + off_platform_checks(own)
+    checks = list(checks) + review_checks(own) + off_platform_checks(own) + shipping_checks(own)
     required = ["shipping", "returns"]
     # Return policies mention components ("구성품 누락으로 … 반품 불가"); only a line about the product itself asks for them.
     if any(re.search(r"구성품|번들|(?:패키지|세트)\s*(?:구성|포함)", line) and not re.search(r"반품|교환|환불|누락|훼손", line)

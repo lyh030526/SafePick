@@ -75,9 +75,11 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         for page in comparison.pages
     ))
     # A stock badge ("품절임박 서두르세요") appears on official malls too, so urgency wording alone is shown but does not
-    # set the level; labeled official-mall pages were the only cases it flagged.
+    # set the level; labeled official-mall pages were the only cases it flagged. Discount and loosely worded terms are the
+    # same: the model reads them on official malls from one run to the next (LG, Innisfree in the 2026-11-10 run) and
+    # they flagged no risky case on their own, so they stay on the checklist without setting the level.
     signals = [item for item in analysis.checklist if complete and item.kind == "attention" and item.quotes
-               and item.category not in {"purchase_pressure", "off_platform"}]
+               and item.category not in {"purchase_pressure", "off_platform", "discount_claim", "ambiguous_conditions"}]
     # Moving the payment or the conversation off the platform is the commonest marketplace scam: a marketplace seller
     # may not do it at all, so either is decisive there. Own malls often take bank transfers and chat on KakaoTalk, so
     # only a discount for paying outside the normal checkout counts for them.
@@ -113,6 +115,9 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
     seller_warn = seller is not None and seller.status in {"suspended", "invalid_number"}
     if seller is not None and seller.status not in {"active", "platform_direct", "overseas"}:
         pending.append("판매자 사업자 상태")
+    # Closing after complaints and opening again under a new number is how some shops shed their record.
+    history = seller.history if seller is not None else None
+    reopened = history is not None and history.status == "reopened"
     rating_warn = (seller is not None and seller.marketplace_rating is not None and seller.rating_count is not None
                    and seller.marketplace_rating < LOW_RATING and seller.rating_count >= MIN_RATINGS)
     if mail_warn or mail_pending:
@@ -175,7 +180,8 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
             + (f" 통신판매업 신고: {mail_order.label}." if mail_order is not None else "")
             + (f" {report_year.group(1)}년에 통신판매업을 신고한 신규 판매자입니다." if new_seller else "")
             + (f" 마켓 판매자 평가 {seller.marketplace_rating}% ({seller.rating_count}명)."
-               if seller.marketplace_rating is not None else "")))
+               if seller.marketplace_rating is not None else "")
+            + (f" 이력: {history.label}." if history is not None else "")))
     # How long the seller has been registered for mail order: the only track record a marketplace page carries.
     if report_year and seller is not None and seller.status == "active":
         years = today.year - int(report_year.group(1))
@@ -231,9 +237,11 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         summary = "설명 분석을 완료하지 못해 주의 수준을 정하지 않았습니다. 자료를 추가하거나 다시 분석해 주세요."
         reasons = [analysis.message]
     elif (signals or seller_warn or mail_warn or price_signal or domain_warn or rating_warn or lookalike_warn or off_warn or bait
-          or claim_conflict):
+          or claim_conflict or reopened):
         level, label = "moderate", "보통"
-        summary = (f"{claims.message}" if claim_conflict and not (signals or seller_warn or mail_warn or price_signal or domain_warn
+        summary = (history.message if reopened and not (signals or seller_warn or mail_warn or price_signal or domain_warn
+                                                        or rating_warn or lookalike_warn or off_warn or bait or claim_conflict) else
+                   f"{claims.message}" if claim_conflict and not (signals or seller_warn or mail_warn or price_signal or domain_warn
                                                                  or rating_warn or lookalike_warn or off_warn or bait) else
                    "대표 가격은 싸 보이지만 상품 자체의 옵션은 훨씬 비쌉니다. 싼 가격은 부속품·사은품 옵션의 가격일 수 있으니 실제로 고르는 "
                    "옵션의 결제 금액을 확인해 주세요." if bait and not (signals or seller_warn or mail_warn or price_signal or domain_warn
@@ -260,6 +268,7 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
                    + ([mail_reason] if mail_warn else [])
                    + ([price_reason] if price_signal else []) + ([bait_reason] if bait else [])
                    + ([claims.label] if claim_conflict else [])
+                   + ([f"판매자 이력: {history.label} (폐업한 번호 {history.closed_numbers}개)"] if reopened else [])
                    + [item.title for item in signals]
                    + ([f"통신판매업 신고: {report_year.group(1)}년 신고 ({report})"] if new_seller else []))
     elif not pending:
@@ -291,7 +300,7 @@ def assess_risk(analysis: RiskAnalysis, comparison: ProductComparison | None,
         if new_seller:
             reasons.insert(0, f"통신판매업 신고: {report_year.group(1)}년 신고 ({report})")
     return RiskAssessment(level=level, label=label, summary=summary, reasons=list(dict.fromkeys(reasons)),
-                          missing_checks=pending, criteria=criteria, rule_version="15", domain=domain,
+                          missing_checks=pending, criteria=criteria, rule_version="17", domain=domain,
                           **score_evidence(criteria, level, params,
                                            None if official or (market is not None and market.status == "typical")
                                            else UNCOMPARED_CEILING))

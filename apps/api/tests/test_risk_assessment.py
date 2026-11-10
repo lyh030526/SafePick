@@ -67,12 +67,14 @@ class RiskLevelTests(unittest.TestCase):
             self.assertEqual(result.level, "undetermined")
             self.assertTrue(result.missing_checks)
 
-    def test_discount_is_moderate_but_urgency_alone_is_only_shown(self):
+    def test_discount_terms_and_urgency_alone_are_only_shown(self):
         quote = "오늘만 90% 할인! 지금 구매하세요."
-        result = assess_risk(analyzed([SignalDraft(category="discount_claim", quotes=[quote])]), None)
-        self.assertEqual(result.level, "moderate")
-        self.assertTrue(result.reasons)
-        self.assertTrue(result.missing_checks)
+        # Official malls word discounts and terms loosely too (the 2026-11-10 run flagged LG and Innisfree on them alone,
+        # and no risky case), so they stay on the checklist without setting the level.
+        for category, said in (("discount_claim", quote), ("ambiguous_conditions", "일부 옵션은 배송 조건이 다를 수 있습니다.")):
+            analysis = analyzed([SignalDraft(category=category, quotes=[said])])
+            self.assertIn(category, [item.category for item in analysis.checklist if item.kind == "attention"])
+            self.assertEqual(assess_risk(analysis, None).level, "undetermined")
         # Official malls show "품절임박 서두르세요" badges, so urgency stays in the checklist without setting the level.
         urgent = analyzed([SignalDraft(category="purchase_pressure", quotes=[quote])])
         self.assertIn("purchase_pressure", [item.category for item in urgent.checklist])
@@ -177,9 +179,10 @@ class RiskLevelTests(unittest.TestCase):
         # Without either, the same evidence is undetermined, so it cannot read as 근거 양호.
         pending = assess_risk(analyzed(), None, SellerVerification(status="not_found"), typical)
         self.assertEqual((pending.level, pending.score_label), ("undetermined", "대체로 양호"))
-        quote = "오늘만 90% 할인! 지금 구매하세요."
-        moderate = assess_risk(analyzed([SignalDraft(category="discount_claim", quotes=[quote])]), official(), active, typical)
-        self.assertEqual((moderate.level, moderate.score, moderate.score_label), ("moderate", 53, "주의 필요"))
+        # Far below the market: price 0 of 15, the rest confirmed -> 85%, 30 + 29 * 0.85.
+        far_below = MarketPrice(status="far_below", label="시세보다 지나치게 저렴", ratio_percent=40)
+        moderate = assess_risk(analyzed(), official(), active, far_below)
+        self.assertEqual((moderate.level, moderate.score, moderate.score_label), ("moderate", 54, "주의 필요"))
 
     def test_score_is_withheld_without_enough_evidence_unless_the_level_is_decisive(self):
         empty = assess_risk(RiskAnalysis(), None, SellerVerification(status="unavailable"), MarketPrice(status="no_model"))

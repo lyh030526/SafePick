@@ -25,7 +25,7 @@ import { GroupComparisonScreen } from './GroupComparison';
 import { AskAnalysis } from './AskAnalysis';
 import { RecentRow } from './ListingRow';
 import { MarketPriceCard, type MarketPrice } from './MarketPrice';
-import { ClaimCard, Checklist, Verdict, type RiskAnalysis } from './RiskChecklist';
+import { ClaimCard, Checklist, PhotoCard, Verdict, type RiskAnalysis } from './RiskChecklist';
 import { SellerCheck, type SellerVerification } from './SellerCheck';
 import { colors, installWebFont, radius, shadow, type } from './theme';
 import { Button, Card, CheckCircle, Disclosure, Divider, Icon, ListRow, Logo, Pill, SectionTitle, TopBar, text } from './ui';
@@ -145,6 +145,7 @@ function SingleAnalysis() {
   const [inputSource, setInputSource] = useState<'user_text' | 'browser_extension'>(initialImport.payload?.input_source ?? 'user_text');
   const [pageTitle, setPageTitle] = useState(initialImport.payload?.page_title ?? '');
   const [capturedAt, setCapturedAt] = useState<string | undefined>(initialImport.payload?.captured_at);
+  const [imageUrl, setImageUrl] = useState<string | undefined>(initialImport.payload?.image_url);
   const [consent, setConsent] = useState(false);
   const [source, setSource] = useState<SourceSummary | null>(null);
   // The description and images stay folded away until needed; imported material opens them for review.
@@ -168,7 +169,7 @@ function SingleAnalysis() {
     const capture = takePendingCapture();
     if (!capture) return;
     setProductUrl(capture.product_url); setProvidedText(capture.provided_text); setPageTitle(capture.page_title);
-    setInputSource('browser_extension'); setCapturedAt(capture.captured_at); setImages([]); setConsent(false);
+    setInputSource('browser_extension'); setCapturedAt(capture.captured_at); setImageUrl(capture.image_url); setImages([]); setConsent(false);
     setError(''); setAnalysisState('input'); setMaterialOpen(true);
   }, []));
   useEffect(() => {
@@ -241,7 +242,7 @@ function SingleAnalysis() {
       const response = await fetch(`${apiBaseUrl}/analyses`, {
         body: JSON.stringify({ product_url: parsedUrl.toString(),
           ...(hasProvidedData ? { provided_text: providedText.trim() || undefined, page_title: pageTitle,
-            input_source: inputSource, captured_at: capturedAt,
+            input_source: inputSource, captured_at: capturedAt, image_url: inputSource === 'browser_extension' ? imageUrl : undefined,
             images: images.map(({ base64_data, mime_type }) => ({ base64_data, mime_type })) } : {}),
         }),
         headers: { 'Content-Type': 'application/json' },
@@ -622,6 +623,7 @@ function CorrectionForm({
             <SellerCheck verification={seller} />
             <MarketPriceCard market={market} />
             <ClaimCard check={riskResult?.claim_check} />
+            <PhotoCard check={riskResult?.photo_check} />
           </> : null}
           <Disclosure title="공식 정보 비교 결과" icon="ribbon-outline" status={result && !dirty ? result.label : undefined} tone={comparisonTone}>
             {result && !dirty ? <ComparisonPanel comparison={result} /> : <Text style={text.body}>다시 비교하면 결과가 여기에 나와요.</Text>}

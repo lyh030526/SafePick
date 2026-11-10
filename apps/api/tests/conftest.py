@@ -18,6 +18,8 @@ def no_live_lookups(monkeypatch, tmp_path):
     monkeypatch.setenv("DATA_GO_KR_SERVICE_KEY", "")
     # Nor a locally built FTC index; tests that need one build it in a temporary folder.
     monkeypatch.setattr("mail_order_index.INDEX_PATH", tmp_path / "no-index.sqlite")
+    # Nor the shipped FTC history; history tests point at a file they build.
+    monkeypatch.setattr("seller_history.HISTORY_PATH", tmp_path / "no-history.sqlite")
     # Nor the domain registries; domain tests patch httpx in domain_check themselves.
     from schemas import DomainCheck
     monkeypatch.setattr("main.check_domain", lambda _url: DomainCheck())

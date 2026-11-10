@@ -11,7 +11,7 @@ type Level = keyof typeof levels;
 type Signal = { kind: string; label: string; severity: 'high' | 'moderate' | 'info'; quote: string; advice: string };
 type Link = { url: string; domain: string | null; status: string; label: string; message: string };
 export type ConversationCheck = { level: Level; label: string; summary: string; signals: Signal[]; links: Link[];
-  read_length: number; warnings: string[] };
+  lookup_numbers?: { kind: 'account' | 'phone'; masked: string; bank: string | null }[]; read_length: number; warnings: string[] };
 
 const channels: { id: 'marketplace' | 'messenger'; label: string; icon: 'storefront-outline' | 'chatbubbles-outline' }[] = [
   { id: 'marketplace', label: '쿠팡 등 마켓 안 문의·채팅', icon: 'storefront-outline' },
@@ -129,6 +129,18 @@ export function ConversationResult({ result, onReset }: { result: ConversationCh
         <Text style={text.body}>{link.message}</Text>
       </Card>)}
     </> : null}
+    {result.lookup_numbers?.length ? <>
+      <SectionTitle>사기 신고 이력 확인</SectionTitle>
+      <Card>
+        <Text style={text.body}>대화에 나온 계좌·전화번호예요. 경찰청 공식 앱 &apos;사이버캅&apos;에서 캡처의 전체 번호로 사기 신고 이력을 조회해 보세요.
+          SafePick은 번호를 다른 곳으로 보내지 않아요.</Text>
+        {result.lookup_numbers.map(item => <View key={item.masked} style={styles.number}>
+          <Icon name={item.kind === 'account' ? 'card-outline' : 'call-outline'} size={18} color={colors.brandText} />
+          <Text style={[text.strong, styles.flex]}>{item.kind === 'account' ? `${item.bank ? `${item.bank} ` : ''}계좌` : '전화번호'} {item.masked}</Text>
+        </View>)}
+        <Text style={text.small}>조회되지 않는다고 안전한 것은 아니에요. 신고가 아직 쌓이지 않은 새 번호일 수 있어요.</Text>
+      </Card>
+    </> : null}
     {result.warnings.map(warning => <Text key={warning} style={text.small}>{warning}</Text>)}
     <Button tone="secondary" icon="refresh" label="다른 대화 확인하기" onPress={onReset} />
   </>;
@@ -154,5 +166,6 @@ const styles = StyleSheet.create({
   levelTitle: { ...type.display, fontSize: 30, lineHeight: 38 },
   quote: { ...type.small, fontSize: 14, color: colors.textSub, backgroundColor: colors.fill, borderRadius: 12, padding: 12,
     borderLeftWidth: 3, borderLeftColor: colors.line },
+  number: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.fill, borderRadius: 12, padding: 12 },
   advice: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: colors.brandSoft, borderRadius: 12, padding: 12 },
 });

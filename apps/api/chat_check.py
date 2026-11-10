@@ -15,7 +15,7 @@ from openai import OpenAI
 from domain_check import check_domain, is_marketplace, registrable_domain
 from risk_analysis import _CONTACT, _PAYMENT, _WARNING
 from schemas import (
-    AnalysisImage, ConversationCheck, ConversationCheckRequest, ConversationLink, ConversationSignal,
+    AnalysisImage, ConversationCheck, ConversationCheckRequest, ConversationLink, ConversationSignal, LookupNumber,
 )
 
 TRANSCRIBE_INSTRUCTIONS = """메신저·문자·쇼핑앱 채팅 화면 캡처의 대화를 위에서 아래로 그대로 옮겨 적으세요.
@@ -60,6 +60,30 @@ _URL = re.compile(r"(?:https?://|www\.)[^\s<>\"'()]+|\b[a-z0-9-]+(?:\.[a-z0-9-]+
 _ACCOUNT = re.compile(r"\b(\d{2,6})-(\d{2,6})-(\d{2,8})(?:-(\d{1,4}))?\b")
 _PHONE = re.compile(r"\b(01[016789])[-\s]?(\d{3,4})[-\s]?(\d{4})\b")
 _SPEAKER = re.compile(r"^(?:상대|판매자)\s*:\s*")
+_BANK = re.compile(r"(국민|신한|우리|하나|농협|기업|카카오\s*뱅크|토스\s*뱅크|케이\s*뱅크|우체국|새마을|수협|부산|대구|경남|광주|전북|제주|SC제일|씨티)"
+                   r"\s*(?:은행)?\s*:?\s*$")
+
+
+def lookup_numbers(transcript: str) -> list[LookupNumber]:
+    """The accounts and phone numbers someone gave in the conversation. The police's fraud lookup has no public API, so
+    the shopper checks them there; only masked forms are sent back."""
+    found, seen = [], set()
+    for line in transcript.splitlines():
+        if line.strip().startswith("나:"):
+            continue
+        for match in _ACCOUNT.finditer(line):
+            # 010-1234-5678 has an account's shape too; it is a phone number.
+            if match.group(0) in seen or _PHONE.fullmatch(match.group(0)):
+                continue
+            seen.add(match.group(0))
+            bank = _BANK.search(line[:match.start()])
+            found.append(LookupNumber(kind="account", masked=mask(match.group(0)),
+                                      bank=re.sub(r"\s+", "", bank.group(1)) if bank else None))
+        for match in _PHONE.finditer(line):
+            if match.group(0) not in seen:
+                seen.add(match.group(0))
+                found.append(LookupNumber(kind="phone", masked=mask(match.group(0))))
+    return found[:6]
 
 
 def _client() -> OpenAI | None:
@@ -204,4 +228,4 @@ def check_conversation(request: ConversationCheckRequest) -> ConversationCheck:
         level, label = "low", "낮음"
         summary = "대화에서 흔한 사기 수법(마켓 밖 결제·연락, 사칭, 추가 입금 요구)을 찾지 못했습니다. 안전을 보장하지는 않습니다."
     return ConversationCheck(level=level, label=label, summary=summary, signals=signals[:8], links=links,
-                             read_length=len(transcript), warnings=warnings)
+                             lookup_numbers=lookup_numbers(transcript), read_length=len(transcript), warnings=warnings)
