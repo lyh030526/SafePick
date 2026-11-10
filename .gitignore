@@ -15,3 +15,10 @@ apps/mobile/.env
 
 # Local data built from public downloads
 data/mail_order/
+
+# Collected third-party page text and screenshots stay on this machine only
+data/calibration/texts/
+data/calibration/snapshots/
+docs/validation/**/*
+!docs/validation/**/
+!docs/validation/**/README.md
