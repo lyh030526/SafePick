@@ -345,6 +345,13 @@ function SingleAnalysis() {
               </Pressable> : null}
             </View>
             {error ? <Text accessibilityRole="alert" style={text.error}>{error}</Text> : null}
+            {/* The consent sits right above the button it unlocks, so imported material is one tap from analysis. */}
+            {hasMaterial ? <Pressable accessibilityRole="checkbox"
+              accessibilityLabel="상품 자료 AI 분석 동의" accessibilityState={{ checked: consent }}
+              onPress={() => { setConsent(current => !current); setError(''); }} style={styles.consentRow}>
+              <CheckCircle checked={consent} />
+              <Text style={styles.consentText}>{imported ? '가져온 페이지 내용' : '넣은 설명·이미지'}을 OpenAI에 보내 분석하는 데 동의합니다. 자료의 이용 권한을 확인했고 개인정보는 넣지 않았어요.</Text>
+            </Pressable> : null}
             <Button label="분석 시작" icon="search" onPress={startAnalysis} />
             <Pressable accessibilityRole="button"
               onPress={() => { setProductUrl(sampleLink); setProvidedText(''); setImages([]); setInputSource('user_text'); setCapturedAt(undefined); setPageTitle(''); setConsent(false); setError(''); }}
@@ -385,12 +392,6 @@ function SingleAnalysis() {
                   <Text style={styles.removeImageText}>삭제</Text>
                 </Pressable></View>
             </View>)}
-            {hasMaterial ? <Pressable accessibilityRole="checkbox"
-              accessibilityLabel="상품 자료 AI 분석 동의" accessibilityState={{ checked: consent }}
-              onPress={() => setConsent(current => !current)} style={styles.consentRow}>
-              <CheckCircle checked={consent} />
-              <Text style={styles.consentText}>제공할 자료의 이용 권한을 확인했으며, 설명·이미지를 OpenAI에 보내 분석하는 데 동의합니다. 개인정보는 제외해 주세요.</Text>
-            </Pressable> : null}
           </Disclosure>
 
           {recent.length ? <>
