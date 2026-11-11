@@ -122,6 +122,34 @@ async function collectProductPage() {
     await new Promise(resolve => setTimeout(resolve, 700));
     read();
   }
+  // The required product notice (maker, importer, origin, KC numbers) shows one row until "필수 표기 정보 더보기" is
+  // pressed. That control is a plain element rather than a button, so it is found by its own text and pressed once.
+  const noticeMore = /^(필수\s*표기\s*정보|상품\s*정보\s*제공\s*고시)\s*(더\s*보기|펼치기|펼쳐\s*보기|전체\s*보기)$/;
+  const noticeHead = /^(필수\s*표기\s*정보|상품\s*정보\s*제공\s*고시)$/;
+  const textOf = element => (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim();
+  const pressable = element => element.closest('button, a, summary, [role="button"], [onclick], [tabindex]') || element;
+  // The innermost element carrying the label, not every container around it. Some pages label it only "더보기", right
+  // after the notice table, so the first "더보기" following the notice heading inside its section counts too.
+  const innermost = (test, within = document) => [...within.querySelectorAll('button, a, span, div, p, strong, em, h2, h3, h4')]
+    .find(element => test(textOf(element)) && ![...element.children].some(child => test(textOf(child)))
+      && element.isConnected && element.getClientRects().length);
+  const noticeHeading = innermost(text => noticeHead.test(text));
+  const noticeSection = noticeHeading?.parentElement?.parentElement;
+  const noticeControl = innermost(text => noticeMore.test(text))
+    || (noticeSection && [...noticeSection.querySelectorAll('button, a, span, div, p')].find(element =>
+      /^더\s*보기$/.test(textOf(element)) && ![...element.children].some(child => /^더\s*보기$/.test(textOf(child)))
+      && noticeHeading.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING && element.getClientRects().length));
+  if (noticeControl) {
+    const target = pressable(noticeControl);
+    if (!target.closest('form') && target.target !== '_blank' && samePage(target) && target.getAttribute('aria-expanded') !== 'true') {
+      try {
+        target.click();
+        clicked.push(textOf(noticeControl));
+        await new Promise(resolve => setTimeout(resolve, 800));
+        read();
+      } catch { /* The notice stays as it was shown. */ }
+    }
+  }
   // Coupang: read the 1-2 star reviews through the read-only star filter, for a complaint summary that does not set the
   // level. A product's reviews mix every seller of it, so each keeps its seller name.
   const lowReviews = [];
@@ -158,6 +186,32 @@ async function collectProductPage() {
     }
   });
   const terms = termLines.length ? `배송·반품 안내:\n${termLines.join('\n')}\n\n` : '';
+  // The notice table sits past the description on long pages, so its rows are lifted out like the terms. It is read
+  // from the page itself: the page text drops repeated lines, and notice values ("상세페이지 참조") repeat.
+  const noticeLines = [];
+  const headWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  while (headWalker.nextNode() && !noticeLines.length) {
+    const head = headWalker.currentNode;
+    if (!noticeHead.test(head.textContent.replace(/\s+/g, ' ').trim()) || head.parentElement?.closest('script,style')) continue;
+    // Climb while the block stays the size of a table, so the whole page is never taken for it.
+    let block = head.parentElement;
+    while (block.parentElement && block.parentElement !== document.body && block.parentElement.textContent.length <= 4000)
+      block = block.parentElement;
+    const rows = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    let started = false;
+    while (rows.nextNode()) {
+      const node = rows.currentNode;
+      const row = node.textContent.replace(/\s+/g, ' ').trim();
+      const parent = node.parentElement;
+      if (!row || !parent || parent.closest('script,style')) continue;
+      if (node === head) { started = true; continue; }
+      if (!started || getComputedStyle(parent).display === 'none' || !parent.getClientRects().length) continue;
+      if (noticeMore.test(row) || /^더\s*보기$/.test(row) || noticeHead.test(row)
+          || /취소\s*\/?\s*반품은|현금\s*거래를\s*요구|^상품\s*문의/.test(row) || noticeLines.join('\n').length > 2500) break;
+      noticeLines.push(row);
+    }
+  }
+  const notice = noticeLines.length ? `상품정보 고시(필수 표기 정보):\n${noticeLines.join('\n')}\n\n` : '';
   // Payment or contact moved off the platform often sits in a Q&A answer near the end, past the text cut; lift it out.
   // The marketplace's own warnings ("현금거래를 요구하면 거부하시고") are left where they are.
   const offPlatform = /카카오\s*톡|카톡|오픈\s*채팅|open\.kakao\.com|텔레그램|계좌\s*이체|무통장|현금\s*(결제|거래|입금)|개인\s*계좌|계좌로|입금\s*(부탁|해\s*주)/i;
@@ -203,7 +257,7 @@ async function collectProductPage() {
   // The main product photo, for finding where else it is used; only an https address is sent.
   const photo = document.querySelector('meta[property="og:image"]')?.content || '';
   return { version: 1, expanded: clicked, hint, product_url: url.toString(), page_title: document.title.slice(0, 300),
-    provided_text: (seller + contact + terms + reviews + structured + visibleText).slice(0, 12000),
+    provided_text: (seller + contact + terms + notice + reviews + structured + visibleText).slice(0, 12000),
     captured_at: new Date().toISOString(), input_source: 'browser_extension',
     ...(/^https:\/\/\S{1,490}$/.test(photo) ? { image_url: photo } : {}) };
 }

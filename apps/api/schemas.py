@@ -89,6 +89,14 @@ class OfferDetails(BaseModel):
     marks: list[ListingMark] = Field(default_factory=list, max_length=8)
 
 
+class ProductNotice(BaseModel):
+    """The listing's required product notice (상품정보제공고시): who made or imported it, where, and its KC numbers."""
+    maker: str = UNKNOWN
+    importer: str = UNKNOWN
+    origin: str = UNKNOWN
+    kc_numbers: list[str] = Field(default_factory=list, max_length=8)
+
+
 class ProductDetails(BaseModel):
     brand_name: str = Field(description="브랜드명. 근거가 없으면 확인 불가")
     product_name: str = Field(description="판매 중인 상품명. 근거가 없으면 확인 불가")
@@ -101,6 +109,7 @@ class ProductDetails(BaseModel):
     # What the listing says it is selling: new, refurbished, used or display stock, or a parallel import.
     condition: Literal["new", "refurbished", "used", "display", "parallel_import", "unknown"] = "unknown"
     offer: OfferDetails = Field(default_factory=OfferDetails)
+    notice: ProductNotice = Field(default_factory=ProductNotice)
 
 
 class SourceSummary(BaseModel):
@@ -123,12 +132,27 @@ class OfficialSearchResult(BaseModel):
     snippet: str
 
 
+class MakerCheck(BaseModel):
+    """For a product with no official site to compare: the maker the notice names and whether the seller is that maker."""
+    status: Literal["seller_is_maker", "listed", "see_detail", "missing"]
+    label: str
+    message: str
+    maker: str = UNKNOWN
+    importer: str = UNKNOWN
+    origin: str = UNKNOWN
+    kc_numbers: list[str] = Field(default_factory=list)
+    kc_link: str | None = None
+
+
 class OfficialLookup(BaseModel):
     status: Literal["found", "not_supported", "no_results", "unavailable"]
     brand: SupportedBrand | None = None
     query: str | None = None
     results: list[OfficialSearchResult] = Field(default_factory=list)
     message: str
+    # The official site was found by searching the brand name rather than taken from the curated brands.
+    discovered: bool = False
+    maker: MakerCheck | None = None
 
 
 class ComparisonRequest(BaseModel):

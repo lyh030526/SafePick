@@ -14,7 +14,9 @@ from comparison import compare_product
 from group_comparison import compare_group
 from extractor import extract_product_details, generate_official_search_query, transcribe_images, unknown_product
 from market_price import check_market_price
+from maker_check import check_maker
 from official_brands import OFFICIAL_BRANDS, find_official_brand
+from official_discovery import discover_official_brand
 from official_search import OfficialSearchError, search_official_pages
 from photo_check import check_photo
 from question_answer import answer_question
@@ -68,13 +70,23 @@ def list_supported_brands() -> list[SupportedBrand]:
     return [SupportedBrand(name=brand.name, domains=list(brand.domains)) for brand in OFFICIAL_BRANDS]
 
 
-def create_official_lookup(product: ProductDetails) -> OfficialLookup:
+def create_official_lookup(product: ProductDetails, url: str = "") -> OfficialLookup:
     brand = find_official_brand(product.brand_name)
+    discovered = False
+    if not brand:
+        # Any brand's official site may be found by its name; small makers without one get the product notice instead.
+        brand = discover_official_brand(product.brand_name, url)
+        discovered = brand is not None
     if not brand:
         return OfficialLookup(
             status="not_supported",
-            message="현재는 지원 브랜드의 공식 사이트 정보만 비교할 수 있습니다.",
+            message="이 브랜드의 공식 사이트를 찾지 못해 공식 정보와 비교하지 않았습니다. 대신 상품정보 고시의 제조·수입사를 확인했어요.",
         )
+    lookup = _lookup_on(product, brand)
+    return lookup.model_copy(update={"discovered": True}) if discovered else lookup
+
+
+def _lookup_on(product: ProductDetails, brand) -> OfficialLookup:
 
     if all(value.strip() in {"", UNKNOWN} for value in (product.model_number, product.product_name)):
         return OfficialLookup(
@@ -127,15 +139,21 @@ def analyze_product(product, url, title, text, entered_url=None, image_url=None)
         seller_future = executor.submit(lambda: with_history(with_mail_order(verify_seller(text, url), url, text)))
         market_future = executor.submit(check_market_price, product)
         photo_future = executor.submit(check_photo, image_url, url)
-        lookup = create_official_lookup(product)
+        lookup = create_official_lookup(product, url)
         comparison = compare_product(product, url, lookup)
         analysis = risk_future.result()
         seller = seller_future.result()
         market = market_future.result()
     photo = photo_future.result()
     claims = check_claims(product, seller, text, market, photo)
-    # A brand without a supported official site has nothing to compare, so the criterion is left out of the score.
-    assessment = assess_risk(analysis, None if lookup.status == "not_supported" else comparison, seller, market,
+    # Without an official page that confirms the product, who made it is what can still be checked.
+    if comparison is None or comparison.status != "exact":
+        lookup = lookup.model_copy(update={"maker": check_maker(product, seller)})
+    # A brand without a supported official site has nothing to compare, so the criterion is left out of the score. A site
+    # found by searching the brand name counts only when it confirms the same product: a page it does not show may just
+    # be missing from a small maker's site.
+    scored = None if lookup.status == "not_supported" or lookup.discovered and comparison.status != "exact" else comparison
+    assessment = assess_risk(analysis, scored, seller, market,
                              domain=domain_future.result(), claims=claims)
     complaints = review_complaints(text, seller.seller.business_name)
     return lookup, comparison, analysis.model_copy(update={"assessment": assessment, "review_complaints": complaints,

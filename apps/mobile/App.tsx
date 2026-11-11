@@ -93,6 +93,19 @@ type OfficialLookup = {
   query: string | null;
   results: { title: string; url: string; snippet: string }[];
   message: string;
+  discovered?: boolean;
+  maker?: MakerCheck | null;
+};
+
+type MakerCheck = {
+  status: 'seller_is_maker' | 'listed' | 'see_detail' | 'missing';
+  label: string;
+  message: string;
+  maker: string;
+  importer: string;
+  origin: string;
+  kc_numbers: string[];
+  kc_link: string | null;
 };
 
 const sampleLink =
@@ -407,7 +420,7 @@ function SingleAnalysis() {
 
           <View style={styles.trust}>
             <Icon name="information-circle-outline" size={16} color={colors.textMuted} />
-            <Text style={[text.small, styles.flex]}>SafePick은 사기 여부를 단정하지 않고, 구매 전에 확인할 근거를 보여 드려요. 공식 정보 비교는 삼성전자·Apple·LG전자·다이슨·소니 상품부터 지원해요.</Text>
+            <Text style={[text.small, styles.flex]}>SafePick은 사기 여부를 단정하지 않고, 구매 전에 확인할 근거를 보여 드려요. 공식 사이트를 찾은 브랜드는 공식 정보와 비교하고, 찾지 못하면 상품정보 고시의 제조·수입사를 대신 확인해요.</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -626,7 +639,9 @@ function CorrectionForm({
             <ClaimCard check={riskResult?.claim_check} />
             <PhotoCard check={riskResult?.photo_check} />
           </> : null}
-          <Disclosure title="공식 정보 비교 결과" icon="ribbon-outline" status={result && !dirty ? result.label : undefined} tone={comparisonTone}>
+          <Disclosure title="공식 정보 비교 결과" icon="ribbon-outline"
+            status={result && !dirty ? (result.status === 'unknown' && lookup?.maker ? lookup.maker.label : result.label) : undefined}
+            tone={result?.status === 'unknown' && lookup?.maker?.status === 'seller_is_maker' ? 'good' : comparisonTone}>
             {result && !dirty ? <ComparisonPanel comparison={result} /> : <Text style={text.body}>다시 비교하면 결과가 여기에 나와요.</Text>}
             {lookup && !dirty ? <OfficialLookupCard lookup={lookup} /> : null}
           </Disclosure>
@@ -738,7 +753,8 @@ function OfficialLookupCard({ lookup }: { lookup: OfficialLookup }) {
     <View style={styles.panel}>
       <Text style={text.strong}>공식 사이트 검색 결과</Text>
       <Text style={text.body}>{lookup.message}</Text>
-      {lookup.brand ? <Text style={text.small}>{lookup.brand.name} 공식 도메인: {lookup.brand.domains.join(', ')}</Text> : null}
+      {lookup.brand ? <Text style={text.small}>{lookup.brand.name} 공식 도메인: {lookup.brand.domains.join(', ')}
+        {lookup.discovered ? ' (브랜드 이름으로 검색해 찾은 사이트예요. 주소가 맞는지 한 번 더 확인해 주세요.)' : ''}</Text> : null}
       {lookup.query ? <Text style={text.small}>검색어: {lookup.query}</Text> : null}
       {lookup.results.map((result) => (
         <Pressable key={result.url} onPress={() => Linking.openURL(result.url)}
@@ -748,6 +764,25 @@ function OfficialLookupCard({ lookup }: { lookup: OfficialLookup }) {
           <Text numberOfLines={1} style={styles.linkUrl}>{result.url}</Text>
         </Pressable>
       ))}
+      {lookup.maker ? <MakerPanel maker={lookup.maker} /> : null}
+    </View>
+  );
+}
+
+function MakerPanel({ maker }: { maker: MakerCheck }) {
+  const rows = [['제조사', maker.maker], ['수입사', maker.importer], ['제조국', maker.origin],
+    ['KC 인증번호', maker.kc_numbers.join(', ')]].filter(([, value]) => value && value !== '확인 불가');
+  return (
+    <View style={styles.makerPanel}>
+      <Text style={text.strong}>제조·수입사 확인 · {maker.label}</Text>
+      <Text style={text.body}>{maker.message}</Text>
+      {rows.map(([label, value]) => <InfoRow key={label} label={label} value={value} />)}
+      {maker.kc_link ? <Pressable accessibilityRole="link" onPress={() => Linking.openURL(maker.kc_link!)}
+        style={({ pressed }) => [styles.searchResult, pressed && styles.pressed]}>
+        <Text style={styles.linkTitle}>KC 인증번호 조회하러 가기</Text>
+        <Text numberOfLines={1} style={styles.linkUrl}>{maker.kc_link}</Text>
+      </Pressable> : null}
+      <Text style={text.small}>상품정보 고시는 판매자가 적은 내용이라 점수에는 넣지 않았어요.</Text>
     </View>
   );
 }
@@ -849,6 +884,7 @@ const styles = StyleSheet.create({
   quoteBox: { backgroundColor: colors.fill, borderRadius: 12, padding: 12, gap: 4 },
   quoteLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   quoteText: { color: colors.textSub, fontSize: 14, lineHeight: 21 },
+  makerPanel: { gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   searchResult: { backgroundColor: colors.fill, borderRadius: 14, padding: 14, ...shadow, shadowOpacity: 0, elevation: 0 },
   searchResultSnippet: { color: colors.textSub, fontSize: 13, lineHeight: 19, marginTop: 4 },
   fieldGroup: { gap: 0 },

@@ -6,7 +6,7 @@ from decimal import Decimal, InvalidOperation
 
 from openai import APIStatusError, OpenAI
 
-from official_brands import find_official_brand
+from official_brands import OfficialBrand, find_official_brand
 from official_search import is_official_url
 from schemas import (
     OfficialFacts, OfficialLookup, OfficialPageSummary, PriceComparison,
@@ -148,6 +148,9 @@ def compare_price(product: ProductDetails, facts: OfficialFacts | None, match: s
 
 def compare_product(product: ProductDetails, product_url: str, lookup: OfficialLookup) -> ProductComparison:
     brand = find_official_brand(product.brand_name)
+    # A brand outside the curated list, whose official site the lookup found by searching.
+    if brand is None and lookup.discovered and lookup.brand:
+        brand = OfficialBrand(lookup.brand.name, tuple(lookup.brand.domains), ())
     pages: list[OfficialPageSummary] = []
     warnings: list[str] = []
     status = "unknown"
