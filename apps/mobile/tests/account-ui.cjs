@@ -1,5 +1,5 @@
-// Sign-in and My Page against a fake Supabase: Kakao sign-in, an analysis saved to history, a saved listing, the
-// nickname, sign-out, and account deletion. Run with the web-fake-auth server (port 8082); nothing real is contacted.
+// Accounts are switched off (lib/session ACCOUNTS_ENABLED): against a fake Supabase, no sign-in is offered, the account
+// screens send the shopper home, and nothing reaches the account backend. Run with the web-fake-auth server (port 8082); nothing real is contacted.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -89,69 +89,26 @@ const analysis = { status: 'completed', warnings: [], sale_text: '판매 페이�
       return route.fulfill({ headers: cors, json: analysis });
     });
 
-    // Signed out: analysis is open, My Page is not.
+    // Accounts are switched off: no sign-in anywhere, and the account screens send the shopper home.
     await page.goto(`${app}/`);
-    await page.getByText('로그인', { exact: true }).click();
-    await page.getByText('카카오로 시작하기').waitFor();
-    await page.screenshot({ path: path.join(output, 'sign-in.png'), fullPage: true });
-    await page.goto(`${app}/my`);
-    await page.getByText('로그인하고 내 기록을 모아 보세요', { exact: true }).waitFor();
-    assert.equal(await page.getByText('회원 탈퇴', { exact: true }).count(), 0);
-    await page.getByText('로그인하기', { exact: true }).click();
-    await page.getByText('카카오로 시작하기').waitFor();
-
-    // Kakao sign-in comes back signed in, and the header offers My Page.
-    await page.getByText('카카오로 시작하기').click();
-    await page.getByLabel('마이페이지', { exact: true }).waitFor();
-    assert.ok(calls.includes('POST /auth/v1/token'), 'the returned code is exchanged for a session');
-
-    // An analysis while signed in lands in history, without the collected page text.
+    await page.getByText('분석 시작', { exact: true }).waitFor();
+    assert.equal(await page.getByText('로그인', { exact: true }).count(), 0);
+    assert.equal(await page.getByRole('tab').count(), 0, 'no tab bar when only Home is left');
+    for (const route of ['/sign-in', '/my', '/history', '/saved']) {
+      await page.goto(`${app}${route}`);
+      await page.getByText('분석 시작', { exact: true }).waitFor();
+      assert.equal(await page.getByText('카카오로 시작하기').count(), 0, `${route} shows no sign-in`);
+    }
+    // An analysis does not offer saving, and nothing reaches the account backend.
     await page.getByLabel('상품 링크', { exact: true }).fill(listingUrl);
     await page.getByText('분석 시작', { exact: true }).click();
-    await page.getByText('관심 판매처로 저장').waitFor();
-    await page.waitForFunction(() => true);
-    for (let i = 0; i < 20 && !db.analyses.length; i++) await page.waitForTimeout(250);
-    assert.equal(db.analyses.length, 1);
-    assert.equal(db.analyses[0].level, 'moderate');
-    assert.equal(db.analyses[0].seller_name, '리샤무역 유한회사');
-    assert.equal('sale_text' in db.analyses[0].result, false);
-    await page.getByText('관심 판매처로 저장').click();
-    await page.getByText('관심 판매처에 저장했어요').waitFor();
-    assert.equal(db.saved_listings.length, 1);
-
-    // My Page: history, saved listings, nickname.
-    // A reload of /my keeps the shopper on My Page while the stored session is read back.
-    await page.goto(`${app}/my`);
-    await page.getByText('테스터', { exact: true }).waitFor();
-    await page.getByText('카카오 계정으로 로그인했어요').waitFor();
-    await page.screenshot({ path: path.join(output, 'my-page.png'), fullPage: true });
-    await page.getByText('분석 기록', { exact: true }).click();
-    await page.getByText('무선 블루투스 이어폰').waitFor();
-    await page.getByText('결과 보기').click();
-    await page.getByText('• AI로 작성한 흔적이 있는 리뷰').waitFor();
-    await page.screenshot({ path: path.join(output, 'history.png'), fullPage: true });
-    await page.getByText('기록 삭제').click();
-    await page.getByText('아직 분석한 판매 페이지가 없어요', { exact: false }).waitFor();
-    await page.goto(`${app}/saved`);
-    await page.getByText('리샤무역 유한회사 · 12,900원').waitFor();
-    await page.screenshot({ path: path.join(output, 'saved.png'), fullPage: true });
-    await page.goto(`${app}/my`);
-    // The stored nickname fills the field once it is read back; the new one replaces it after that.
-    await page.waitForFunction(() => document.querySelector('input[aria-label="닉네임"]')?.value === '테스터');
-    await page.getByLabel('닉네임').fill('세이프픽');
-    await page.getByText('닉네임 저장').click();
-    await page.getByText('닉네임을 저장했어요.').waitFor();
-    assert.equal(db.profiles[0].nickname, '세이프픽');
-
-    // Deleting the account asks once more, sends the session token to the API, and signs out.
-    await page.getByText('회원 탈퇴', { exact: true }).last().click();
-    await page.getByText('모든 기록을 지우고 탈퇴하기').click();
-    await page.getByText('로그인', { exact: true }).waitFor();
-    assert.equal(deletedWith, 'Bearer access-token');
-    assert.equal(db.saved_listings.length, 0);
+    await page.getByText('상품 분석 결과', { exact: true }).waitFor();
+    assert.equal(await page.getByText(/관심 판매처/).count(), 0);
+    await page.screenshot({ path: path.join(output, 'accounts-off.png'), fullPage: true });
+    assert.deepEqual(calls.filter(call => !call.startsWith('OPTIONS')), []);
     assert.deepEqual(errors, []);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     assert.equal(overflow, false);
-    console.log(`PASS account: Kakao sign-in, history auto-save, saved listing, nickname, deletion. Screenshots: ${output}`);
+    console.log(`PASS accounts off: no sign-in, account screens go home, no saving. Screenshots: ${output}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

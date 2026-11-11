@@ -2,7 +2,7 @@ import { Redirect } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenFrame } from '../ScreenFrame';
-import { useSession, type Provider } from '../lib/session';
+import { ACCOUNTS_ENABLED, useSession, type Provider } from '../lib/session';
 import { colors, radius } from '../theme';
 import { Card, Icon, type IconName, text } from '../ui';
 
@@ -17,6 +17,10 @@ const perks: { icon: IconName; label: string }[] = [
 ];
 
 export default function SignIn() {
+  return ACCOUNTS_ENABLED ? <SignInScreen /> : <Redirect href="/" />;
+}
+
+function SignInScreen() {
   const { session, signIn, available, loading } = useSession();
   const [busy, setBusy] = useState<Provider | null>(null);
   const [error, setError] = useState('');

@@ -1,16 +1,20 @@
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AccountPrompt } from '../../AccountPrompt';
 import { ScreenFrame } from '../../ScreenFrame';
 import { deleteAccount, getNickname, setNickname } from '../../lib/account';
-import { useSession } from '../../lib/session';
+import { ACCOUNTS_ENABLED, useSession } from '../../lib/session';
 import { colors, radius } from '../../theme';
 import { Button, Card, Divider, ListRow, SectionTitle, text } from '../../ui';
 
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
 export default function MyPage() {
+  return ACCOUNTS_ENABLED ? <MyPageScreen /> : <Redirect href="/" />;
+}
+
+function MyPageScreen() {
   const { session } = useSession();
   return <ScreenFrame title="마이">
     {session ? <Account /> : <AccountPrompt icon="person-circle-outline" title="로그인하고 내 기록을 모아 보세요"

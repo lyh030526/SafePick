@@ -1,14 +1,19 @@
+import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text } from 'react-native';
 import { AccountPrompt } from '../AccountPrompt';
 import { EmptyList, ListingRow } from '../ListingRow';
 import { ScreenFrame } from '../ScreenFrame';
 import { listSaved, removeSaved, type SavedItem } from '../lib/account';
-import { useSession } from '../lib/session';
+import { ACCOUNTS_ENABLED, useSession } from '../lib/session';
 import { colors } from '../theme';
 import { text } from '../ui';
 
 export default function Saved() {
+  return ACCOUNTS_ENABLED ? <SavedScreen /> : <Redirect href="/" />;
+}
+
+function SavedScreen() {
   const { session } = useSession();
   return <ScreenFrame title="관심 판매처" back="/my">
     {session ? <SavedList /> : <AccountPrompt icon="bookmark-outline" title="로그인하고 판매처를 저장하세요"

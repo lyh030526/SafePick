@@ -63,15 +63,10 @@ function risk(status = 'completed', empty = false, level = empty ? 'undetermined
       await page.getByRole('checkbox', { name: '상품 자료 AI 분석 동의' }).click();
       await page.getByText('분석 시작', { exact: true }).click();
       await page.getByText('상품 분석 결과', { exact: true }).waitFor();
-      await page.getByText('구매 전 체크리스트', { exact: true }).waitFor();
       await page.getByLabel('구매 전 주의 수준 보통', { exact: true }).waitFor();
-      await page.getByText(promo, { exact: true }).first().waitFor();
-      await page.getByText('수집 자료에서 확인 불가', { exact: true }).waitFor();
-      await page.getByRole('checkbox', { name: '구매를 서두르게 하는 표현 확인 완료' }).click();
-      await page.getByText('직접 확인한 항목 1 / 3', { exact: true }).waitFor();
-      await page.getByLabel('구매 전 주의 수준 보통', { exact: true }).waitFor();
-      await page.getByText('상품 조건 원문 보기', { exact: true }).click();
-      await page.getByText('배송비 3,000원.', { exact: true }).waitFor();
+      // The pre-purchase checklist and the chat check are no longer part of a result.
+      assert.equal(await page.getByText('구매 전 체크리스트', { exact: true }).count(), 0);
+      assert.equal(await page.getByText('판매자가 카톡·문자로 연락했나요?', { exact: true }).count(), 0);
       await page.screenshot({ path: path.join(output, `checklist-${width}.png`), fullPage: true });
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       status = 'unavailable';
@@ -79,14 +74,12 @@ function risk(status = 'completed', empty = false, level = empty ? 'undetermined
       await page.getByLabel('모델명', { exact: true }).fill('SP-200');
       assert.equal(await page.getByText('구매 전 체크리스트', { exact: true }).count(), 0);
       await page.getByText('수정 정보로 다시 비교', { exact: true }).click();
-      await page.getByText('AI 서비스 오류로 위험 신호 분석을 완료하지 못했습니다.', { exact: true }).waitFor();
       await page.getByLabel('구매 전 주의 수준 판단 보류', { exact: true }).waitFor();
       assert.equal(await page.getByText(promo, { exact: true }).count(), 0);
       assert.equal(corrections[0].sale_text, text);
       assert.equal(corrections[0].product.model_number, 'SP-200');
       status = 'completed'; empty = true;
       await page.getByText('수정 정보로 다시 비교', { exact: true }).click();
-      await page.getByText('수집한 자료에서 추가 확인할 표현을 찾지 못했습니다. 안전성을 보장하는 결과는 아닙니다.', { exact: true }).waitFor();
       assert.equal(await page.getByRole('checkbox').count(), 0);
       await page.getByLabel('구매 전 주의 수준 판단 보류', { exact: true }).waitFor();
       await page.getByLabel('신뢰 점수 보류', { exact: true }).waitFor();
@@ -102,11 +95,10 @@ function risk(status = 'completed', empty = false, level = empty ? 'undetermined
       }
       status = 'insufficient';
       await page.getByText('수정 정보로 다시 비교', { exact: true }).click();
-      await page.getByText('위험 신호의 원문 근거를 확인할 상품 설명이 부족합니다.', { exact: true }).waitFor();
       await page.getByLabel('구매 전 주의 수준 판단 보류', { exact: true }).waitFor();
       assert.equal(await page.getByText(promo, { exact: true }).count(), 0);
       assert.deepEqual(errors, []);
-      console.log(`PASS ${width}px: extension import, grounded checklist, missing info, checkboxes, conditions, correction source, unavailable/insufficient/empty, no overflow`);
+      console.log(`PASS ${width}px: extension import, no checklist, correction source, unavailable/insufficient/empty, levels, no overflow`);
       await page.close();
     }
     console.log(`Screenshots: ${output}`);

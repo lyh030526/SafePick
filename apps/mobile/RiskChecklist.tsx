@@ -70,11 +70,10 @@ const labels: Record<keyof RiskAnalysis['conditions'], string> = {
 const criterionLabels = { confirmed: '확인됨', partial: '일부 확인', attention: '주의 항목 있음', unknown: '추가 확인' };
 const criterionTones = { confirmed: 'good', partial: 'good', attention: 'warn', unknown: 'neutral' } as const;
 
-// The verdict and the checklist together, for places that show one listing in a single block (the group comparison).
-export function RiskChecklist({ analysis, sourceUrl }: { analysis: RiskAnalysis | null; sourceUrl: string }) {
+// The verdict, for places that show one listing in a single block (the group comparison).
+export function RiskChecklist({ analysis }: { analysis: RiskAnalysis | null; sourceUrl?: string }) {
   return <View style={styles.stack}>
     <Verdict analysis={analysis} />
-    <Checklist analysis={analysis} sourceUrl={sourceUrl} />
   </View>;
 }
 
@@ -157,67 +156,6 @@ export function Verdict({ analysis, product }: { analysis: RiskAnalysis | null; 
       <Text style={text.small}>신뢰 점수는 확인한 근거로 계산한 참고 점수이고, 주의 수준은 수집한 자료에서 확인한 신호예요. 사기 확률이 아니며 판매자나 정품·안전을 인증하지 않아요.</Text>
     </View>
   </Card>;
-}
-
-// Items the shopper ticks off while checking the real page, with the quote each one came from.
-export function Checklist({ analysis, sourceUrl }: { analysis: RiskAnalysis | null; sourceUrl: string }) {
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [showConditions, setShowConditions] = useState(false);
-  const complete = analysis?.status === 'completed';
-  const total = complete ? analysis.checklist.length : 0;
-  return <View style={styles.stack}>
-    <SectionTitle>구매 전 체크리스트</SectionTitle>
-    <Card style={[styles.summary, !complete && styles.summaryNeutral]}>
-      <View style={styles.bulletRow}>
-        <Icon name={complete ? 'sparkles-outline' : 'hourglass-outline'} size={18} color={complete ? colors.brandText : colors.textMuted} />
-        <Text style={[text.strong, styles.flex]}>{complete ? '수집한 상품 설명 분석' : '위험 신호 분석 미완료'}</Text>
-      </View>
-      <Text style={text.body}>{analysis?.message ?? '새 분석을 시작하면 상세 설명의 확인 항목을 볼 수 있어요.'}</Text>
-    </Card>
-    {complete ? <>
-      {total > 0 ? <View style={styles.progress}>
-        <Text style={styles.counter}>직접 확인한 항목 {checked.size} / {total}</Text>
-        <View style={styles.track}><View style={[styles.fill, { width: `${(checked.size / total) * 100}%` }]} /></View>
-      </View> : null}
-      {analysis.checklist.map(item => <Card key={item.id}>
-        <Pill label={item.kind === 'attention' ? '표현·불일치 확인' : '수집 자료에서 확인 불가'} tone={item.kind === 'attention' ? 'warn' : 'neutral'} />
-        <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.title} 확인 완료`}
-          accessibilityState={{ checked: checked.has(item.id) }} onPress={() => setChecked(previous => {
-            const next = new Set(previous); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next;
-          })} style={styles.checkRow}>
-          <CheckCircle checked={checked.has(item.id)} />
-          <Text style={[styles.itemTitle, checked.has(item.id) && styles.itemDone]}>{item.title}</Text>
-        </Pressable>
-        <Text style={text.body}>{item.explanation}</Text>
-        {item.quotes.length ? item.quotes.map((quote, index) => <Text key={index} selectable style={styles.quote}>{quote}</Text>)
-          : <Text style={text.small}>수집한 자료에서 해당 안내를 찾지 못했어요. 실제 페이지에서 안내를 펼쳐 확인해 주세요.</Text>}
-        <View style={styles.howTo}>
-          <Icon name="checkmark-done-outline" size={17} color={colors.brandText} />
-          <Text style={[text.body, styles.flex]}>{item.how_to_check}</Text>
-        </View>
-      </Card>)}
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded: showConditions }}
-        onPress={() => setShowConditions(value => !value)} style={({ pressed }) => [styles.toggle, pressed && styles.pressed]}>
-        <Text style={styles.toggleText}>{showConditions ? '상품 조건 원문 접기' : '상품 조건 원문 보기'}</Text>
-        <Icon name={showConditions ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSub} />
-      </Pressable>
-      {showConditions ? <Card>
-        {(Object.keys(labels) as (keyof RiskAnalysis['conditions'])[]).map((key, index) => {
-          const condition = analysis.conditions[key];
-          return <View key={key} style={[styles.condition, index > 0 && styles.conditionDivider]}>
-            <Text style={text.strong}>{labels[key]}</Text>
-            <Text selectable style={text.body}>{condition.text}</Text>
-            {condition.status === 'unknown' && condition.quotes.map((quote, index) => <Text key={index} selectable style={styles.quote}>{quote}</Text>)}
-          </View>;
-        })}
-      </Card> : null}
-      <Pressable accessibilityRole="link" onPress={() => Linking.openURL(sourceUrl)} style={styles.sourceLink}>
-        <Icon name="open-outline" size={16} color={colors.brandText} />
-        <Text style={text.link}>분석한 판매 페이지 열기</Text>
-      </Pressable>
-    </> : null}
-    {analysis?.warnings.map((warning, index) => <Text key={index} style={[text.small, styles.warning]}>{warning}</Text>)}
-  </View>;
 }
 
 // The single line under the level: why it is high or moderate, what is still missing when it is held back.

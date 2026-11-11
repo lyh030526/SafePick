@@ -35,7 +35,6 @@ export default function RootLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="browse" />
       <Stack.Screen name="saved" />
-      <Stack.Screen name="chat-check" />
       <Stack.Screen name="sign-in" />
     </Stack>
   </SessionProvider></ShareIntentProvider>;

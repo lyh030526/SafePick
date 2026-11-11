@@ -52,17 +52,21 @@ async function signIn(provider: Provider) {
   if (exchangeError) throw exchangeError;
 }
 
+// Accounts are switched off for now: no sign-in, history, or saved listings. Turning this on brings them all back.
+export const ACCOUNTS_ENABLED = false;
+const auth = ACCOUNTS_ENABLED ? supabase : null;
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(!!supabase);
+  const [loading, setLoading] = useState(!!auth);
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || !auth) return;
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false); });
     const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
     return () => data.subscription.unsubscribe();
   }, []);
   const value: SessionState = {
-    session, loading, available: !!supabase, signIn,
+    session, loading, available: !!auth, signIn,
     signOut: async () => { await supabase?.auth.signOut(); },
   };
   return <SessionContext value={value}>{children}</SessionContext>;

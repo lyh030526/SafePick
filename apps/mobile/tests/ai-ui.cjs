@@ -69,26 +69,17 @@ const conversation = { level: 'high', label: '높음', read_length: 80,
       return route.fulfill({ headers: cors, json: analysis });
     });
 
-    // The conversation check: channel, pasted chat, consent, and the result with its quote and link.
+    // The home screen keeps only link analysis: no in-app Coupang search, chat check, sample link, or sign-in.
     await page.goto(app);
-    await page.getByText('판매자와 나눈 대화 확인', { exact: true }).click();
-    await page.getByText('어디서 나눈 대화인가요?', { exact: true }).waitFor();
-    await page.getByText('카카오톡·문자 등 마켓 밖', { exact: true }).click();
-    await page.getByLabel('대화 내용', { exact: true }).fill('상대: 국민은행 123456-12-345678 로 입금해주시면 바로 발송해요');
-    await page.getByText('대화 확인하기', { exact: true }).click();
-    await page.getByText('대화 자료의 AI 분석 동의를 확인해 주세요.', { exact: true }).waitFor();
-    assert.equal(calls.length, 0);
-    await page.getByRole('checkbox', { name: '대화 자료 AI 분석 동의' }).click();
-    await page.getByText('대화 확인하기', { exact: true }).click();
-    await page.getByLabel('대화 주의 수준 높음', { exact: true }).waitFor();
-    await page.getByText('쿠팡 사칭 의심 주소', { exact: true }).waitFor();
-    await page.getByText('국민 계좌 123456-****-******', { exact: true }).waitFor();
-    assert.equal(calls[0].path, '/conversation-checks');
-    assert.equal(calls[0].body.channel, 'messenger');
-    assert.match(calls[0].body.text, /국민은행/);
-    await page.screenshot({ path: path.join(output, 'chat-check.png'), fullPage: true });
-    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-    console.log('PASS conversation check: channel, consent gate, quote, link verdict');
+    await page.getByText('분석 시작', { exact: true }).waitFor();
+    for (const removed of ['쿠팡에서 찾아 분석하기', '판매자와 나눈 대화 확인', '예시 링크로 채우기', '로그인']) {
+      assert.equal(await page.getByText(removed, { exact: true }).count(), 0, `${removed} is gone from home`);
+    }
+    // The chat check screen no longer exists.
+    await page.goto(`${app}/chat-check`);
+    await page.getByText('대화 확인하기', { exact: true }).waitFor({ state: 'detached', timeout: 3000 }).catch(() => undefined);
+    assert.equal(await page.getByText('대화 확인하기', { exact: true }).count(), 0);
+    console.log('PASS home: only link analysis is offered');
 
     // The bait option and questions on a result.
     await page.goto(app);

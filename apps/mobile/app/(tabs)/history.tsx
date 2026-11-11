@@ -1,11 +1,11 @@
-import { useFocusEffect } from 'expo-router';
+import { Redirect, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Text } from 'react-native';
 import { AccountPrompt } from '../../AccountPrompt';
 import { EmptyList, ListingRow } from '../../ListingRow';
 import { ScreenFrame } from '../../ScreenFrame';
 import { deleteAnalysis, listAnalyses, type HistoryItem } from '../../lib/account';
-import { useSession } from '../../lib/session';
+import { ACCOUNTS_ENABLED, useSession } from '../../lib/session';
 import { colors } from '../../theme';
 import { text } from '../../ui';
 
@@ -13,6 +13,10 @@ const reasonsOf = (item: HistoryItem) =>
   ((item.result as { risk_analysis?: { assessment?: { reasons?: string[] } } }).risk_analysis?.assessment?.reasons ?? []);
 
 export default function History() {
+  return ACCOUNTS_ENABLED ? <HistoryScreen /> : <Redirect href="/" />;
+}
+
+function HistoryScreen() {
   const { session } = useSession();
   return <ScreenFrame title="분석 기록">
     {session ? <HistoryList /> : <AccountPrompt icon="time-outline" title="로그인하면 분석 기록이 남아요"

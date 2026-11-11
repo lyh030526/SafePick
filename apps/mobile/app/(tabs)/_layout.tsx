@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { ACCOUNTS_ENABLED } from '../../lib/session';
 import { colors } from '../../theme';
 import { Icon, type IconName } from '../../ui';
 
@@ -14,12 +15,14 @@ export default function TabLayout() {
     headerShown: false,
     tabBarActiveTintColor: colors.brand,
     tabBarInactiveTintColor: colors.textMuted,
-    tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.line },
+    // With accounts off only Home is left, so there is no tab bar to show.
+    tabBarStyle: ACCOUNTS_ENABLED ? { backgroundColor: colors.card, borderTopColor: colors.line } : { display: 'none' },
     tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
     sceneStyle: { backgroundColor: colors.canvas },
   }}>
     {tabs.map(tab => <Tabs.Screen key={tab.name} name={tab.name} options={{
       title: tab.title,
+      href: ACCOUNTS_ENABLED || tab.name === 'index' ? undefined : null,
       tabBarIcon: ({ color, focused }) => <Icon name={focused ? tab.active : tab.icon} size={23} color={String(color)} />,
     }} />)}
   </Tabs>;

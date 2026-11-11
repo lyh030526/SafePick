@@ -25,7 +25,7 @@ import { GroupComparisonScreen } from './GroupComparison';
 import { AskAnalysis } from './AskAnalysis';
 import { RecentRow } from './ListingRow';
 import { MarketPriceCard, type MarketPrice } from './MarketPrice';
-import { ClaimCard, Checklist, PhotoCard, Verdict, type RiskAnalysis } from './RiskChecklist';
+import { ClaimCard, PhotoCard, Verdict, type RiskAnalysis } from './RiskChecklist';
 import { SellerCheck, type SellerVerification } from './SellerCheck';
 import { colors, installWebFont, radius, shadow, type } from './theme';
 import { Button, Card, CheckCircle, Disclosure, Divider, Icon, ListRow, Logo, Pill, SectionTitle, TopBar, text } from './ui';
@@ -108,8 +108,6 @@ type MakerCheck = {
   kc_link: string | null;
 };
 
-const sampleLink =
-  'https://www.coupang.com/vp/products/7608804797?itemId=20146298818';
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 // The server bounds each step; this only stops the screen from waiting forever.
 const requestTimeoutMs = 150_000;
@@ -366,24 +364,12 @@ function SingleAnalysis() {
               <Text style={styles.consentText}>{imported ? '가져온 페이지 내용' : '넣은 설명·이미지'}을 OpenAI에 보내 분석하는 데 동의합니다. 자료의 이용 권한을 확인했고 개인정보는 넣지 않았어요.</Text>
             </Pressable> : null}
             <Button label="분석 시작" icon="search" onPress={startAnalysis} />
-            <Pressable accessibilityRole="button"
-              onPress={() => { setProductUrl(sampleLink); setProvidedText(''); setImages([]); setInputSource('user_text'); setCapturedAt(undefined); setPageTitle(''); setConsent(false); setError(''); }}
-              style={({ pressed }) => [styles.sample, pressed && styles.pressed]}>
-              <Text style={text.small}>예시 링크로 채우기</Text>
-            </Pressable>
           </Card>
 
           {Platform.OS !== 'web' ? <Card tight>
-            <ListRow icon="storefront-outline" title="쿠팡에서 찾아 분석하기" subtitle="앱 안에서 쿠팡을 열고 상품 페이지를 바로 가져와요"
-              onPress={() => router.push('/browse')} />
-            <Divider />
             <ListRow icon="share-social-outline" title="쿠팡 앱에서 공유로 보내기" subtitle="상품 화면에서 공유 → SafePick을 누르면 바로 분석해요" />
           </Card> : null}
 
-          <Card tight>
-            <ListRow icon="chatbubbles-outline" title="판매자와 나눈 대화 확인" subtitle="카톡·문자 캡처로 계좌 입금 유도, 가짜 결제 링크를 찾아요"
-              onPress={() => router.push('/chat-check')} />
-          </Card>
 
           <Disclosure title={imported ? '확장 프로그램에서 가져온 자료' : '상품 설명·이미지 추가'} icon="document-attach-outline"
             status={hasMaterial ? (imported ? '가져온 자료가 있어요' : `자료 ${providedText.trim() ? '설명' : ''}${providedText.trim() && images.length ? '·' : ''}${images.length ? `이미지 ${images.length}장` : ''}`) : undefined}
@@ -646,13 +632,8 @@ function CorrectionForm({
             {lookup && !dirty ? <OfficialLookupCard lookup={lookup} /> : null}
           </Disclosure>
 
-          {fresh ? <Checklist analysis={riskResult} sourceUrl={source?.final_url ?? productUrl} /> : null}
           {fresh && riskResult ? <AskAnalysis analysis={{ product: draft, risk_analysis: riskResult, seller_verification: seller,
             market_price: market, comparison: result }} /> : null}
-          {fresh ? <Card tight>
-            <ListRow icon="chatbubbles-outline" title="판매자가 카톡·문자로 연락했나요?" subtitle="대화 캡처로 사기 수법을 확인해 보세요"
-              onPress={() => router.push('/chat-check')} />
-          </Card> : null}
 
           {source ? <>
             <SectionTitle>분석한 자료</SectionTitle>
@@ -837,7 +818,6 @@ const styles = StyleSheet.create({
   linkInput: { flex: 1, minWidth: 0, color: colors.text, fontSize: 16, minHeight: 52 },
   pasteButton: { backgroundColor: colors.card, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
   pasteText: { color: colors.brandText, fontSize: 14, fontWeight: '700' },
-  sample: { alignSelf: 'center', paddingVertical: 2 },
   counter: { textAlign: 'right' },
   label: { color: colors.textSub, fontSize: 14, fontWeight: '600', marginBottom: 8 },
   input: { backgroundColor: colors.fill, borderRadius: radius.field, borderWidth: 1.5, borderColor: colors.fill, color: colors.text, fontSize: 16, minHeight: 52, paddingHorizontal: 14 },
