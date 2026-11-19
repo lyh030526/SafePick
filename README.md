@@ -47,7 +47,9 @@ SafePick의 원칙은 **역할 분담**입니다. 페이지를 읽고 정리하�
 
 ## 시스템 구조
 
-![SafePick 시스템 설계도](docs/system-design.png)
+![SafePick 시스템 아키텍처](docs/system-architecture.png)
+
+그림 원본은 [docs/system-architecture.html](docs/system-architecture.html)입니다. 사용자 기기(안드로이드 앱) → 분석 서버(① GPT-5.4 mini로 읽고 정리 → ② 공공데이터·검색으로 사실 확인 → ③ 규칙으로 판정 → ④ 결과 질문 답변) → 외부 서비스 순서로 동작합니다.
 
 | 영역 | 구성 |
 | --- | --- |

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1600px;height:1000px;background:#F4F7F6;font-family:"Malgun Gothic","Apple SD Gothic Neo",Arial,sans-serif;color:#13201D;position:relative;overflow:hidden;word-break:keep-all}
+.t{position:absolute;left:56px;top:40px}
+.t h1{font-size:40px;font-weight:900;letter-spacing:-0.5px}
+.t p{font-size:20px;color:#475652;margin-top:8px}
+.col{position:absolute;top:150px;bottom:40px;border-radius:24px;padding:24px}
+.lbl{font-size:17px;font-weight:700;letter-spacing:1px;color:#0D8A72;margin-bottom:6px}
+.ttl{font-size:25px;font-weight:900;margin-bottom:16px}
+.card{background:#FBFCFB;border:2px solid #C9D6D2;border-radius:16px;padding:14px 18px;margin-bottom:14px}
+.card h3{font-size:20px;font-weight:800;margin-bottom:6px}
+.card p{font-size:16.5px;line-height:1.5;color:#475652}
+.step{display:flex;gap:12px;align-items:flex-start}
+.num{flex:none;width:30px;height:30px;border-radius:50%;background:#0D8A72;color:#fff;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.gpt{background:#FFF6E8;border-color:#F3C77A}
+.gpt .num{background:#F29D0B;color:#13201D}
+.dark{background:#10302A;border-color:#10302A}
+.dark h3{color:#F4F7F6}.dark p{color:#BFD8D5}
+.pill{display:inline-block;font-size:14px;font-weight:700;padding:3px 10px;border-radius:999px;margin-right:6px;margin-top:6px}
+.arrow{position:absolute;font-size:46px;color:#0D8A72;font-weight:900}
+.small{font-size:14px;color:#82908C;line-height:1.4}
+</style></head><body>
+<div class="t"><h1>SafePick 시스템 구조</h1><p>AI는 읽고 근거를 찾고, 판매자 확인은 공공데이터가, 최종 판정은 규칙이 합니다</p></div>
+
+<!-- column 1 -->
+<div class="col" style="left:40px;width:440px;background:#E3F0EC">
+  <div class="lbl">① 사용자 기기</div>
+  <div class="ttl">안드로이드 앱 <span style="font-size:17px;font-weight:600;color:#475652">React Native · Expo</span></div>
+  <div class="card"><h3>쿠팡 앱 → 공유 → SafePick</h3><p>상품을 보다가 공유 한 번으로 분석을 시작합니다. 링크를 붙여넣어도 됩니다.</p></div>
+  <div class="card"><h3>앱 안 브라우저가 직접 읽기</h3><p>쿠팡은 서버 접속을 막기 때문에 휴대폰에서 페이지를 열고, 접힌 판매자 정보·필수 표기 정보까지 펼쳐 글을 모읍니다.</p></div>
+  <div class="card"><h3>내용 확인 · AI 분석 동의</h3><p>보낼 내용을 확인하고 동의한 뒤에만 서버로 보냅니다.</p></div>
+  <div class="card"><h3>결과 화면 · 질문하기</h3><p>주의 수준, 신뢰 점수, 영역별 근거를 보여 주고 결과에 대한 질문에 답합니다.</p></div>
+  <div class="card" style="margin-bottom:0;border-style:dashed"><h3 style="font-size:18px">PC: 크롬·엣지 확장 프로그램</h3><p style="font-size:15.5px">네이버·11번가·쿠팡·G마켓 판매 페이지를 앱으로 전달</p></div>
+</div>
+
+<div class="arrow" style="left:486px;top:470px">⇄</div>
+
+<!-- column 2 -->
+<div class="col" style="left:540px;width:520px;background:#FFFFFF;border:2px solid #C9D6D2">
+  <div class="lbl">② 분석 서버</div>
+  <div class="ttl">Python FastAPI <span style="font-size:17px;font-weight:600;color:#475652">Render 자동 배포</span></div>
+  <div class="card gpt"><div class="step"><div class="num">1</div><div><h3>읽고 정리하기 · GPT-5.4 mini</h3><p>모은 글에서 브랜드·모델명·가격·판매자·신고번호·정품 주장을 JSON으로, 위험 문장은 원문 인용으로 찾습니다.</p></div></div></div>
+  <div class="card"><div class="step"><div class="num">2</div><div><h3>사실 확인하기</h3><p>판매자(국세청·공정위) · 공식 정보(공식몰·제조사) · 시세 · 사기 의심 사이트 · 사진 재사용 · 리뷰</p><p style="margin-top:6px;font-size:15.5px;color:#0A6B59"><b>원문 재대조:</b> GPT가 인용한 문장이 실제 페이지에 없으면 버림</p></div></div></div>
+  <div class="card dark"><div class="step"><div class="num" style="background:#9FD9C8;color:#10302A">3</div><div><h3>규칙으로 판정하기</h3><p>주의 수준 <b style="color:#F4F7F6">높음 · 보통 · 보류 · 낮음</b><br>신뢰 점수 <b style="color:#F4F7F6">100점</b> (7개 항목 확인 정도)</p></div></div></div>
+  <div class="card gpt" style="margin-bottom:0"><div class="step"><div class="num">4</div><div><h3>결과 질문 답변 · GPT-5.4 mini</h3><p>분석 근거 번호(E1, E2 …)를 달아서만 답하고, 근거가 없으면 모른다고 답합니다.</p></div></div></div>
+</div>
+
+<div class="arrow" style="left:1066px;top:470px">⇄</div>
+
+<!-- column 3 -->
+<div class="col" style="left:1120px;width:440px;background:#E9EEED">
+  <div class="lbl">③ 외부 서비스 · 공공데이터</div>
+  <div class="ttl">근거를 가져오는 곳</div>
+  <div class="card gpt"><h3>OpenAI GPT-5.4 mini</h3><p>정보 정리 · 위험 문장 찾기 · 공식 정보 대조 · 결과 질문 답변</p><p class="small" style="margin-top:6px">점수와 판매자 사실 확인은 하지 않음</p></div>
+  <div class="card"><h3>공공데이터포털</h3><p>국세청 사업자 상태 조회<br>공정위 통신판매사업자 (신고번호·상호·폐업 이력)</p></div>
+  <div class="card"><h3>Serper 검색</h3><p>브랜드 공식몰 탐색 · 쇼핑 시세 · 상품 사진 재사용</p></div>
+  <div class="card" style="margin-bottom:0"><h3>사기 의심 사이트 · 도메인</h3><p>서울시 전자상거래센터 공지 목록, 도메인 등록 정보</p></div>
+</div>
+</body></html>
