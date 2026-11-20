@@ -1,11 +1,12 @@
 import re
 import os
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from accounts import delete_account
 from chat_check import check_conversation
@@ -287,3 +288,19 @@ def create_analysis(request: AnalysisRequest) -> AnalysisResponse:
         market_price=market,
         sale_text=page.text,
     )
+
+
+# The web version of the app (`npx expo export -p web` in apps/mobile, copied to apps/api/web), served from the API's own
+# address so the browser needs no cross-origin access. Registered last, so every API route above still wins; any other
+# GET path is a file of the build or, for the app's own pages (/browse, ...), its single-page index.html.
+WEB_DIR = (Path(__file__).parent / "web").resolve()
+
+
+@app.get("/{path:path}", include_in_schema=False)
+def web_app(path: str):
+    if not (WEB_DIR / "index.html").is_file():
+        raise HTTPException(status_code=404, detail="Not Found")
+    file = (WEB_DIR / path).resolve()
+    if path and file.is_file() and file.is_relative_to(WEB_DIR):
+        return FileResponse(file)
+    return FileResponse(WEB_DIR / "index.html")

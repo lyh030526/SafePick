@@ -22,3 +22,6 @@ data/calibration/snapshots/
 docs/validation/**/*
 !docs/validation/**/
 !docs/validation/**/README.md
+
+# The web build served by the API keeps its icon font and images under a folder named node_modules.
+!apps/api/web/assets/node_modules/

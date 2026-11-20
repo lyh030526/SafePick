@@ -10,7 +10,7 @@ byId('consent').addEventListener('change', () => {
 // Several pages of the same product, gathered one by one as the shopper opens them. Kept in local storage so the list
 // survives moving between pages, until the shopper compares or clears it.
 const COMPARE_MAX = 10;
-const appOrigins = ['http://localhost:8081', 'http://localhost:8082'];
+const appOrigins = ['https://safepick-api-5vcn.onrender.com', 'http://localhost:8081', 'http://localhost:8082'];
 async function compareList() { return (await chrome.storage.local.get('compareList')).compareList || []; }
 async function showCompare() {
   const list = await compareList();
@@ -121,7 +121,7 @@ byId('send').addEventListener('click', async () => {
   byId('send').disabled = true;
   try {
     const appOrigin = byId('app-origin').value;
-    if (!['http://localhost:8081', 'http://localhost:8082'].includes(appOrigin)) throw new Error('지원하지 않는 앱 주소');
+    if (!appOrigins.includes(appOrigin)) throw new Error('지원하지 않는 앱 주소');
     const payload = { ...collected, page_title: byId('title').value, provided_text: text };
     // URL fragment is not sent in an HTTP request. The app removes it immediately on import.
     await chrome.tabs.create({ url: `${appOrigin}/#safepick-import=${encodeURIComponent(JSON.stringify(payload))}` });

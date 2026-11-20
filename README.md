@@ -187,6 +187,17 @@ npx expo start
 
 안드로이드 APK는 EAS로 빌드해 QR로 설치합니다. 설치 후 쿠팡 앱에서 **공유 → SafePick**을 누르면 분석이 시작됩니다.
 
+### 웹 버전
+
+배포된 분석 서버 주소 <https://safepick-api-5vcn.onrender.com> 에서 웹 버전을 바로 쓸 수 있습니다. 서버가 오래 쉬고 있었다면 첫 접속에 1분 정도 걸립니다.
+
+- 웹에서는 쿠팡 페이지를 대신 열 수 없으므로, PC 크롬 확장 프로그램으로 상품 페이지를 보내거나(앱 주소: "SafePick 웹") 상품 설명·이미지를 직접 넣어 분석합니다.
+- 웹 버전은 분석 서버가 `apps/api/web`에서 함께 제공합니다. 앱을 고친 뒤에는 다시 빌드해 복사합니다.
+
+```bash
+cd apps/mobile && EXPO_PUBLIC_API_BASE_URL=https://safepick-api-5vcn.onrender.com npx expo export -p web && rm -rf ../api/web && cp -r dist ../api/web
+```
+
 ### 3. 크롬 확장 프로그램 (PC)
 
 `chrome://extensions` → 개발자 모드 → **압축해제된 확장 프로그램을 로드** → `apps/extension` 폴더. 자세한 내용은 [apps/extension/README.md](apps/extension/README.md)에 있습니다.
