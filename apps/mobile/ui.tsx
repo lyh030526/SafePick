@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useState, type ComponentProps, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ComponentProps, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, levels, radius, shadow, type } from './theme';
 
@@ -92,14 +92,42 @@ export function Divider() {
 }
 
 // A row that opens to show its details: the verdict on each check stays visible while the evidence is folded away.
+// Disclosures inside a DisclosureGroup drop their own card and sit as rows of one card, status on the right.
+const InGroup = createContext(false);
+
+export function DisclosureGroup({ children }: { children: ReactNode }) {
+  return <View style={styles.group}><InGroup.Provider value={true}>{children}</InGroup.Provider></View>;
+}
+
 export function Disclosure({ title, icon, status, tone = 'neutral', open: controlled, onToggle, defaultOpen = false, children,
   accessibilityLabel }: {
   title: string; icon?: IconName; status?: string; tone?: Tone; open?: boolean; onToggle?: (open: boolean) => void;
   defaultOpen?: boolean; children: ReactNode; accessibilityLabel?: string;
 }) {
+  const grouped = useContext(InGroup);
   const [own, setOwn] = useState(defaultOpen);
   const open = controlled ?? own;
   const toggle = () => { setOwn(!open); onToggle?.(!open); };
+  if (grouped) {
+    // The icon takes the status colour, so the rows read as a column of green, amber and grey at a glance.
+    const toneColor = toneColors[tone];
+    return <View accessibilityLabel={accessibilityLabel} style={styles.groupItem}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={toggle}
+        style={({ pressed }) => [styles.groupHead, pressed && styles.rowPressed]}>
+        {icon ? <View style={[styles.groupIcon, { backgroundColor: toneColor.soft }]}>
+          <Icon name={icon} size={18} color={tone === 'neutral' ? colors.textSub : toneColor.dot} />
+        </View> : null}
+        <Text numberOfLines={1} style={[styles.rowTitle, styles.groupTitle]}>{title}</Text>
+        {status ? <View style={styles.groupStatusBox}>
+          <Text numberOfLines={1} style={[styles.groupStatus, { color: tone === 'neutral' ? colors.textSub : toneColor.text }]}>
+            {status.split(' · ')[0]}</Text>
+          {status.includes(' · ') ? <Text numberOfLines={1} style={styles.groupStatusSub}>{status.split(' · ').slice(1).join(' · ')}</Text> : null}
+        </View> : null}
+        <Icon name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textFaint} />
+      </Pressable>
+      {open ? <View style={styles.groupBody}>{children}</View> : null}
+    </View>;
+  }
   return <View accessibilityLabel={accessibilityLabel} style={styles.disclosure}>
     <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={toggle}
       style={({ pressed }) => [styles.disclosureHead, pressed && styles.rowPressed]}>
@@ -171,6 +199,15 @@ const styles = StyleSheet.create({
   rowTitleDanger: { color: colors.redText },
   rowSubtitle: { ...type.small, color: colors.textMuted },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.line, marginLeft: 64 },
+  group: { backgroundColor: colors.card, borderRadius: radius.card, overflow: 'hidden', paddingVertical: 4, ...shadow },
+  groupItem: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, marginTop: -StyleSheet.hairlineWidth },
+  groupHead: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
+  groupIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  groupTitle: { flex: 1, minWidth: 0 },
+  groupStatusBox: { flexShrink: 0, maxWidth: '48%', alignItems: 'flex-end' },
+  groupStatus: { fontSize: 14, fontWeight: '700', textAlign: 'right' },
+  groupStatusSub: { color: colors.textMuted, fontSize: 12, textAlign: 'right' },
+  groupBody: { paddingHorizontal: 18, paddingBottom: 18, paddingTop: 4, gap: 10 },
   disclosure: { backgroundColor: colors.card, borderRadius: radius.card, overflow: 'hidden', ...shadow },
   disclosureHead: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
   disclosureStatus: { marginTop: 4 },

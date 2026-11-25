@@ -85,9 +85,10 @@ function levelOf(analysis: RiskAnalysis | null): Level {
   return analysis?.status === 'completed' || decisive ? assessment?.level ?? 'undetermined' : 'undetermined';
 }
 
-// The level and the one reason behind it come first; what to check, the evidence and the score follow.
+// The level, the score and the one reason behind them come first, with up to three things to check; every other
+// reason, the score breakdown, the criteria, reviews and the domain fold under a single "자세히 보기".
 export function Verdict({ analysis, product }: { analysis: RiskAnalysis | null; product?: string }) {
-  const [showCriteria, setShowCriteria] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const assessment = analysis?.assessment;
   const level = levelOf(analysis);
   const tone = levels[level];
@@ -97,53 +98,49 @@ export function Verdict({ analysis, product }: { analysis: RiskAnalysis | null; 
   const line = keyLine(assessment, level);
   // The line under the level already states the first reason, so the list repeats only the rest.
   const otherReasons = (assessment?.reasons ?? []).filter(reason => reason !== line);
+  const scored = decided && assessment?.score !== null && assessment?.score !== undefined;
+  const checks = (assessment?.missing_checks ?? []).slice(0, 3);
+  const hasMore = otherReasons.length > 0 || !!assessment?.criteria.length || !!analysis?.review_complaints?.complaints || !!domain
+    || (decided && assessment?.coverage_percent !== undefined);
   return <Card style={styles.verdictCard}>
-    <View accessibilityLabel={`구매 전 주의 수준 ${levelLabel}`} style={[styles.verdictHead, { backgroundColor: tone.soft }]}>
+    <View accessibilityLabel={`구매 전 주의 수준 ${levelLabel}${scored ? `, 신뢰 점수 ${assessment?.score}점` : ''}`}
+      style={[styles.verdictHead, { backgroundColor: tone.soft }]}>
       <Text style={[styles.eyebrow, { color: tone.text }]}>구매 전 주의 수준</Text>
       <View style={styles.levelRow}>
         <Icon name={tone.icon} size={34} color={tone.color} />
-        <Text style={[styles.levelTitle, { color: tone.text }]}>{levelLabel}</Text>
+        <Text style={[styles.levelTitle, styles.flex, { color: tone.text }]}>{levelLabel}</Text>
+        {scored ? <View style={styles.scoreBadge}>
+          <Text style={[styles.scoreNumber, { color: tone.text }]}>{assessment?.score}<Text style={styles.scoreUnit}>점</Text></Text>
+          <Text style={styles.scoreCaption}>신뢰 점수</Text>
+        </View> : null}
       </View>
-      {line ? <Text style={styles.keyLine}>{line}</Text> : null}
-      <Text style={text.body}>{assessment?.summary ?? '주의 수준을 확인하려면 상품 자료를 추가하거나 다시 분석해 주세요.'}</Text>
+      <Text style={styles.keyLine}>{line || assessment?.summary || '주의 수준을 확인하려면 상품 자료를 추가하거나 다시 분석해 주세요.'}</Text>
       {product ? <Text numberOfLines={1} style={text.small}>{product}</Text> : null}
     </View>
     <View style={styles.verdictBody}>
-      {assessment?.missing_checks.length ? <View style={styles.block}>
+      {checks.length ? <View style={styles.block}>
         <Text style={text.strong}>구매 전에 확인할 것</Text>
-        {assessment.missing_checks.map(item => <View key={item} style={styles.bulletRow}>
+        {checks.map(item => <View key={item} style={styles.bulletRow}>
           <Icon name="square-outline" size={17} color={colors.textMuted} />
-          <Text style={[text.body, styles.flex]}>{item}</Text>
+          <Text style={[text.body, styles.checkText]}>{item}</Text>
         </View>)}
       </View> : null}
-      {otherReasons.length ? <View style={styles.block}>
-        <Text style={text.strong}>판단 근거</Text>
-        {otherReasons.map((reason, index) => <View key={index} style={styles.bulletRow}>
-          <View style={[styles.bullet, { backgroundColor: tone.color }]} />
-          <Text style={[text.body, styles.flex]}>{reason}</Text>
-        </View>)}
-      </View> : null}
-      {decided ? <ScoreSummary assessment={assessment} level={level} /> : null}
-      {analysis?.review_complaints?.complaints ? <View accessibilityLabel="낮은 별점 리뷰 요약" style={styles.inset}>
-        <Text style={text.strong}>낮은 별점 리뷰 (참고)</Text>
-        <Text style={text.body}>1~2점 리뷰 {analysis.review_complaints.low_reviews}개 중 {analysis.review_complaints.complaints}개가
-          가품·미배송·연락두절 등을 언급했고, 그중 이 판매자에 대한 리뷰는 {analysis.review_complaints.same_seller}개예요.
-          한 상품의 리뷰에는 다른 판매자 리뷰가 섞여 있고 추측도 많아 주의 수준에는 반영하지 않았어요.</Text>
-        {analysis.review_complaints.quotes.map((quote, index) => <Text key={index} style={text.small}>“{quote}”</Text>)}
-      </View> : null}
-      {domain ? <View accessibilityLabel={`도메인 ${domain.label}`} style={styles.inset}>
-        <Text style={text.strong}>도메인 등록 정보</Text>
-        <Text style={text.body}>{[domain.domain, domain.label, domain.registered_on && `등록 ${domain.registered_on}`,
-          domain.expires_on && `만료 ${domain.expires_on}`].filter(Boolean).join(' · ')}</Text>
-        <Text style={text.small}>{domain.message}</Text>
-      </View> : null}
-      {assessment?.criteria.length ? <>
-        <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCriteria }} onPress={() => setShowCriteria(!showCriteria)}
-          style={({ pressed }) => [styles.more, pressed && styles.pressed]}>
-          <Text style={text.link}>{showCriteria ? '판단 기준 접기' : '판단 기준 자세히 보기'}</Text>
-          <Icon name={showCriteria ? 'chevron-up' : 'chevron-down'} size={16} color={colors.brandText} />
-        </Pressable>
-        {showCriteria ? <View style={styles.inset}>
+      {hasMore ? <Pressable accessibilityRole="button" accessibilityState={{ expanded: showMore }} onPress={() => setShowMore(!showMore)}
+        style={({ pressed }) => [styles.more, pressed && styles.pressed]}>
+        <Text style={text.link}>{showMore ? '자세히 접기' : '판단 근거 자세히 보기'}</Text>
+        <Icon name={showMore ? 'chevron-up' : 'chevron-down'} size={16} color={colors.brandText} />
+      </Pressable> : null}
+      {showMore ? <View style={styles.details}>
+        {assessment?.summary && assessment.summary !== line ? <Text style={text.body}>{assessment.summary}</Text> : null}
+        {otherReasons.length ? <View style={styles.block}>
+          <Text style={text.strong}>판단 근거</Text>
+          {otherReasons.map((reason, index) => <View key={index} style={styles.bulletRow}>
+            <View style={[styles.bullet, { backgroundColor: tone.color }]} />
+            <Text style={[text.body, styles.flex]}>{reason}</Text>
+          </View>)}
+        </View> : null}
+        {decided ? <ScoreSummary assessment={assessment} level={level} /> : null}
+        {assessment?.criteria.length ? <View style={styles.inset}>
           {assessment.criteria.map(criterion => <View key={criterion.key} style={styles.criterion}>
             <View style={styles.criterionHead}>
               <Text style={[text.strong, styles.flex]}>{criterion.label}</Text>
@@ -152,8 +149,20 @@ export function Verdict({ analysis, product }: { analysis: RiskAnalysis | null; 
             <Text style={text.small}>{criterion.detail}</Text>
           </View>)}
         </View> : null}
-      </> : null}
-      <Text style={text.small}>신뢰 점수는 확인한 근거로 계산한 참고 점수이고, 주의 수준은 수집한 자료에서 확인한 신호예요. 사기 확률이 아니며 판매자나 정품·안전을 인증하지 않아요.</Text>
+        {analysis?.review_complaints?.complaints ? <View accessibilityLabel="낮은 별점 리뷰 요약" style={styles.inset}>
+          <Text style={text.strong}>낮은 별점 리뷰 (참고)</Text>
+          <Text style={text.body}>1~2점 리뷰 {analysis.review_complaints.low_reviews}개 중 {analysis.review_complaints.complaints}개가
+            가품·미배송·연락두절 등을 언급했어요(이 판매자 리뷰 {analysis.review_complaints.same_seller}개). 주의 수준에는 반영하지 않았어요.</Text>
+          {analysis.review_complaints.quotes.map((quote, index) => <Text key={index} style={text.small}>“{quote}”</Text>)}
+        </View> : null}
+        {domain ? <View accessibilityLabel={`도메인 ${domain.label}`} style={styles.inset}>
+          <Text style={text.strong}>도메인 등록 정보</Text>
+          <Text style={text.body}>{[domain.domain, domain.label, domain.registered_on && `등록 ${domain.registered_on}`,
+            domain.expires_on && `만료 ${domain.expires_on}`].filter(Boolean).join(' · ')}</Text>
+          <Text style={text.small}>{domain.message}</Text>
+        </View> : null}
+      </View> : null}
+      <Text style={text.small}>확인한 근거로 계산한 참고 결과이며, 사기 여부나 정품을 인증하지 않아요.</Text>
     </View>
   </Card>;
 }
@@ -172,9 +181,8 @@ function ScoreSummary({ assessment, level }: { assessment: RiskAnalysis['assessm
   const scored = assessment.score !== null && assessment.score !== undefined;
   return <View accessibilityLabel={scored ? `신뢰 점수 ${assessment.score}점 ${assessment.score_label}` : '신뢰 점수 보류'} style={styles.score}>
     <View style={styles.scoreRow}>
-      <Text style={text.strong}>신뢰 점수</Text>
-      {scored ? <Text style={[styles.scoreNumber, { color: levels[level].text }]}>{assessment.score}<Text style={styles.scoreUnit}> / 100</Text></Text>
-        : <Text style={styles.scoreWithheld}>점수 보류</Text>}
+      <Text style={text.strong}>확인한 근거</Text>
+      {scored ? null : <Text style={styles.scoreWithheld}>점수 보류</Text>}
     </View>
     <View style={styles.track}><View style={[styles.fill, { width: `${coverage}%`, backgroundColor: levels[level].color }]} /></View>
     <Text style={text.small}>
@@ -193,7 +201,10 @@ const styles = StyleSheet.create({
   levelRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   levelTitle: { ...type.display, fontSize: 32, lineHeight: 40 },
   keyLine: { ...type.heading, color: colors.text },
-  verdictBody: { padding: 20, gap: 16 },
+  verdictBody: { padding: 20, gap: 14 },
+  details: { gap: 14 },
+  scoreBadge: { alignItems: 'flex-end' },
+  scoreCaption: { color: colors.textSub, fontSize: 12, fontWeight: '700' },
   block: { gap: 8 },
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   bullet: { width: 6, height: 6, borderRadius: 3, marginTop: 8 },
@@ -203,7 +214,8 @@ const styles = StyleSheet.create({
   criterionHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   score: { gap: 8 },
   scoreRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  scoreNumber: { fontSize: 24, lineHeight: 30, fontWeight: '800', letterSpacing: -0.5 },
+  scoreNumber: { fontSize: 30, lineHeight: 36, fontWeight: '800', letterSpacing: -0.5 },
+  checkText: { ...type.body, flex: 1, color: colors.text, fontWeight: '700' },
   scoreUnit: { color: colors.textFaint, fontSize: 15, fontWeight: '700', letterSpacing: 0 },
   scoreWithheld: { color: colors.textSub, fontSize: 18, fontWeight: '800' },
   track: { height: 6, borderRadius: 3, backgroundColor: colors.line, overflow: 'hidden' },

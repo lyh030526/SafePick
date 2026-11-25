@@ -28,7 +28,7 @@ import { MarketPriceCard, type MarketPrice } from './MarketPrice';
 import { ClaimCard, PhotoCard, Verdict, type RiskAnalysis } from './RiskChecklist';
 import { SellerCheck, type SellerVerification } from './SellerCheck';
 import { colors, installWebFont, radius, shadow, type } from './theme';
-import { Button, Card, CheckCircle, Disclosure, Divider, Icon, ListRow, Logo, Pill, SectionTitle, TopBar, text } from './ui';
+import { Button, Card, CheckCircle, Disclosure, DisclosureGroup, Divider, Icon, ListRow, Logo, Pill, SectionTitle, TopBar, text } from './ui';
 
 installWebFont();
 
@@ -160,7 +160,8 @@ function SingleAnalysis() {
   const [consent, setConsent] = useState(false);
   const [source, setSource] = useState<SourceSummary | null>(null);
   // The description and images stay folded away until needed; imported material opens them for review.
-  const [materialOpen, setMaterialOpen] = useState(!!initialImport.payload);
+  // Imported page text stays folded; the shopper opens it only to look or to edit.
+  const [materialOpen, setMaterialOpen] = useState(false);
   const [recent, setRecent] = useState<HistoryItem[]>([]);
   const requestRef = useRef<AbortController | null>(null);
   const router = useRouter();
@@ -181,7 +182,7 @@ function SingleAnalysis() {
     if (!capture) return;
     setProductUrl(capture.product_url); setProvidedText(capture.provided_text); setPageTitle(capture.page_title);
     setInputSource('browser_extension'); setCapturedAt(capture.captured_at); setImageUrl(capture.image_url); setImages([]); setConsent(false);
-    setError(''); setAnalysisState('input'); setMaterialOpen(true);
+    setError(''); setAnalysisState('input'); setMaterialOpen(false);
   }, []));
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -371,7 +372,7 @@ function SingleAnalysis() {
           </Card> : null}
 
 
-          <Disclosure title={imported ? '확장 프로그램에서 가져온 자료' : '상품 설명·이미지 추가'} icon="document-attach-outline"
+          <Disclosure title={imported ? '가져온 페이지 내용' : '상품 설명·이미지 추가'} icon="document-attach-outline"
             status={hasMaterial ? (imported ? '가져온 자료가 있어요' : `자료 ${providedText.trim() ? '설명' : ''}${providedText.trim() && images.length ? '·' : ''}${images.length ? `이미지 ${images.length}장` : ''}`) : undefined}
             tone="brand" open={materialOpen} onToggle={setMaterialOpen}>
             <Text style={text.small}>페이지를 읽지 못할 때 설명이나 캡처를 넣으면 그 자료로 분석해요. 첨부한 자료가 있으면 판매 페이지를 다시 요청하지 않아요.</Text>
@@ -593,7 +594,7 @@ function CorrectionForm({
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardContainer}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.content, styles.resultContent]} keyboardShouldPersistTaps="handled">
           <TopBar title="상품 분석 결과" onBack={onBack} />
           {/* The verdict comes first; each check, the checklist and where the material came from follow it. */}
           {fresh ? <Verdict analysis={riskResult} product={productLine} /> : null}
@@ -619,41 +620,33 @@ function CorrectionForm({
           ) : null}
 
           {fresh ? <>
-            <SectionTitle>확인 결과</SectionTitle>
-            <SellerCheck verification={seller} />
-            <MarketPriceCard market={market} />
-            <ClaimCard check={riskResult?.claim_check} />
-            <PhotoCard check={riskResult?.photo_check} />
+            <SectionTitle>근거 한눈에 보기</SectionTitle>
+            <DisclosureGroup>
+              <SellerCheck verification={seller} />
+              <MarketPriceCard market={market} />
+              <ClaimCard check={riskResult?.claim_check} />
+              <PhotoCard check={riskResult?.photo_check} />
+              {(result || lookup) ? <Disclosure title="공식 정보 비교" icon="ribbon-outline"
+                status={result ? (result.status === 'unknown' && lookup?.maker ? lookup.maker.label : result.label) : undefined}
+                tone={result?.status === 'unknown' && lookup?.maker?.status === 'seller_is_maker' ? 'good' : comparisonTone}>
+                {result ? <ComparisonPanel comparison={result} /> : null}
+                {lookup ? <OfficialLookupCard lookup={lookup} /> : null}
+              </Disclosure> : null}
+            </DisclosureGroup>
           </> : null}
-          <Disclosure title="공식 정보 비교 결과" icon="ribbon-outline"
-            status={result && !dirty ? (result.status === 'unknown' && lookup?.maker ? lookup.maker.label : result.label) : undefined}
-            tone={result?.status === 'unknown' && lookup?.maker?.status === 'seller_is_maker' ? 'good' : comparisonTone}>
-            {result && !dirty ? <ComparisonPanel comparison={result} /> : <Text style={text.body}>다시 비교하면 결과가 여기에 나와요.</Text>}
-            {lookup && !dirty ? <OfficialLookupCard lookup={lookup} /> : null}
-          </Disclosure>
 
-          {fresh && riskResult ? <AskAnalysis analysis={{ product: draft, risk_analysis: riskResult, seller_verification: seller,
-            market_price: market, comparison: result }} /> : null}
 
-          {source ? <>
-            <SectionTitle>분석한 자료</SectionTitle>
-            <Card>
-              <View style={styles.sourceHead}>
-                <Icon name={provided ? 'document-text-outline' : 'globe-outline'} size={18} color={colors.brandText} />
-                <Text style={[text.strong, styles.flex]}>{provided ? '사용자 제공 자료 기반 분석' : '판매 페이지 직접 수집'}</Text>
-              </View>
+          {/* What was read and the extracted fields stay out of the way; a shopper opens them only to correct something. */}
+          <Disclosure title="분석한 자료 · 정보 수정" icon="document-text-outline" status={dirty ? '수정함' : undefined} tone="warn"
+            defaultOpen={dirty}>
+            {source ? <View style={styles.sourceBlock}>
+              <Text style={text.strong}>{provided ? '사용자 제공 자료 기반 분석' : '판매 페이지 직접 수집'}</Text>
               <Text selectable numberOfLines={2} style={text.small}>{source.final_url}</Text>
-              <View style={styles.sourceFacts}>
-                <Pill label={`텍스트 ${source.text_length.toLocaleString()}자`} />
-                <Pill label={`이미지 ${source.image_count ?? 0}장`} />
-                {source.captured_at ? <Pill label={`수집 ${new Date(source.captured_at).toLocaleString('ko-KR')}`} /> : null}
-              </View>
+              <Text style={text.small}>{[`텍스트 ${source.text_length.toLocaleString()}자`, `이미지 ${source.image_count ?? 0}장`,
+                source.captured_at && `수집 ${new Date(source.captured_at).toLocaleString('ko-KR')}`].filter(Boolean).join(' · ')}</Text>
               {provided ? <Text style={text.small}>제공 자료와 실제 판매 페이지의 일치 여부는 인증하지 않았어요.</Text> : null}
               <Button tone="secondary" icon="add-circle-outline" label="상품 설명·이미지로 다시 분석" onPress={onAddMaterial} />
-            </Card>
-          </> : null}
-
-          <Disclosure title="추출한 상품 정보" icon="create-outline" status={dirty ? '수정함' : undefined} tone="warn">
+            </View> : null}
             <Text style={text.small}>자동으로 읽은 상품 정보예요. 틀린 항목을 고치고 다시 비교할 수 있어요.</Text>
             {fieldLabels.map(({ key, label }) => (
               <EditableField key={key} label={label} onChangeText={(value) => updateField(key, value)} value={draft[key]} editable={!comparing} />
@@ -666,6 +659,8 @@ function CorrectionForm({
           </Disclosure>
           <Button tone="ghost" icon="arrow-back" label="다른 링크 분석하기" onPress={onBack} />
         </ScrollView>
+        {fresh && riskResult ? <AskAnalysis title={productLine} analysis={{ product: draft, risk_analysis: riskResult, seller_verification: seller,
+            market_price: market, comparison: result }} /> : null}
         {fresh ? <SaveFooter productUrl={productUrl} product={draft} source={source} risk={riskResult} seller={seller} /> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -802,6 +797,7 @@ function EditableField({
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.canvas },
   keyboardContainer: { flex: 1 },
+  resultContent: { paddingBottom: 104 },
   content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, maxWidth: 640, width: '100%', alignSelf: 'center', gap: 12 },
   flex: { flex: 1 },
   center: { textAlign: 'center' },
@@ -851,8 +847,7 @@ const styles = StyleSheet.create({
   warningCard: { flexDirection: 'row', gap: 10, backgroundColor: colors.orangeSoft, borderRadius: radius.card, padding: 16 },
   warningTitle: { ...type.body, color: colors.orangeText, fontWeight: '700', marginBottom: 2 },
   warningInline: { color: colors.orangeText, fontSize: 13, lineHeight: 19 },
-  sourceHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sourceFacts: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  sourceBlock: { gap: 8, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
   panel: { gap: 10 },
   factRows: { backgroundColor: colors.fill, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 4 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, paddingVertical: 8 },
