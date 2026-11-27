@@ -23,9 +23,6 @@
    | `OPENAI_API_KEY` | OpenAI 키 |
    | `SERPER_API_KEY` | Serper 키 |
    | `DATA_GO_KR_SERVICE_KEY` | 공공데이터포털 키 |
-   | `SUPABASE_URL` | `https://<프로젝트>.supabase.co` |
-   | `SUPABASE_SECRET_KEY` | Supabase 비밀 키(`sb_secret_...`) |
-   | `SAFEPICK_ALLOWED_ORIGINS` | 웹 앱 주소. 웹을 아직 안 올렸으면 비워 두고(로컬 주소만 허용), 웹을 올린 뒤 그 주소를 넣습니다 |
 
 5. **Apply**를 누르면 설치와 실행이 시작됩니다(몇 분). 끝나면 서비스 주소가 생깁니다. 주소는 Render 서비스 화면 위쪽에 있고, `safepick-api.onrender.com`은 다른 사람이 이미 쓰고 있어 뒤에 글자가 붙습니다(예: `https://safepick-api-ab12.onrender.com`). 이 문서의 `<서비스 주소>`는 그 주소입니다.
 6. 브라우저로 `<서비스 주소>/health`를 열어 `{"status":"ok"}`가 나오면 성공입니다. 다른 응답이면 SafePick 서버가 아닙니다.
@@ -34,14 +31,14 @@
 
 ### 앱을 배포된 서버에 연결
 
-로컬 앱으로 먼저 확인하려면 `apps/mobile/.env.local`의 `EXPO_PUBLIC_API_BASE_URL`을 Render 주소로 바꾸고 앱을 `--clear`로 다시 시작합니다. 이때 로컬 웹(`http://localhost:8081`)에서 접속하므로 `SAFEPICK_ALLOWED_ORIGINS`는 비워 두거나 `http://localhost:8081`을 포함해야 합니다.
+`apps/mobile/.env.local`의 `EXPO_PUBLIC_API_BASE_URL`을 Render 주소로 바꾸고 앱을 `--clear`로 다시 시작합니다. APK에 넣을 값은 아래 3단계에서 EAS에 넣습니다.
 
 ### 문제가 생기면
 
 | 증상 | 확인할 것 |
 | --- | --- |
 | 배포가 실패함 | Render 서비스의 **Logs**. 설치 단계 오류면 `requirements.txt`, 실행 단계 오류면 환경 변수 |
-| `/health`는 되는데 앱에서 "Failed to fetch" | `SAFEPICK_ALLOWED_ORIGINS`에 앱 주소가 없음, 또는 앱의 `EXPO_PUBLIC_API_BASE_URL`이 Render 주소가 아님 |
+| `/health`는 되는데 앱에서 분석 서버에 연결하지 못함 | 앱의 `EXPO_PUBLIC_API_BASE_URL`이 Render 주소가 아님 |
 | 분석 결과에 "AI 설정이 없어" | Render의 `OPENAI_API_KEY`가 비어 있음 |
 | 첫 분석만 유난히 느림 | 무료 요금제가 잠들었다가 깨어난 것(정상) |
 
@@ -52,12 +49,11 @@
 3. `apps/mobile/.env.local`의 `EXPO_PUBLIC_API_BASE_URL`을 PC의 와이파이 주소로 둡니다(예: `http://192.168.219.111:8000`). PC 주소는 PowerShell `ipconfig`의 Wi-Fi IPv4 주소입니다.
 4. 앱 개발 서버(`npx expo start --clear`)를 켜고, Expo Go에서 QR을 찍거나 **Enter URL manually**에 `exp://<PC 주소>:8081`을 넣습니다.
 5. 휴대폰에서 연결이 안 되면 Windows 방화벽이 Python·Node의 접속을 막는 경우가 많습니다. 처음 실행할 때 뜨는 방화벽 창에서 **개인 네트워크 허용**을 누릅니다.
-6. Expo Go 안에서 로그인하려면 Supabase **Authentication → URL Configuration → Redirect URLs**에 `exp://**`를 추가합니다(개발용, 출시 전 삭제). 로그인 없이도 분석은 됩니다.
 
-첫 화면의 **쿠팡 열기**로 앱 안에서 쿠팡을 열고, 상품 페이지에서 **이 페이지 분석**을 누르면 확장 프로그램과 같은 수집 코드로 판매자 정보·배송·반품·상품 문의를 읽어 분석 화면으로 가져옵니다. 쿠팡 휴대폰 화면은 PC와 구조가 달라 실제 휴대폰에서 판매자 정보가 잘 읽히는지 확인이 필요합니다. 수집 코드를 고치면 `apps/mobile`에서 `npm run sync-collector`로 앱용 사본을 다시 만듭니다(`tests/inapp-collector.cjs`가 사본이 최신인지 확인).
+첫 화면의 **쿠팡 열기**로 앱 안에서 쿠팡을 열고, 상품 페이지에서 **이 페이지 분석**을 누르면 수집 코드가 판매자 정보·배송·반품·상품 문의를 읽어 분석 화면으로 가져옵니다. 쿠팡 휴대폰 화면은 PC와 구조가 달라 실제 휴대폰에서 판매자 정보가 잘 읽히는지 확인이 필요합니다. 수집 코드를 고치면 `apps/mobile`에서 `npm run sync-collector`로 앱용 사본을 다시 만듭니다(`tests/inapp-collector.cjs`가 사본이 최신인지 확인).
 
 ### 쿠팡 링크를 복사해 가져오기
-쿠팡 앱 상품 화면에서 **공유 → 링크 복사** 후 SafePick의 **복사한 링크 붙여넣기**를 누르면, 앱 안 브라우저가 그 상품 페이지를 열고 다 뜨면 저절로 읽어 분석 화면에 채웁니다. 상품 링크 칸에 쿠팡 링크를 넣고 **분석 시작**을 눌러도 같습니다(휴대폰 앱에서만. 웹은 서버가 링크를 읽습니다).
+쿠팡 앱 상품 화면에서 **공유 → 링크 복사** 후 SafePick의 **복사한 링크 붙여넣기**를 누르면, 앱 안 브라우저가 그 상품 페이지를 열고 다 뜨면 저절로 읽어 분석 화면에 채웁니다. 상품 링크 칸에 쿠팡 링크를 넣고 **분석 시작**을 눌러도 같습니다.
 
 ## 3. 안드로이드 앱(APK) — 쿠팡 앱에서 공유로 보내기
 
@@ -76,12 +72,6 @@
    ```bash
    npx eas-cli@latest env:create --environment preview --name EXPO_PUBLIC_API_BASE_URL --value <서비스 주소> --visibility plaintext
    ```
-   ```bash
-   npx eas-cli@latest env:create --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value https://<프로젝트>.supabase.co --visibility plaintext
-   ```
-   ```bash
-   npx eas-cli@latest env:create --environment preview --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --value sb_publishable_... --visibility plaintext
-   ```
    분석 서버를 아직 Render에 안 올렸다면 PC 주소(`http://192.168.219.111:8000`)를 넣어도 되지만, 그 APK는 PC가 켜져 있고 같은 와이파이일 때만 분석됩니다. 안드로이드는 기본으로 `http://` 주소 접속을 막으므로 PC 주소로 시험하려면 따로 허용이 필요합니다. Render(`https://`)를 권장합니다.
 4. APK를 빌드합니다(10~20분, 무료 요금제는 대기 시간이 더 걸릴 수 있음).
    ```bash
@@ -89,12 +79,10 @@
    ```
    처음에는 앱 서명 키를 만들지 묻습니다. **Yes**를 누르면 EAS가 만들고 보관합니다.
 5. 끝나면 나오는 링크(또는 QR)를 휴대폰에서 열어 APK를 내려받아 설치합니다. 안드로이드가 "출처를 알 수 없는 앱" 설치를 물으면 그 브라우저에 한해 허용합니다.
-6. 로그인을 쓰려면 Supabase **Authentication → URL Configuration → Redirect URLs**에 `safepick://**`를 추가합니다(설치한 앱은 `safepick://sign-in`으로 돌아옵니다).
 
 설치 후 쿠팡 앱 상품 화면에서 **공유**를 누르고 목록에서 **SafePick**을 고르면, SafePick이 열리며 그 상품 페이지를 앱 안에서 읽고 분석 화면으로 갑니다. 쿠팡이 아닌 링크를 공유하면 상품 링크 칸에 채워집니다. iOS 공유는 아직 꺼 두었습니다(`disableIOS`).
 
 ## 4. 다음 단계
 
-- 웹 앱 배포(Expo 무료 호스팅)와 그 주소를 카카오·Google·Supabase 로그인 설정에 추가
-- 안드로이드 앱 빌드(EAS)와 휴대폰 시험
+- 네이버 스마트스토어·11번가 상품도 공유 한 번으로 분석
 - 개인정보처리방침·이용약관 화면, 플레이스토어 등록

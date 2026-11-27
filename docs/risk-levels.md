@@ -46,12 +46,4 @@
 cd apps/api
 python -m unittest discover -s tests -v
 python tests/evaluate_risk_levels.py
-
-cd ../mobile
-$env:PLAYWRIGHT_MODULE = '<Playwright 모듈의 절대 경로>'
-$env:UI_APP_ORIGIN = 'http://localhost:8082'
-node tests/risk-ui.cjs
-node tests/live-risk-level.cjs
 ```
-
-마지막 명령은 실행 중인 웹/API와 기존 OpenAI 설정을 사용합니다. 기존 8081 포트의 다른 프로세스는 종료하지 않았습니다. 검증 웹은 8082이며 개발 CORS는 localhost 8081/8082를 허용합니다. 확장의 기본 앱 주소는 8081이고, 확장 0.2.1부터 팝업에서 8082를 직접 선택할 수 있습니다.
