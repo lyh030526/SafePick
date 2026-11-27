@@ -1,9 +1,10 @@
-import { Redirect, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { Redirect, useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AskHistoryCard } from '../../AccountCards';
 import { AccountPrompt } from '../../AccountPrompt';
 import { ScreenFrame } from '../../ScreenFrame';
-import { deleteAccount, getNickname, setNickname } from '../../lib/account';
+import { deleteAccount, getNickname, listAnalyses, listSaved, setNickname } from '../../lib/account';
 import { ACCOUNTS_ENABLED, useSession } from '../../lib/session';
 import { colors, radius } from '../../theme';
 import { Button, Card, Divider, ListRow, SectionTitle, text } from '../../ui';
@@ -18,7 +19,7 @@ function MyPageScreen() {
   const { session } = useSession();
   return <ScreenFrame title="마이">
     {session ? <Account /> : <AccountPrompt icon="person-circle-outline" title="로그인하고 내 기록을 모아 보세요"
-      body="분석한 판매 페이지가 자동으로 기록되고, 관심 판매처를 저장해 다시 확인할 수 있어요." />}
+      body="분석한 판매 페이지가 자동으로 기록되고, 그 기록에 AI로 물어보거나 관심 판매처를 저장할 수 있어요." />}
   </ScreenFrame>;
 }
 
@@ -29,8 +30,13 @@ function Account() {
   const [message, setMessage] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [counts, setCounts] = useState<{ analyses: number | null; saved: number | null }>({ analyses: null, saved: null });
   // The stored nickname fills the field only if the shopper has not started typing in it yet.
   useEffect(() => { getNickname().then(stored => setName(current => current || stored)).catch(() => undefined); }, []);
+  useFocusEffect(useCallback(() => {
+    Promise.all([listAnalyses().catch(() => null), listSaved().catch(() => null)])
+      .then(([analyses, saved]) => setCounts({ analyses: analyses?.length ?? null, saved: saved?.length ?? null }));
+  }, []));
   const provider = session?.user.app_metadata.provider === 'kakao' ? '카카오' : 'Google';
   const initial = (name || provider).slice(0, 1);
 
@@ -42,13 +48,22 @@ function Account() {
     }
   };
   return <>
-    <Card style={styles.profile}>
-      <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>
-      <View style={styles.profileText}>
-        <Text style={text.title}>{name || '이름 없음'}</Text>
-        <Text style={text.small}>{provider} 계정으로 로그인했어요{session?.user.email ? ` · ${session.user.email}` : ''}</Text>
+    <View style={styles.profile}>
+      <View style={styles.profileHead}>
+        <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>
+        <View style={styles.profileText}>
+          <Text style={styles.name}>{name || '이름 없음'}</Text>
+          <Text numberOfLines={1} style={styles.account}>{provider} 계정{session?.user.email ? ` · ${session.user.email}` : ''}</Text>
+        </View>
       </View>
-    </Card>
+      <View style={styles.counts}>
+        <View style={styles.count}><Text style={styles.countValue}>{counts.analyses ?? '–'}</Text><Text style={styles.countLabel}>분석 기록</Text></View>
+        <View style={styles.countDivider} />
+        <View style={styles.count}><Text style={styles.countValue}>{counts.saved ?? '–'}</Text><Text style={styles.countLabel}>관심 판매처</Text></View>
+      </View>
+    </View>
+
+    <AskHistoryCard count={counts.analyses ?? undefined} />
 
     <Card tight>
       <ListRow icon="time-outline" title="분석 기록" subtitle="로그인한 뒤 분석한 판매 페이지" onPress={() => router.push('/history')} />
@@ -62,7 +77,7 @@ function Account() {
       <View style={styles.nicknameRow}>
         <TextInput accessibilityLabel="닉네임" maxLength={40} value={name} onChangeText={setName} style={styles.input}
           placeholder="닉네임" placeholderTextColor={colors.textFaint} />
-        <Button tone="secondary" label="닉네임 저장" onPress={() => setNickname(name)
+        <Button tone="secondary" label="저장" onPress={() => setNickname(name)
           .then(() => setMessage('닉네임을 저장했어요.')).catch(() => setMessage('닉네임을 저장하지 못했어요.'))} />
       </View>
       {message ? <Text accessibilityRole="alert" style={text.small}>{message}</Text> : null}
@@ -83,10 +98,18 @@ function Account() {
 }
 
 const styles = StyleSheet.create({
-  profile: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
+  profile: { backgroundColor: colors.card, borderRadius: radius.card, padding: 18, gap: 16, borderWidth: 1, borderColor: colors.line },
+  profileHead: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#FFFFFF', fontSize: 24, fontWeight: '800' },
   profileText: { flex: 1, minWidth: 0, gap: 2 },
+  name: { color: colors.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  account: { color: colors.textMuted, fontSize: 13 },
+  counts: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.fill, borderRadius: 16, paddingVertical: 12 },
+  count: { flex: 1, alignItems: 'center', gap: 2 },
+  countValue: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  countLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  countDivider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.line },
   nicknameRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   input: { flex: 1, minWidth: 0, borderRadius: radius.field, paddingHorizontal: 14, minHeight: 52, fontSize: 16,
     color: colors.text, backgroundColor: colors.fill },

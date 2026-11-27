@@ -1,21 +1,22 @@
 import { useRouter } from 'expo-router';
-import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { colors, radius, shadow } from './theme';
-import { Icon, TopBar, text } from './ui';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ChatView, type ChatReply } from './Chat';
+import { askHistory } from './lib/account';
+import { colors, levels, radius } from './theme';
+import { Icon, text } from './ui';
 
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
-const suggestions = ['이 판매자 믿어도 될까?', '구매 전에 꼭 확인할 건 뭐야?', '반품은 어떻게 해야 해?'];
+const resultSuggestions = ['이 판매자 믿어도 될까?', '구매 전에 꼭 확인할 건 뭐야?', '반품은 어떻게 해야 해?', '가격은 적당해?'];
+const historySuggestions = ['최근에 분석한 것 중 가장 믿을 만한 곳은?', '주의가 나온 판매처만 알려 줘', '같은 상품을 마켓별로 비교해 줘'];
 
-type Answer = { question: string; answer: string; citations: { id: string; text: string }[]; failed?: boolean };
+type Level = keyof typeof levels;
 
 // The result the chat answers about, and what was asked so far. Kept in memory only, so going back to the result and
 // returning keeps the conversation; a new analysis starts a new one.
-let current: { key: string; analysis: Record<string, unknown>; title: string; answers: Answer[] } | null = null;
+let current: { key: string; analysis: Record<string, unknown>; title: string; replies: ChatReply[] } | null = null;
+// Questions about the saved analyses, kept while the app is open.
+let historyReplies: ChatReply[] = [];
 
 // On the result screen: a round chat button floating at the bottom right that opens the chat for this result.
 export function AskAnalysis({ analysis, title }: { analysis: Record<string, unknown>; title?: string }) {
@@ -23,7 +24,7 @@ export function AskAnalysis({ analysis, title }: { analysis: Record<string, unkn
   const open = () => {
     // The result screen builds the object on every render, so the same result is recognised by its content.
     const key = JSON.stringify(analysis);
-    if (current?.key !== key) current = { key, analysis, title: title ?? '', answers: [] };
+    if (current?.key !== key) current = { key, analysis, title: title ?? '', replies: [] };
     router.push('/ask');
   };
   return <Pressable accessibilityRole="button" accessibilityLabel="AI에게 결과 물어보기" onPress={open} hitSlop={6}
@@ -32,144 +33,61 @@ export function AskAnalysis({ analysis, title }: { analysis: Record<string, unkn
   </Pressable>;
 }
 
-// The chat screen: questions about the one result, answered only from its own findings, with the findings each answer
-// used one tap away.
+// Questions about the result just shown, answered from that result's own findings.
 export function AskChat() {
-  const router = useRouter();
-  const [answers, setAnswers] = useState<Answer[]>(current?.answers ?? []);
-  const [question, setQuestion] = useState('');
-  const [pending, setPending] = useState('');
-  const [openSources, setOpenSources] = useState<number | null>(null);
-  const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
-  useEffect(() => { if (current) current.answers = answers; }, [answers]);
-
-  if (!current) {
-    return <SafeAreaView style={styles.safeArea}>
-      <View style={styles.content}>
-        <TopBar title="결과에 대해 물어보기" back="/" />
-        <Text style={text.body}>먼저 상품을 분석하면 그 결과에 대해 물어볼 수 있어요.</Text>
-      </View>
-    </SafeAreaView>;
-  }
+  const [replies, setReplies] = useState<ChatReply[]>(current?.replies ?? []);
+  useEffect(() => { if (current) current.replies = replies; }, [replies]);
+  if (!current) return <ChatView title="결과에 대해 물어보기" welcome="먼저 상품을 분석하면 그 결과에 대해 물어볼 수 있어요."
+    suggestions={[]} replies={[]} onReplies={() => undefined} send={async question => ({ question, answer: '분석한 결과가 없어요.', citations: [], failed: true })} />;
   const { analysis, title } = current;
-
-  const ask = async (value: string) => {
-    const asked = value.trim();
-    if (asked.length < 2 || pending) return;
-    setPending(asked); setQuestion('');
-    let next: Answer;
-    try {
-      const response = await fetch(`${apiBaseUrl}/analysis-questions`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...analysis, question: asked }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(typeof payload.detail === 'string' ? payload.detail : '질문을 보내지 못했어요.');
-      next = { question: asked, answer: payload.answer, citations: payload.citations ?? [], failed: payload.status !== 'answered' };
-    } catch (reason) {
-      next = { question: asked, answer: reason instanceof Error ? reason.message : '분석 서버에 연결할 수 없어요.', citations: [], failed: true };
-    }
-    setAnswers(list => [...list, next].slice(-20));
-    setPending('');
+  const assessment = (analysis.risk_analysis as { assessment?: { level?: Level; label?: string; score?: number | null; summary?: string } } | null)?.assessment;
+  const level = levels[assessment?.level ?? 'undetermined'];
+  const send = async (question: string): Promise<ChatReply> => {
+    const response = await fetch(`${apiBaseUrl}/analysis-questions`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...analysis, question }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(typeof payload.detail === 'string' ? payload.detail : '질문을 보내지 못했어요.');
+    return { question, answer: payload.answer, citations: payload.citations ?? [], failed: payload.status !== 'answered' };
   };
+  return <ChatView title="결과에 대해 물어보기" subtitle={title} replies={replies} onReplies={setReplies} send={send}
+    suggestions={resultSuggestions}
+    welcome="이 분석 결과에 대해 궁금한 점을 물어보세요. 분석에서 찾은 근거로만 답하고, 근거에 없는 내용은 확인하지 못했다고 알려 드려요."
+    context={assessment ? <View style={[styles.context, { backgroundColor: level.soft }]}>
+      <Icon name={level.icon} size={26} color={level.color} />
+      <View style={styles.contextText}>
+        <Text style={[styles.contextLevel, { color: level.text }]}>{assessment.label}{assessment.score != null ? ` · ${assessment.score}점` : ''}</Text>
+        {assessment.summary ? <Text numberOfLines={2} style={text.small}>{assessment.summary}</Text> : null}
+      </View>
+    </View> : null} />;
+}
 
-  const canSend = !pending && question.trim().length >= 2;
-  return <SafeAreaView style={styles.safeArea}>
-    <StatusBar style="dark" />
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-      <View style={styles.header}>
-        <TopBar title="결과에 대해 물어보기" onBack={() => router.back()} />
-        {title ? <Text numberOfLines={1} style={[text.small, styles.headerSub]}>{title}</Text> : null}
-      </View>
-      <ScrollView ref={scroll} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled"
-        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
-        <View style={styles.botRow}>
-          <View style={styles.avatar}><Icon name="shield-checkmark" size={16} color="#FFFFFF" /></View>
-          <View style={[styles.bubble, styles.botBubble]}>
-            <Text style={text.body}>이 분석 결과에 대해 궁금한 점을 물어보세요. 분석에서 찾은 근거로만 답하고, 근거에 없는 내용은 확인하지 못했다고 알려 드려요.</Text>
-          </View>
-        </View>
-        {answers.map((item, index) => <View key={`${index}-${item.question}`} style={styles.turn}>
-          <View style={[styles.bubble, styles.userBubble]}><Text style={styles.userText}>{item.question}</Text></View>
-          <View style={styles.botRow}>
-            <View style={styles.avatar}><Icon name="shield-checkmark" size={16} color="#FFFFFF" /></View>
-            <View style={[styles.bubble, styles.botBubble]}>
-              <Text style={[text.body, item.failed && styles.failed]}>{item.answer}</Text>
-              {item.citations.length ? <Pressable accessibilityRole="button" accessibilityState={{ expanded: openSources === index }}
-                onPress={() => setOpenSources(openSources === index ? null : index)} style={styles.sourcesToggle}>
-                <Icon name="document-text-outline" size={15} color={colors.brandText} />
-                <Text style={styles.sourcesText}>{openSources === index ? '근거 접기' : `근거 ${item.citations.length}개 보기`}</Text>
-              </Pressable> : null}
-              {openSources === index ? item.citations.map(citation =>
-                <Text key={citation.id} style={styles.citation}>{citation.text}</Text>) : null}
-            </View>
-          </View>
-        </View>)}
-        {pending ? <View style={styles.turn}>
-          <View style={[styles.bubble, styles.userBubble]}><Text style={styles.userText}>{pending}</Text></View>
-          <View style={styles.botRow}>
-            <View style={styles.avatar}><Icon name="shield-checkmark" size={16} color="#FFFFFF" /></View>
-            <View style={[styles.bubble, styles.botBubble, styles.typing]}>
-              <ActivityIndicator color={colors.brand} size="small" />
-              <Text style={text.small}>근거를 찾아 답하는 중이에요</Text>
-            </View>
-          </View>
-        </View> : null}
-      </ScrollView>
-      <View style={styles.composer}>
-        {!answers.length && !pending ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {suggestions.map(item => <Pressable key={item} accessibilityRole="button" onPress={() => ask(item)}
-            style={({ pressed }) => [styles.chip, pressed && styles.pressed]}>
-            <Text style={styles.chipText}>{item}</Text>
-          </Pressable>)}
-        </ScrollView> : null}
-        <View style={styles.inputRow}>
-          <TextInput accessibilityLabel="결과에 대한 질문" value={question} onChangeText={setQuestion} maxLength={300}
-            placeholder="궁금한 점을 입력해 주세요" placeholderTextColor={colors.textFaint} style={styles.input}
-            onSubmitEditing={() => ask(question)} returnKeyType="send" />
-          <Pressable accessibilityRole="button" accessibilityLabel="질문 보내기" disabled={!canSend}
-            onPress={() => ask(question)} style={[styles.send, !canSend && styles.dim]}>
-            <Icon name="arrow-up" size={20} color="#FFFFFF" />
-          </Pressable>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
-  </SafeAreaView>;
+// Questions about everything the signed-in shopper analyzed: the server picks the records the question is about and
+// answers from their stored results, each answer listing the records it used.
+export function HistoryChat() {
+  const [replies, setReplies] = useState<ChatReply[]>(historyReplies);
+  useEffect(() => { historyReplies = replies; }, [replies]);
+  const send = async (question: string): Promise<ChatReply> => {
+    const reply = await askHistory(apiBaseUrl, question);
+    return { question, answer: reply.answer, citations: reply.citations ?? [], records: reply.records ?? [],
+      failed: reply.status === 'unavailable' };
+  };
+  return <ChatView title="내 분석 기록에 물어보기" subtitle="저장된 분석 결과로만 답해요" icon="time" replies={replies}
+    onReplies={setReplies} send={send} suggestions={historySuggestions}
+    welcome="쿠팡·G마켓·옥션에서 분석해 둔 기록을 찾아 답해요. 결과는 분석한 날 기준이라, 지금 판매 페이지와 다를 수 있어요."
+    context={<View style={styles.note}>
+      <Icon name="lock-closed-outline" size={16} color={colors.textSub} />
+      <Text style={[text.small, styles.contextText]}>내 계정의 기록만 읽어요. 질문할 때 관련 기록 몇 개만 골라 AI에게 보내요.</Text>
+    </View>} />;
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  pressed: { opacity: 0.7 },
   fab: { position: 'absolute', right: 20, bottom: 24, width: 62, height: 62, borderRadius: 31, backgroundColor: colors.brand,
     alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 }, elevation: 8 },
   fabPressed: { opacity: 0.85, transform: [{ scale: 0.96 }] },
-  safeArea: { flex: 1, backgroundColor: colors.canvas },
-  content: { padding: 20, gap: 16 },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.line, backgroundColor: colors.canvas },
-  headerSub: { marginTop: -4, marginLeft: 48 },
-  messages: { padding: 16, gap: 16, flexGrow: 1 },
-  turn: { gap: 10 },
-  botRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, maxWidth: '92%' },
-  avatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center',
-    marginTop: 2 },
-  bubble: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
-  botBubble: { flexShrink: 1, backgroundColor: colors.card, borderTopLeftRadius: 6, ...shadow },
-  userBubble: { alignSelf: 'flex-end', maxWidth: '80%', backgroundColor: colors.brand, borderTopRightRadius: 6 },
-  userText: { color: '#FFFFFF', fontSize: 15, lineHeight: 22, fontWeight: '600' },
-  typing: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  failed: { color: colors.textMuted },
-  sourcesToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 2 },
-  sourcesText: { color: colors.brandText, fontSize: 13, fontWeight: '600' },
-  citation: { color: colors.textSub, fontSize: 13, lineHeight: 19, backgroundColor: colors.fill, borderRadius: 10, padding: 10 },
-  composer: { gap: 10, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, backgroundColor: colors.card,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  chips: { gap: 8 },
-  chip: { borderRadius: radius.pill, backgroundColor: colors.brandSoft, paddingHorizontal: 12, paddingVertical: 8 },
-  chipText: { color: colors.brandText, fontSize: 14, fontWeight: '600' },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  input: { flex: 1, minWidth: 0, minHeight: 48, borderRadius: radius.field, backgroundColor: colors.fill, paddingHorizontal: 14,
-    fontSize: 15, color: colors.text },
-  send: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
-  dim: { opacity: 0.45 },
+  context: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: radius.card, padding: 14 },
+  contextText: { flex: 1, minWidth: 0, gap: 2 },
+  contextLevel: { fontSize: 17, fontWeight: '800' },
+  note: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
 });

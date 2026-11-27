@@ -3,7 +3,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
@@ -21,13 +21,15 @@ from official_discovery import discover_official_brand
 from official_search import OfficialSearchError, search_official_pages
 from photo_check import check_photo
 from question_answer import answer_question
+from history_answer import answer_history_question
 from request_limits import AnalysisBodyLimit, AnalysisRateLimit
 from risk_analysis import analyze_listing_risks, review_complaints
 from domain_check import check_domain
 from risk_assessment import assess_risk
 from schemas import (
     AnalysisAnswer, AnalysisQuestion, AnalysisRequest, AnalysisResponse, ComparisonRequest, ComparisonResponse,
-    ConversationCheck, ConversationCheckRequest, GroupAnalysisRequest, GroupAnalysisResponse, OfficialLookup,
+    ConversationCheck, ConversationCheckRequest, GroupAnalysisRequest, GroupAnalysisResponse, HistoryAnswer, HistoryQuestion,
+    OfficialLookup,
     ProductDetails, RiskAnalysis, SourceSummary, SupportedBrand, UNKNOWN,
 )
 from scraper import FOOTER_LENGTH, RETURN_TERMS, ProductPage, ProductPageError, fetch_product_page
@@ -227,6 +229,11 @@ def create_conversation_check(request: ConversationCheckRequest) -> Conversation
 @app.post("/analysis-questions", response_model=AnalysisAnswer)
 def create_analysis_answer(request: AnalysisQuestion) -> AnalysisAnswer:
     return answer_question(request)
+
+
+@app.post("/history-questions", response_model=HistoryAnswer)
+def create_history_answer(request: HistoryQuestion, authorization: str = Header(default="")) -> HistoryAnswer:
+    return answer_history_question(request, authorization)
 
 
 @app.post("/group-analyses", response_model=GroupAnalysisResponse)

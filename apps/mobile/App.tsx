@@ -595,6 +595,8 @@ function CorrectionForm({
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardContainer}>
+        {/* The scroll area and the chat button share one box, so the button floats above the save footer. */}
+        <View style={styles.flex}>
         <ScrollView contentContainerStyle={[styles.content, styles.resultContent]} keyboardShouldPersistTaps="handled">
           <TopBar title="상품 분석 결과" onBack={onBack} />
           {/* The verdict comes first; each check, the checklist and where the material came from follow it. */}
@@ -662,6 +664,7 @@ function CorrectionForm({
         </ScrollView>
         {fresh && riskResult ? <AskAnalysis title={productLine} analysis={{ product: draft, risk_analysis: riskResult, seller_verification: seller,
             market_price: market, comparison: result }} /> : null}
+        </View>
         {fresh ? <SaveFooter productUrl={productUrl} product={draft} source={source} risk={riskResult} seller={seller} /> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>

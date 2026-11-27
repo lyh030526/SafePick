@@ -52,8 +52,8 @@ async function signIn(provider: Provider) {
   if (exchangeError) throw exchangeError;
 }
 
-// Accounts are switched off for now: no sign-in, history, or saved listings. Turning this on brings them all back.
-export const ACCOUNTS_ENABLED = false;
+// Sign-in, history, saved listings and questions about the history. Switching this off hides them all again.
+export const ACCOUNTS_ENABLED = true;
 const auth = ACCOUNTS_ENABLED ? supabase : null;
 
 export function SessionProvider({ children }: { children: ReactNode }) {

@@ -13,7 +13,7 @@ export function ScreenFrame({ title, back, subtitle, children }: {
   return <SafeAreaView style={styles.safe}>
     <ScrollView contentContainerStyle={styles.content}>
       {back !== undefined ? <TopBar back={back} /> : null}
-      <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+      {title ? <Text accessibilityRole="header" style={styles.title}>{title}</Text> : null}
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       {children}
     </ScrollView>

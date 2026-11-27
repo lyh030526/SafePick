@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { marketName } from './browserImport';
 import type { ListingSummary } from './lib/account';
 import { colors, levels } from './theme';
 import { Card, Icon, LevelDot, type IconName, text } from './ui';
@@ -19,6 +20,7 @@ export function ListingRow({ item, date, reasons, onDelete, deleteLabel }: {
     <View accessibilityLabel={`${item.seller_name ?? '판매처'} ${item.label}`} style={styles.head}>
       <LevelDot level={item.level} />
       <View style={styles.headText}>
+        {marketName(item.product_url) ? <Text style={styles.market}>{marketName(item.product_url)}</Text> : null}
         <Text numberOfLines={2} style={text.strong}>{titleOf(item)}</Text>
         <Text style={text.small}>{metaOf(item)}</Text>
       </View>
@@ -46,7 +48,7 @@ export function RecentRow({ item, onPress }: { item: ListingSummary; onPress: ()
     <LevelDot level={item.level} />
     <View style={styles.headText}>
       <Text numberOfLines={1} style={text.strong}>{titleOf(item)}</Text>
-      <Text numberOfLines={1} style={text.small}>{metaOf(item)}</Text>
+      <Text numberOfLines={1} style={text.small}>{[marketName(item.product_url), metaOf(item)].filter(Boolean).join(' · ')}</Text>
     </View>
     <Text style={[styles.level, { color: levels[item.level].text }]}>{item.label}</Text>
   </Pressable>;
@@ -74,6 +76,8 @@ const styles = StyleSheet.create({
   headText: { flex: 1, minWidth: 0, gap: 2 },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   level: { fontSize: 14, fontWeight: '700' },
+  market: { alignSelf: 'flex-start', color: colors.brandText, backgroundColor: colors.brandSoft, fontSize: 12, fontWeight: '700',
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden', marginBottom: 2 },
   detail: { gap: 4, backgroundColor: colors.fill, borderRadius: 12, padding: 12 },
   actions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, paddingTop: 10 },
   action: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 10, backgroundColor: colors.fill },

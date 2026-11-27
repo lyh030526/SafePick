@@ -85,6 +85,29 @@ export async function setNickname(nickname: string) {
   if (error) throw error;
 }
 
+export type HistoryRecord = {
+  id: string; title: string; market: string; seller: string; price: string; level: Level; label: string;
+  score: number | null; analyzed_at: string; product_url: string;
+};
+export type HistoryReply = {
+  status: 'answered' | 'no_records' | 'unavailable'; answer: string;
+  citations: { id: string; text: string; record_id?: string | null }[]; records: HistoryRecord[];
+};
+
+// A question about the signed-in shopper's own analyses: the server reads them with this user's token and answers
+// from them only, naming the records it used.
+export async function askHistory(apiBaseUrl: string, question: string): Promise<HistoryReply> {
+  const { data: { session } } = await client().auth.getSession();
+  if (!session) throw new Error('다시 로그인해 주세요.');
+  const response = await fetch(`${apiBaseUrl}/history-questions`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ question }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof payload.detail === 'string' ? payload.detail : '질문을 보내지 못했어요.');
+  return payload as HistoryReply;
+}
+
 // Deleting the sign-in itself needs the server's secret key, so the API does it after checking this user's token.
 export async function deleteAccount(apiBaseUrl: string) {
   const { data: { session } } = await client().auth.getSession();

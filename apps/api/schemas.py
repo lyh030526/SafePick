@@ -513,9 +513,37 @@ class AnalysisQuestion(BaseModel):
 class AnswerCitation(BaseModel):
     id: str
     text: str
+    # For answers drawn from several saved analyses: which record this evidence came from.
+    record_id: str | None = None
 
 
 class AnalysisAnswer(BaseModel):
     status: Literal["answered", "unavailable"] = "answered"
     answer: str
     citations: list[AnswerCitation] = Field(default_factory=list)
+
+
+class HistoryQuestion(BaseModel):
+    """A signed-in shopper's question about the analyses they saved; the records are read on the server."""
+    question: str = Field(min_length=2, max_length=300)
+
+
+class HistoryRecord(BaseModel):
+    """One saved analysis an answer drew on, as the app lists it under the answer."""
+    id: str
+    title: str
+    market: str = ""
+    seller: str = ""
+    price: str = ""
+    level: Literal["high", "moderate", "low", "undetermined"] = "undetermined"
+    label: str = ""
+    score: int | None = None
+    analyzed_at: str = ""
+    product_url: str = ""
+
+
+class HistoryAnswer(BaseModel):
+    status: Literal["answered", "no_records", "unavailable"] = "answered"
+    answer: str
+    citations: list[AnswerCitation] = Field(default_factory=list)
+    records: list[HistoryRecord] = Field(default_factory=list)
