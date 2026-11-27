@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { findLink, isCoupangLink, parseBrowserImport } from './browserImport';
+import { findLink, isMarketLink, parseBrowserImport, secureMarketLink } from './browserImport';
 import { listAnalyses, saveAnalysis, saveListing, summarize, type HistoryItem } from './lib/account';
 import { takePendingCapture, takePendingLink } from './lib/pendingCapture';
 import { pickImage, type AttachedImage } from './lib/pickImage';
@@ -213,10 +213,10 @@ function SingleAnalysis() {
   // The clipboard is read only when the shopper taps the button, never in the background.
   const pasteLink = async () => {
     const link = findLink(await Clipboard.getStringAsync().catch(() => ''));
-    if (!link) { setError('복사한 링크가 없어요. 쿠팡 앱의 공유 → 링크 복사로 복사해 주세요.'); return; }
+    if (!link) { setError('복사한 링크가 없어요. 쿠팡·G마켓·옥션 앱의 공유 → 링크 복사로 복사해 주세요.'); return; }
     setProductUrl(link); setProvidedText(''); setImages([]); setInputSource('user_text'); setCapturedAt(undefined);
     setPageTitle(''); setConsent(false); setError('');
-    if (isCoupangLink(link)) router.push({ pathname: '/browse', params: { url: link } });
+    if (isMarketLink(link)) router.push({ pathname: '/browse', params: { url: secureMarketLink(link) } });
   };
 
   const startAnalysis = async () => {
@@ -234,10 +234,11 @@ function SingleAnalysis() {
       return;
     }
     const hasProvidedData = !!providedText.trim() || images.length > 0;
-    // Coupang turns away the analysis server, so on the phone a Coupang link opens in the in-app browser and is read there.
-    if (Platform.OS !== 'web' && !hasProvidedData && isCoupangLink(parsedUrl.toString())) {
+    // Coupang turns away the analysis server, so on the phone a Coupang, G마켓 or 옥션 link opens in the in-app browser
+    // and is read there.
+    if (Platform.OS !== 'web' && !hasProvidedData && isMarketLink(parsedUrl.toString())) {
       setError('');
-      router.push({ pathname: '/browse', params: { url: parsedUrl.toString() } });
+      router.push({ pathname: '/browse', params: { url: secureMarketLink(parsedUrl.toString()) } });
       return;
     }
     if (hasProvidedData && !consent) { setError('상품 자료의 AI 분석 동의를 확인해 주세요.'); return; }
@@ -368,7 +369,7 @@ function SingleAnalysis() {
           </Card>
 
           {Platform.OS !== 'web' ? <Card tight>
-            <ListRow icon="share-social-outline" title="쿠팡 앱에서 공유로 보내기" subtitle="상품 화면에서 공유 → SafePick을 누르면 바로 분석해요" />
+            <ListRow icon="share-social-outline" title="쿠팡·G마켓·옥션 앱에서 공유로 보내기" subtitle="상품 화면에서 공유 → SafePick을 누르면 바로 분석해요" />
           </Card> : null}
 
 

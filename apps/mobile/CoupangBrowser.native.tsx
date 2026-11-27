@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
-import { isCoupangLink, validCapture } from './browserImport';
+import { isMarketLink, isProductPage, marketName, secureMarketLink, validCapture } from './browserImport';
 import { collectorSource } from './lib/collectorSource';
 import { setPendingCapture } from './lib/pendingCapture';
 import { colors } from './theme';
@@ -12,12 +12,8 @@ import { Button, Icon } from './ui';
 const Web = WebView<object>;
 
 const START = 'https://m.coupang.com/';
-const isProduct = (address: string) => {
-  try {
-    const url = new URL(address);
-    return /^(www|m)\.coupang\.com$/.test(url.hostname) && /^\/v[pm]\/products\/\d+\/?$/.test(url.pathname);
-  } catch { return false; }
-};
+// Coupang, G마켓 and 옥션 product pages; the same collector reads all three.
+const isProduct = isProductPage;
 
 // The extension's collector, run inside the page the shopper is looking at; it reads only what that page shows and
 // opens the same read-only sections (seller, returns, Q&A, low-star reviews) the extension does.
@@ -38,7 +34,7 @@ const inject = `(async () => {
 export function CoupangBrowser({ initialUrl }: { initialUrl?: string }) {
   const router = useRouter();
   const web = useRef<WebView<object>>(null);
-  const [start] = useState(() => initialUrl && isCoupangLink(initialUrl) ? initialUrl : START);
+  const [start] = useState(() => initialUrl && isMarketLink(initialUrl) ? secureMarketLink(initialUrl) : START);
   const autoRead = useRef(start !== START);
   const [address, setAddress] = useState(start);
   const [title, setTitle] = useState('');
@@ -69,7 +65,7 @@ export function CoupangBrowser({ initialUrl }: { initialUrl?: string }) {
       setPendingCapture(validCapture(result));
       router.back();
     } catch {
-      setMessage('이 페이지에서는 상품 정보를 가져오지 못했어요. 쿠팡 상품 상세 페이지에서 눌러 주세요.');
+      setMessage('이 페이지에서는 상품 정보를 가져오지 못했어요. 쿠팡·G마켓·옥션 상품 상세 페이지에서 눌러 주세요.');
     }
   };
   const product = isProduct(address);
@@ -87,7 +83,7 @@ export function CoupangBrowser({ initialUrl }: { initialUrl?: string }) {
         <Icon name="close" size={24} color={colors.text} />
       </Pressable>
       <View style={styles.titleBox}>
-        <Text numberOfLines={1} style={styles.title}>{title || '쿠팡'}</Text>
+        <Text numberOfLines={1} style={styles.title}>{title || marketName(address) || '쇼핑몰'}</Text>
         <Text numberOfLines={1} style={styles.address}>{address.replace(/^https?:\/\//, '')}</Text>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="이전 페이지" disabled={!canGoBack} onPress={() => web.current?.goBack()}

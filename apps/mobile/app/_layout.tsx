@@ -1,12 +1,12 @@
 import { Stack, useRootNavigationState, useRouter } from 'expo-router';
 import { ShareIntentProvider, useShareIntentContext } from 'expo-share-intent';
 import { useEffect } from 'react';
-import { findLink, isCoupangLink } from '../browserImport';
+import { findLink, isMarketLink, secureMarketLink } from '../browserImport';
 import { setPendingLink } from '../lib/pendingCapture';
 import { SessionProvider } from '../lib/session';
 import { colors } from '../theme';
 
-// A link shared to SafePick from the Coupang app opens in the in-app browser, which reads the product page by itself;
+// A link shared to SafePick from the Coupang, G마켓 or 옥션 app opens in the in-app browser, which reads the product page by itself;
 // any other shared link is filled into the analysis screen. In Expo Go and on the web the share module is absent and
 // this does nothing.
 function SharedLink() {
@@ -19,7 +19,7 @@ function SharedLink() {
     const link = shareIntent.webUrl || findLink(shareIntent.text ?? '');
     resetShareIntent();
     if (!link) return;
-    if (isCoupangLink(link)) router.push({ pathname: '/browse', params: { url: link } });
+    if (isMarketLink(link)) router.push({ pathname: '/browse', params: { url: secureMarketLink(link) } });
     else { setPendingLink(link); router.navigate('/'); }
   }, [hasShareIntent, ready, shareIntent, resetShareIntent, router]);
   return null;

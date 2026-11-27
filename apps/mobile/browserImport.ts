@@ -16,17 +16,46 @@ const productPages: [RegExp, RegExp][] = [
   [/^(www|m)\.11st\.co\.kr$/, /^\/products\/(m\/)?\d+\/?$/],
   [/^(www|m)\.coupang\.com$/, /^\/v[pm]\/products\/\d+\/?$/],
   [/^item\.(gmarket|auction)\.co\.kr$/, /^\/(Item|DetailView\/Item\.aspx)$/i],
+  // The phone sites: G마켓 moves item links to /vi/product/<no>, 옥션 to mitem.auction.co.kr/vip?itemNo=<no>.
+  [/^m\.gmarket\.co\.kr$/, /^\/vi\/product\/\d+\/?$/],
+  [/^mitem\.(gmarket|auction)\.co\.kr$/, /^\/(vip|Item)\/?$/i],
 ];
 
-// Any https Coupang address, including the link.coupang.com short links the Coupang app shares.
-export function isCoupangLink(address: string) {
+// The marketplaces the phone app opens in its in-app browser: Coupang, G마켓 and 옥션.
+const markets: [string, string][] = [['coupang.com', '쿠팡'], ['gmarket.co.kr', 'G마켓'], ['auction.co.kr', '옥션']];
+
+function marketOf(address: string) {
   try {
     const url = new URL(address);
-    return url.protocol === 'https:' && (url.hostname === 'coupang.com' || url.hostname.endsWith('.coupang.com'));
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+    return markets.find(([site]) => url.hostname === site || url.hostname.endsWith(`.${site}`)) ?? null;
+  } catch { return null; }
+}
+
+// A link the in-app browser opens itself, including the short links the marketplace apps share.
+export function isMarketLink(address: string) {
+  return marketOf(address) !== null;
+}
+
+// The marketplace's name for the browser's title bar, or '' for any other address.
+export function marketName(address: string) {
+  return marketOf(address)?.[1] ?? '';
+}
+
+// G마켓 and 옥션 still hand out http:// links, which Android refuses to load; the same pages are served over https.
+export function secureMarketLink(address: string) {
+  return isMarketLink(address) ? address.replace(/^http:\/\//i, 'https://') : address;
+}
+
+// A Coupang, G마켓 or 옥션 product detail page the in-app browser can read.
+export function isProductPage(address: string) {
+  try {
+    const url = new URL(address);
+    return url.protocol === 'https:' && isMarketLink(address) && productPages.some(([host, path]) => host.test(url.hostname) && path.test(url.pathname));
   } catch { return false; }
 }
 
-// The Coupang app shares "상품명 https://link.coupang.com/a/…", so the link is picked out of whatever was copied.
+// Marketplace apps share "상품명 https://link.coupang.com/a/…", so the link is picked out of whatever was copied.
 export function findLink(text: string) {
   return text.match(/https?:\/\/[^\s<>"']+/)?.[0] ?? '';
 }
