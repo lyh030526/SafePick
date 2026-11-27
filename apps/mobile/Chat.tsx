@@ -2,8 +2,9 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { HistoryRecord } from './lib/account';
 import { colors, levels, radius, shadow } from './theme';
 import { Icon, type IconName, text } from './ui';
@@ -47,7 +48,9 @@ export function ChatView({ title, subtitle, context, welcome, suggestions, repli
   };
 
   const canSend = !pending && question.trim().length >= 2;
-  return <SafeAreaView style={styles.safe}>
+  // Android draws under the status bar and the system navigation bar, so both edges are kept clear: the input sits
+  // above the phone's own bottom bar.
+  return <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
     <StatusBar style="dark" />
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
       <View style={styles.header}>
@@ -60,7 +63,7 @@ export function ChatView({ title, subtitle, context, welcome, suggestions, repli
           {subtitle ? <Text numberOfLines={1} style={text.small}>{subtitle}</Text> : null}
         </View>
       </View>
-      <ScrollView ref={scroll} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled"
+      <ScrollView ref={scroll} style={styles.scroll} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
         {context}
         <View style={styles.welcome}>
@@ -149,7 +152,8 @@ function RecordCard({ record }: { record: HistoryRecord }) {
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   pressed: { opacity: 0.7 },
-  safe: { flex: 1, backgroundColor: colors.canvas },
+  safe: { flex: 1, backgroundColor: colors.card },
+  scroll: { backgroundColor: colors.canvas },
   header: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: colors.card,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
   back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
@@ -180,7 +184,7 @@ const styles = StyleSheet.create({
   sourcesText: { color: colors.brandText, fontSize: 13, fontWeight: '700' },
   citations: { gap: 6 },
   citation: { color: colors.textSub, fontSize: 13, lineHeight: 19, backgroundColor: colors.fill, borderRadius: 10, padding: 10 },
-  composer: { gap: 10, paddingTop: 10, paddingBottom: 12, backgroundColor: colors.card, borderTopWidth: StyleSheet.hairlineWidth,
+  composer: { gap: 10, paddingTop: 10, paddingBottom: 14, backgroundColor: colors.card, borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line },
   chips: { gap: 8, paddingHorizontal: 16 },
   chip: { borderRadius: radius.pill, backgroundColor: colors.brandSoft, paddingHorizontal: 14, paddingVertical: 8 },

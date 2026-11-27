@@ -327,8 +327,10 @@ function SingleAnalysis() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardContainer}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.content, styles.homeContent]} keyboardShouldPersistTaps="handled">
           <BrandHeader />
+          {/* The header stays on top; the rest sits in the middle of a tall screen instead of crowding the top. */}
+          <View style={styles.homeSpacer} />
           <View style={styles.hero}>
             <Text style={text.display}>사기 전에,{'\n'}판매처부터 확인하세요</Text>
             <Text style={text.body}>판매자 사업자 상태, 가격, 상품 설명의 위험 신호를 한 번에 살펴봐요.</Text>
@@ -410,6 +412,7 @@ function SingleAnalysis() {
             <Icon name="information-circle-outline" size={16} color={colors.textMuted} />
             <Text style={[text.small, styles.flex]}>SafePick은 사기 여부를 단정하지 않고, 구매 전에 확인할 근거를 보여 드려요. 공식 사이트를 찾은 브랜드는 공식 정보와 비교하고, 찾지 못하면 상품정보 고시의 제조·수입사를 대신 확인해요.</Text>
           </View>
+          <View style={styles.homeSpacer} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -802,6 +805,8 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.canvas },
   keyboardContainer: { flex: 1 },
   resultContent: { paddingBottom: 104 },
+  homeContent: { flexGrow: 1 },
+  homeSpacer: { flexGrow: 1, minHeight: 8, maxHeight: 120 },
   content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, maxWidth: 640, width: '100%', alignSelf: 'center', gap: 12 },
   flex: { flex: 1 },
   center: { textAlign: 'center' },
